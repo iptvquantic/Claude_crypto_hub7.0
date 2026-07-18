@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NEXUS HUB — Terminal Financeiro Profissional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--acc:#6366f1;--acc2:#818cf8;--green:#22c55e;--red:#ef4444;--yel:#f59e0b}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:#070710;color:#e2e8f0;overflow-x:hidden}
+a{color:var(--acc);text-decoration:none}
+nav{position:fixed;top:0;left:0;right:0;height:62px;background:rgba(7,7,16,.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(99,102,241,.12);display:flex;align-items:center;padding:0 28px;gap:14px;z-index:100}
+.nav-logo{font-size:16px;font-weight:900;letter-spacing:.12em;background:linear-gradient(135deg,#6366f1,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+.nav-sp{flex:1}
+.nav-link{color:#64748b;font-size:13px;font-weight:600;padding:6px 12px;border-radius:8px;transition:color .2s}
+.nav-link:hover{color:#e2e8f0}
+.btn-outline{padding:8px 18px;border:1px solid rgba(99,102,241,.4);border-radius:9px;color:var(--acc2);font-size:13px;font-weight:700;transition:all .2s}
+.btn-outline:hover{background:rgba(99,102,241,.1);color:#c7d2fe}
+.btn-cta{padding:9px 22px;background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:9px;color:#fff;font-size:13px;font-weight:800;transition:all .2s;white-space:nowrap}
+.btn-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(99,102,241,.4);color:#fff}
+/* HERO */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:100px 24px 60px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(99,102,241,.1),transparent)}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:var(--green);margin-bottom:24px}
+.hero-title{font-size:clamp(36px,7vw,78px);font-weight:900;line-height:1.05;margin-bottom:20px;letter-spacing:-.02em}
+.hero-title .grad{background:linear-gradient(135deg,#6366f1,#818cf8,#a5b4fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:clamp(15px,2vw,19px);color:#94a3b8;max-width:580px;margin:0 auto 36px;line-height:1.7}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:48px}
+.hero-pri{padding:14px 36px;background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:12px;color:#fff;font-size:16px;font-weight:800;display:inline-block;transition:all .2s}
+.hero-pri:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(99,102,241,.5);color:#fff}
+.hero-sec{padding:13px 28px;border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#e2e8f0;font-size:15px;font-weight:700;display:inline-block;transition:all .2s}
+.hero-sec:hover{background:rgba(255,255,255,.05)}
+.stats{display:flex;gap:36px;justify-content:center;flex-wrap:wrap}
+.stat-n{font-size:30px;font-weight:900;background:linear-gradient(135deg,#6366f1,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-l{font-size:12px;color:#475569;margin-top:2px}
+/* SECTIONS */
+section{padding:80px 24px}
+.sec-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.18);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;color:var(--acc2);margin-bottom:14px;text-transform:uppercase;letter-spacing:.07em}
+.sec-title{font-size:clamp(26px,4vw,44px);font-weight:900;margin-bottom:12px}
+.sec-sub{font-size:15px;color:#94a3b8;max-width:520px;margin:0 auto}
+.features{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px;margin-top:48px;max-width:1100px;margin-left:auto;margin-right:auto}
+.feat{background:rgba(15,15,28,.8);border:1px solid rgba(30,30,50,.9);border-radius:16px;padding:24px;transition:all .25s}
+.feat:hover{border-color:rgba(99,102,241,.3);transform:translateY(-3px);box-shadow:0 12px 36px rgba(0,0,0,.5)}
+.feat-icon{font-size:28px;margin-bottom:12px}
+.feat-title{font-size:15px;font-weight:800;margin-bottom:8px}
+.feat-desc{font-size:13px;color:#64748b;line-height:1.65}
+/* PLANS */
+.plans-wrap{max-width:900px;margin:0 auto;text-align:center}
+.plans-section{background:rgba(7,7,16,.7);border-top:1px solid rgba(20,20,40,.8);border-bottom:1px solid rgba(20,20,40,.8)}
+.trial-banner{display:flex;align-items:center;justify-content:space-between;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.18);border-radius:14px;padding:16px 24px;margin:32px 0;flex-wrap:wrap;gap:12px}
+.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+@media(max-width:700px){.plans-grid{grid-template-columns:1fr}}
+.plan{background:rgba(15,15,28,.9);border:1px solid rgba(30,30,50,.8);border-radius:16px;padding:26px;text-align:center;position:relative;transition:all .2s}
+.plan.pop{border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.05)}
+.plan-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#000;font-size:10px;font-weight:900;padding:3px 14px;border-radius:20px;white-space:nowrap}
+.plan-period{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.plan-price{font-size:38px;font-weight:900;margin-bottom:4px}
+.plan-sub{font-size:12px;color:#475569;margin-bottom:20px}
+.plan-feats{list-style:none;text-align:left;margin-bottom:22px;display:flex;flex-direction:column;gap:9px}
+.plan-feats li{font-size:13px;color:#94a3b8;display:flex;align-items:center;gap:8px}
+.plan-feats li.ok{color:#e2e8f0}
+.plan-btn{display:block;width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:800;text-align:center;transition:all .2s}
+.plan-btn.pri{background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff}
+.plan-btn.pri:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(99,102,241,.4);color:#fff}
+.plan-btn.sec{border:1px solid rgba(99,102,241,.3);color:var(--acc2)}
+.plan-btn.sec:hover{background:rgba(99,102,241,.08)}
+.pix-box{background:rgba(15,15,28,.8);border:1px solid rgba(30,30,50,.8);border-radius:14px;padding:28px;max-width:580px;margin:0 auto;text-align:center}
+.pix-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px;text-align:left}
+.pix-step{background:rgba(20,20,38,.6);border-radius:10px;padding:14px}
+.pix-n{font-size:22px;font-weight:900;color:var(--acc);margin-bottom:6px}
+/* TESTIMONIALS */
+.tests{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;max-width:980px;margin:40px auto 0}
+.test{background:rgba(15,15,28,.8);border:1px solid rgba(30,30,50,.8);border-radius:14px;padding:22px}
+.stars{color:#f59e0b;font-size:16px;margin-bottom:12px}
+.test-txt{font-size:14px;color:#94a3b8;line-height:1.65;margin-bottom:16px;font-style:italic}
+.test-author{display:flex;align-items:center;gap:10px}
+.test-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;flex-shrink:0}
+/* FAQ */
+.faq-wrap{max-width:680px;margin:40px auto 0}
+.faq-item{border-bottom:1px solid rgba(20,20,40,.8)}
+.faq-q{padding:18px 0;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:15px;font-weight:700;color:#e2e8f0;gap:16px}
+.faq-q:hover{color:var(--acc2)}
+.faq-icon{font-size:18px;color:var(--acc);transition:transform .3s;flex-shrink:0}
+.faq-a{font-size:13px;color:#64748b;line-height:1.75;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s ease}
+.faq-item.open .faq-a{max-height:300px;padding-bottom:18px}
+.faq-item.open .faq-icon{transform:rotate(45deg)}
+/* CTA */
+.cta-sec{background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(168,85,247,.07));border-top:1px solid rgba(99,102,241,.12);padding:80px 24px;text-align:center}
+footer{background:#050508;border-top:1px solid rgba(20,20,40,.8);padding:32px 24px;text-align:center}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;max-width:900px;margin:0 auto 18px}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-link{font-size:13px;color:#334155;transition:color .2s}
+.footer-link:hover{color:#e2e8f0}
+.footer-copy{font-size:12px;color:#1e293b}
+.text-center{text-align:center}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">⬡ NEXUS HUB</div>
+  <div class="nav-sp"></div>
+  <a href="#funcionalidades" class="nav-link">Funcionalidades</a>
+  <a href="#planos" class="nav-link">Planos</a>
+  <a href="#faq" class="nav-link">FAQ</a>
+  <a href="index.html" class="btn-outline" style="margin-left:8px">Entrar</a>
+  <a href="index.html" class="btn-cta" style="margin-left:6px">Começar Grátis</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div style="position:relative;z-index:1;max-width:780px">
+    <div class="hero-badge">🟢 15 dias grátis — sem cartão de crédito</div>
+    <h1 class="hero-title">O terminal financeiro<br><span class="grad">cripto mais completo</span><br>do Brasil</h1>
+    <p class="hero-sub">Dashboard profissional com dados ao vivo, Portfolio Vault™, análise on-chain, Bitcoin Lab Pro, Polymarket, notícias e muito mais.</p>
+    <div class="hero-btns">
+      <a href="index.html" class="hero-pri">🚀 Acessar o Dashboard</a>
+      <a href="#funcionalidades" class="hero-sec">Ver funcionalidades ↓</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n">15+</div><div class="stat-l">Páginas de análise</div></div>
+      <div class="stat"><div class="stat-n">Real-time</div><div class="stat-l">Binance WebSocket</div></div>
+      <div class="stat"><div class="stat-n">100%</div><div class="stat-l">Gratuito (base)</div></div>
+      <div class="stat"><div class="stat-n">PT-BR</div><div class="stat-l">Interface em português</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="funcionalidades" class="text-center">
+  <div class="sec-badge">✨ Funcionalidades</div>
+  <h2 class="sec-title">Tudo que você precisa para<br>dominar o mercado cripto</h2>
+  <p class="sec-sub">Terminal profissional, intuitivo e completo — no navegador, sem instalação.</p>
+  <div class="features">
+    <div class="feat"><div class="feat-icon">📊</div><div class="feat-title">Dashboard ao Vivo</div><div class="feat-desc">Preços em tempo real via Binance WebSocket, Fear & Greed Index, Dominância e RSI BTC+ETH multi-timeframe.</div></div>
+    <div class="feat"><div class="feat-icon">📈</div><div class="feat-title">Gráfico BTC Profissional</div><div class="feat-desc">Candlestick com MA20, MA50, MA200 e Bandas de Bollinger. LightweightCharts de nível institucional.</div></div>
+    <div class="feat"><div class="feat-icon">💎</div><div class="feat-title">Portfolio Vault™ PRO</div><div class="feat-desc">Registre aportes, calcule preço médio, veja no gráfico estilo MicroStrategy e acompanhe ROI ao vivo.</div></div>
+    <div class="feat"><div class="feat-icon">🗺️</div><div class="feat-title">Mapa de Acumulação</div><div class="feat-desc">Visualize em quais faixas de preço você mais acumulou. Diferencial exclusivo para investidores sérios.</div></div>
+    <div class="feat"><div class="feat-icon">🧪</div><div class="feat-title">Bitcoin Lab Pro</div><div class="feat-desc">8 indicadores on-chain: MA200, Realized Price, MVRV, Mayer Multiple, Pi Cycle Top e mais.</div></div>
+    <div class="feat"><div class="feat-icon">🏦</div><div class="feat-title">Macro & FOMC</div><div class="feat-desc">Countdown para reuniões do Fed, calendário 2025-2027 e probabilidades CME FedWatch.</div></div>
+    <div class="feat"><div class="feat-icon">📦</div><div class="feat-title">ETF Flows BTC</div><div class="feat-desc">Fluxo de IBIT, FBTC, GBTC e outros com gráfico de pizza por emissor e semáforo de fluxo.</div></div>
+    <div class="feat"><div class="feat-icon">🎯</div><div class="feat-title">Polymarket</div><div class="feat-desc">18 mercados de predição com filtros: Cripto, IA, Macro, Geopolítica, Esportes, Ações e Trending.</div></div>
+    <div class="feat"><div class="feat-icon">📰</div><div class="feat-title">Notícias em Tempo Real</div><div class="feat-desc">Feeds RSS com 6 categorias. Idioma PT-BR ou EN configurável por preferência do usuário.</div></div>
+  </div>
+</section>
+
+<!-- PLANS -->
+<section id="planos" class="plans-section text-center">
+  <div class="plans-wrap">
+    <div class="sec-badge">💳 Planos</div>
+    <h2 class="sec-title">Escolha seu plano</h2>
+    <p class="sec-sub">Comece grátis por 15 dias. Sem cartão. Cancele quando quiser.</p>
+    <div class="trial-banner">
+      <div><div style="font-size:15px;font-weight:800;color:var(--green)">🎁 15 dias completamente grátis</div><div style="font-size:13px;color:#475569;margin-top:2px">Sem cartão. Sem compromisso. Acesso total ao PRO.</div></div>
+      <a href="index.html" class="btn-cta" style="padding:11px 24px;font-size:14px">Começar grátis →</a>
+    </div>
+    <div class="plans-grid">
+      <div class="plan">
+        <div class="plan-period">Gratuito</div>
+        <div class="plan-price">R$ 0</div>
+        <div class="plan-sub">para sempre</div>
+        <ul class="plan-feats">
+          <li class="ok">✅ Dashboard ao vivo</li>
+          <li class="ok">✅ Gráfico BTC + indicadores</li>
+          <li class="ok">✅ RSI Multi-timeframe</li>
+          <li class="ok">✅ Notícias RSS</li>
+          <li class="ok">✅ Top 100 Ativos</li>
+          <li>❌ Portfolio Vault™</li>
+          <li>❌ Bitcoin Lab Pro completo</li>
+        </ul>
+        <a href="index.html" class="plan-btn sec">Usar grátis</a>
+      </div>
+      <div class="plan pop">
+        <div class="plan-badge">⭐ MAIS POPULAR</div>
+        <div class="plan-period">PRO Trimestral</div>
+        <div class="plan-price" style="color:var(--acc2)">R$ 39<span style="font-size:18px;font-weight:600">,90</span></div>
+        <div class="plan-sub">a cada 3 meses · R$13,30/mês</div>
+        <ul class="plan-feats">
+          <li class="ok">✅ Tudo do plano Gratuito</li>
+          <li class="ok">✅ <strong>Portfolio Vault™</strong></li>
+          <li class="ok">✅ Mapa de Acumulação</li>
+          <li class="ok">✅ Bitcoin Lab Pro avançado</li>
+          <li class="ok">✅ IA Notícias (Claude)</li>
+          <li class="ok">✅ Exportar CSV</li>
+          <li class="ok">✅ Suporte prioritário</li>
+        </ul>
+        <a href="https://pagamento.pagbank.com.br/pagamento?code=93aa7511-3a7c-4aed-b74e-dd90d92a24ae&t=17f88256-5be6-42c3-831a-68a9269bc916" target="_blank" class="plan-btn pri">Assinar via PagBank →</a>
+      </div>
+      <div class="plan">
+        <div class="plan-period" style="color:#3b82f6">PRO Anual</div>
+        <div class="plan-price" style="color:#3b82f6">R$ 149<span style="font-size:18px;font-weight:600;color:#475569">,90</span></div>
+        <div class="plan-sub">por ano · R$12,49/mês · <span style="color:var(--green)">Economize 16%</span></div>
+        <ul class="plan-feats">
+          <li class="ok">✅ Tudo do PRO Trimestral</li>
+          <li class="ok">✅ Melhor custo/benefício</li>
+          <li class="ok">✅ Acesso antecipado a novidades</li>
+        </ul>
+        <a href="https://pagamento.pagbank.com.br/pagamento?code=d0900f17-002a-469a-a025-69aca77eb3fe&t=91d4ceb1-6059-496a-907e-41a4ff0e15a7" target="_blank" class="plan-btn pri" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">Assinar PRO Anual →</a>
+      </div>
+    </div>
+    <div class="pix-box">
+      <div style="font-size:26px;margin-bottom:10px">💳</div>
+      <div style="font-size:17px;font-weight:800;margin-bottom:6px">Pagamento via PagBank</div>
+      <div style="font-size:13px;color:#475569;margin-bottom:18px">PIX ou Cartão de crédito. Ativação em até 1 hora.</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px">
+        <a href="https://pagamento.pagbank.com.br/pagamento?code=7ba02f5b-0a34-404e-9c6c-3318616aed7f&t=6b32d181-7db3-4872-8afc-74f98d565312" target="_blank" class="btn-outline" style="font-size:12px">Mensal R$14,90</a>
+        <a href="https://pagamento.pagbank.com.br/pagamento?code=93aa7511-3a7c-4aed-b74e-dd90d92a24ae&t=17f88256-5be6-42c3-831a-68a9269bc916" target="_blank" class="btn-cta" style="font-size:12px">Trimestral R$39,90</a>
+        <a href="https://pagamento.pagbank.com.br/pagamento?code=d0900f17-002a-469a-a025-69aca77eb3fe&t=91d4ceb1-6059-496a-907e-41a4ff0e15a7" target="_blank" class="btn-outline" style="font-size:12px">Anual R$149,90</a>
+      </div>
+      <div class="pix-steps">
+        <div class="pix-step"><div class="pix-n">1</div><div style="font-size:13px;font-weight:700">Escolha o plano</div><div style="font-size:12px;color:#475569;margin-top:2px">Clique no botão desejado</div></div>
+        <div class="pix-step"><div class="pix-n">2</div><div style="font-size:13px;font-weight:700">Faça o pagamento</div><div style="font-size:12px;color:#475569;margin-top:2px">PIX ou cartão via PagBank</div></div>
+        <div class="pix-step"><div class="pix-n">3</div><div style="font-size:13px;font-weight:700">Ative no Vault</div><div style="font-size:12px;color:#475569;margin-top:2px">Portfolio Vault™ → Ativar PRO</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="text-center">
+  <div class="sec-badge">💬 Depoimentos</div>
+  <h2 class="sec-title">O que nossos usuários dizem</h2>
+  <div class="tests">
+    <div class="test"><div class="stars">★★★★★</div><div class="test-txt">"Finalmente um dashboard que tem tudo: preços ao vivo, RSI, notícias e o Portfolio Vault para acompanhar meus aportes. Impressionante."</div><div class="test-author"><div class="test-av" style="background:#6366f1">R</div><div><div style="font-weight:700;font-size:13px">Rafael M.</div><div style="font-size:11px;color:#475569">Investidor, São Paulo</div></div></div></div>
+    <div class="test"><div class="stars">★★★★★</div><div class="test-txt">"O Mapa de Acumulação mudou minha forma de ver meu portfólio. Sei exatamente em quais faixas estou posicionado. Nível institucional."</div><div class="test-author"><div class="test-av" style="background:#22c55e">A</div><div><div style="font-weight:700;font-size:13px">Amanda S.</div><div style="font-size:11px;color:#475569">Trader, Rio de Janeiro</div></div></div></div>
+    <div class="test"><div class="stars">★★★★★</div><div class="test-txt">"O Bitcoin Lab Pro com os indicadores on-chain é incrível. Uso diariamente para tomar decisões mais inteligentes no mercado."</div><div class="test-author"><div class="test-av" style="background:#f59e0b">C</div><div><div style="font-weight:700;font-size:13px">Carlos F.</div><div style="font-size:11px;color:#475569">Empreendedor, BH</div></div></div></div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="text-center">
+  <div class="sec-badge">❓ FAQ</div>
+  <h2 class="sec-title">Perguntas frequentes</h2>
+  <div class="faq-wrap">
+    <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Como funcionam os 15 dias grátis? <span class="faq-icon">+</span></div><div class="faq-a">Ao criar sua conta no dashboard, você recebe automaticamente 15 dias de acesso PRO completo — sem cartão, sem compromisso. Após esse período, os recursos PRO ficam bloqueados até você assinar um plano.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Meus dados de portfólio ficam salvos onde? <span class="faq-icon">+</span></div><div class="faq-a">Seus aportes são salvos no navegador (localStorage) de forma segura e privada. Nenhum dado sai do seu dispositivo. Você pode exportar via CSV a qualquer momento.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Como ativar o PRO após o pagamento? <span class="faq-icon">+</span></div><div class="faq-a">Após pagar via PagBank, acesse o dashboard, vá em Portfolio Vault™ e clique em "Ativar minha conta PRO". O acesso é liberado em até 1 hora.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Posso acessar do celular? <span class="faq-icon">+</span></div><div class="faq-a">Sim! O NEXUS HUB é 100% responsivo. Funciona perfeitamente em smartphones, tablets e desktops.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Quais APIs são usadas? São gratuitas? <span class="faq-icon">+</span></div><div class="faq-a">Todas gratuitas: Binance WebSocket (preços), CoinGecko (dados), Alternative.me (Fear & Greed), open.er-api.com (câmbio/ouro) e rss2json (notícias).</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Posso cancelar quando quiser? <span class="faq-icon">+</span></div><div class="faq-a">Sim. Os planos são recorrentes via PagBank e você pode cancelar a qualquer momento, sem fidelidade ou taxas.</div></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-sec">
+  <h2 style="font-size:clamp(28px,5vw,50px);font-weight:900;margin-bottom:12px">Pronto para dominar o<br><span style="background:linear-gradient(135deg,#6366f1,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">mercado cripto?</span></h2>
+  <p style="font-size:16px;color:#64748b;margin-bottom:32px">15 dias grátis. Sem cartão. Comece agora.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <a href="index.html" class="hero-pri">🚀 Acessar o Dashboard</a>
+    <a href="#planos" class="hero-sec">Ver planos</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="nav-logo">⬡ NEXUS HUB</div>
+    <div class="footer-links">
+      <a href="index.html" class="footer-link">Dashboard</a>
+      <a href="#planos" class="footer-link">Planos</a>
+      <a href="#faq" class="footer-link">FAQ</a>
+      <a href="index.html" class="footer-link">Entrar</a>
+    </div>
+  </div>
+  <div class="footer-copy">© 2026 NEXUS HUB · Dashboard Financeiro Profissional · Todos os direitos reservados</div>
+</footer>
+</body>
+</html>
