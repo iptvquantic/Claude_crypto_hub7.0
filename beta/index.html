@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+cYxbv6QGzrRMGwNkl53fi2HIUeUxxZKnjVvlCU4kwc=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-fyeP75trk+1vyA6PdzQQ0KjlVQ0+52ahGZMW+XU1EoI=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -53,6 +53,7 @@
   --ref: #62b4ff;
   --stale: #f4b43f;
   --off: #8b97b2;
+  --fg-1: #ff5d6c; --fg-2: #ff9a52; --fg-3: #f4c23f; --fg-4: #9ad25d; --fg-5: #2fd17c;
   --shadow: 0 10px 34px rgba(2, 5, 14, .5);
   --shadow-sm: 0 2px 10px rgba(2, 5, 14, .35);
   --scrim: rgba(4, 8, 18, .72);
@@ -75,18 +76,19 @@
   --accent-2: #2f3ab8;
   --accent-ink: #ffffff;
   --accent-bg: rgba(68, 80, 216, .1);
-  --signal: #a86a00;
+  --signal: #925c00;
   --signal-bg: rgba(214, 140, 0, .12);
-  --up: #08804a;
+  --up: #077644;
   --up-bg: rgba(8, 128, 74, .1);
-  --down: #c72b42;
+  --down: #c12a40;
   --down-bg: rgba(199, 43, 66, .09);
-  --info: #1c6fc4;
+  --info: #1a67b6;
   --info-bg: rgba(28, 111, 196, .1);
-  --live: #0b8f52;
-  --ref: #1c6fc4;
-  --stale: #b97400;
-  --off: #66738f;
+  --live: #097543;
+  --ref: #1a67b6;
+  --stale: #925c00;
+  --off: #5e6a84;
+  --fg-1: #b5424d; --fg-2: #965b30; --fg-3: #7f6521; --fg-4: #557333; --fg-5: #1b7948;
   --shadow: 0 10px 30px rgba(20, 30, 60, .12);
   --shadow-sm: 0 2px 8px rgba(20, 30, 60, .08);
   --scrim: rgba(17, 26, 45, .45);
@@ -113,7 +115,7 @@
   --signal-bg: rgba(255, 207, 74, .13);
   --up: #2ff3a4;
   --up-bg: rgba(47, 243, 164, .12);
-  --down: #ff5a7e;
+  --down: #ff6183;
   --down-bg: rgba(255, 90, 126, .12);
   --info: #27d8ff;
   --info-bg: rgba(39, 216, 255, .12);
@@ -121,6 +123,7 @@
   --ref: #27d8ff;
   --stale: #ffcf4a;
   --off: #79abc6;
+  --fg-1: #ff6183;
   --grid: rgba(166, 216, 238, .07);
   color-scheme: dark;
 }
@@ -1083,7 +1086,7 @@ details.li[open] > summary::after { content: '−'; }
 // =====================================================================
 const NX = {
   version: '3.0.1',
-  build: '20261015-2200-cef2af5-beta',
+  build: '20261015-2210-6f5ceed-beta',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',
@@ -2317,11 +2320,12 @@ function heatBg(v, scale = 8) {
 }
 function fgColor(v) {
   if (!isNum(v)) return 'var(--off)';
-  if (v < 25) return '#ff5d6c';
-  if (v < 45) return '#ff9a52';
-  if (v <= 55) return '#f4c23f';
-  if (v <= 75) return '#9ad25d';
-  return '#2fd17c';
+  // cores por tema (styles.css: --fg-1 … --fg-5), sempre legíveis no fundo do tema
+  if (v < 25) return 'var(--fg-1)';
+  if (v < 45) return 'var(--fg-2)';
+  if (v <= 55) return 'var(--fg-3)';
+  if (v <= 75) return 'var(--fg-4)';
+  return 'var(--fg-5)';
 }
 const FG_PT = { 'Extreme Fear': ['Medo extremo', 'Extreme fear'], Fear: ['Medo', 'Fear'], Neutral: ['Neutro', 'Neutral'], Greed: ['Ganância', 'Greed'], 'Extreme Greed': ['Ganância extrema', 'Extreme greed'] };
 const fgLabel = (cls) => (FG_PT[cls] ? L(...FG_PT[cls]) : cls || '—');

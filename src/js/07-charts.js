@@ -134,11 +134,12 @@ function heatBg(v, scale = 8) {
 }
 function fgColor(v) {
   if (!isNum(v)) return 'var(--off)';
-  if (v < 25) return '#ff5d6c';
-  if (v < 45) return '#ff9a52';
-  if (v <= 55) return '#f4c23f';
-  if (v <= 75) return '#9ad25d';
-  return '#2fd17c';
+  // cores por tema (styles.css: --fg-1 … --fg-5), sempre legíveis no fundo do tema
+  if (v < 25) return 'var(--fg-1)';
+  if (v < 45) return 'var(--fg-2)';
+  if (v <= 55) return 'var(--fg-3)';
+  if (v <= 75) return 'var(--fg-4)';
+  return 'var(--fg-5)';
 }
 const FG_PT = { 'Extreme Fear': ['Medo extremo', 'Extreme fear'], Fear: ['Medo', 'Fear'], Neutral: ['Neutro', 'Neutral'], Greed: ['Ganância', 'Greed'], 'Extreme Greed': ['Ganância extrema', 'Extreme greed'] };
 const fgLabel = (cls) => (FG_PT[cls] ? L(...FG_PT[cls]) : cls || '—');
