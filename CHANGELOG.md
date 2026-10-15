@@ -3,6 +3,7 @@
 ## 3.0.1 — 15/10/2026
 - **Banco de dados sempre ativo:** o plano grátis do Supabase pausa o projeto depois de ~7 dias sem uso (login e Vault parariam). O robô de dados agora faz uma consulta mínima a cada execução e, como reforço, cada navegador que abre o site faz no máximo uma por dia (anônima, sem dado pessoal; política de privacidade atualizada). O Painel do administrador mostra se o banco respondeu, com o caminho para reativar caso ele pause.
 - **Painel do administrador:** status do robô com nomes claros (Notícias, Agenda econômica, Bolsas e índices…).
+- **Menu inteiro sem rolar em notebooks:** em telas baixas (1366×768, 1920×1080 com zoom de 125%, 1280×720) o menu fica mais compacto e cabe por completo, inclusive com o Painel do administrador. Medido por `dev/check-menu.mjs`.
 - **Medo e ganância:** no painel estreito, os 7 dias mostram data e número (o nome aparece ao passar o mouse), sem palavras cortadas.
 - **Contraste:** cores de alta/queda, selos (ao vivo, referência, modelo, atrasado) e o índice de medo e ganância agora passam do mínimo de legibilidade (4,5:1) em todos os temas — antes o tema claro tinha selos fracos.
 - **Permissões extras (migração 02, aplicada pelo dono):** visitante sem login só consegue chamar o sinal de vida do banco; resolve os avisos do Security Advisor do Supabase.
