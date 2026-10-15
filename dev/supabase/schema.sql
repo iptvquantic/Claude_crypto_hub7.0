@@ -192,6 +192,13 @@ language sql stable security definer set search_path = public as $$
   from public.profiles p where p.id = auth.uid();
 $$;
 
+-- Sinal de vida: o robô de dados chama a cada execução para o plano grátis do Supabase
+-- não pausar o projeto por falta de uso (pausa após ~7 dias sem consultas). Não lê nenhuma tabela.
+create or replace function public.ping() returns jsonb
+language sql stable set search_path = public as $$
+  select jsonb_build_object('ok', true, 'server_time', now());
+$$;
+
 -- Remover / desfazer um aporte (vale mesmo sem PRO: a pessoa sempre pode tirar os próprios dados)
 create or replace function public.vault_remove(p_id uuid) returns jsonb
 language plpgsql security definer set search_path = public as $$
@@ -358,3 +365,4 @@ grant execute on function public.is_admin(), public.has_pro(), public.my_profile
   public.admin_overview(), public.admin_list_users(text, int), public.admin_list_claims(text),
   public.admin_set_plan(uuid, text, int), public.admin_resolve_claim(uuid, text),
   public.admin_set_active(uuid, boolean) to authenticated;
+grant execute on function public.ping() to anon, authenticated;

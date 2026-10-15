@@ -7,6 +7,7 @@
 //   markets.json   bolsas, juros, dólar global, commodities e cotas de ETFs (Yahoo)
 //                  + ranking dos maiores ativos do mundo (companiesmarketcap)
 //   status.json    situação de cada fonte nesta execução
+// E mantém o banco (Supabase grátis) ativo: o plano grátis pausa o projeto após ~7 dias sem consultas.
 // Regra de ouro: NUNCA quebrar o site. Se uma fonte falhar, o arquivo anterior é mantido
 // com o horário antigo (o site percebe que está velho e busca direto na fonte).
 // Uso: node scripts/atualizar-dados.mjs <pasta-de-saída>
@@ -32,6 +33,30 @@ async function get(url, { as = 'text', timeout = 20000, headers = {} } = {}) {
 async function pool(items, n, fn) { const out = []; let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) { const k = i++; try { out[k] = await fn(items[k], k); } catch (e) { out[k] = { err: String(e.message || e) }; } } })); return out; }
 async function previous(name) { try { return await get(PREV + name + '.json?t=' + Date.now(), { as: 'json', timeout: 15000 }); } catch { return null; } }
 const save = (name, obj) => writeFileSync(join(OUT, name + '.json'), JSON.stringify(obj));
+
+// ---------- banco de dados (Supabase) ----------
+// Sem consultas por ~7 dias o Supabase grátis pausa o projeto e o login/Vault param. Uma chamada mínima
+// à função ping (não lê tabela nenhuma; liberada para visitante) a cada execução conta como uso.
+// Endereço e chave PUBLICÁVEL vêm da configuração do site (uma fonte só).
+function supabaseConfig() {
+  let src = '';
+  try { src = readFileSync(new URL('../src/js/00-config.js', import.meta.url), 'utf8'); } catch { /* sem o arquivo: usa as variáveis */ }
+  const url = process.env.SUPABASE_URL || (src.match(/supabaseUrl:\s*'([^']+)'/) || [])[1];
+  const key = process.env.SUPABASE_KEY || (src.match(/supabaseKey:\s*'([^']+)'/) || [])[1];
+  return url && key ? { url: url.replace(/\/+$/, ''), key } : null;
+}
+async function db() {
+  const cfg = supabaseConfig(); if (!cfg) throw new Error('configuração do Supabase não encontrada');
+  const t = Date.now(); const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = await fetch(cfg.url + '/rest/v1/rpc/ping', { method: 'POST', signal: ctl.signal, headers: { apikey: cfg.key, 'content-type': 'application/json', accept: 'application/json', 'user-agent': UA }, body: '{}' });
+    if (r.status === 540) throw new Error('projeto pausado no Supabase (reativar no painel)');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (!j || j.ok !== true) throw new Error('resposta inesperada do ping');
+    return { ms: Date.now() - t };
+  } finally { clearTimeout(to); }
+}
 
 // ---------- RSS ----------
 const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
@@ -198,6 +223,8 @@ for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', ()
     const old = await previous(name); if (old) save(name, old);
   }
 }
+try { const r = await db(); status.db = { ok: true, ...r }; console.log('✓ db', JSON.stringify(r)); }
+catch (e) { status.db = { ok: false, err: String(e.message || e).slice(0, 160) }; console.warn('✗ db', status.db.err); }
 save('status', { generatedAt: new Date().toISOString(), ms: Date.now() - t0, sources: status });
 writeFileSync(join(OUT, 'README.md'), '# Dados do NEXUS HUB\n\nRamo gerado automaticamente pelo robô (GitHub Actions). Não edite à mão.\n');
 console.log(`pronto em ${Math.round((Date.now() - t0) / 1000)} s`);

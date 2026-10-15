@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-7OeTmQjgjS219OEexHUCjOJg3Kcu48MrPIQ7W/AEa9w=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+cYxbv6QGzrRMGwNkl53fi2HIUeUxxZKnjVvlCU4kwc=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -1082,8 +1082,8 @@ details.li[open] > summary::after { content: '−'; }
 // com fonte e data de conferência) ou AUSENTE ("—"). Nada de constante disfarçada de dado.
 // =====================================================================
 const NX = {
-  version: '3.0.0',
-  build: '20261015-2139-04605f9-beta',
+  version: '3.0.1',
+  build: '20261015-2200-cef2af5-beta',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',
@@ -5418,8 +5418,13 @@ function admDraw() {
       <button class="menu-i" data-act="admActive" data-u="${esc(u.id)}" data-v="${u.active ? '0' : '1'}">${ico(u.active ? 'lock' : 'check', 16)}${esc(u.active ? L('Desativar conta', 'Disable account') : L('Reativar conta', 'Enable account'))}</button>
       <button class="menu-i" data-act="admReset" data-u="${esc(u.id)}" data-e="${esc(u.email)}">${ico('key-round', 16)}${esc(L('Gerar senha temporária', 'Generate temporary password'))}</button></div></div>`}</td></tr>`;
   }).join('')}</tbody></table></div></section>
-  <section class="panel mt">${panelHead('server', L('Robô de dados (GitHub Actions)', 'Data bot (GitHub Actions)'), { sub: esc(L('Traz o que o navegador não consegue: notícias, agenda global, bolsas e índices.', 'Fetches what the browser cannot: news, global calendar, indices.')) })}
-    ${pipe ? `<div class="small muted">${esc(L('Última execução:', 'Last run:'))} <b>${esc(fmtDateTime(Date.parse(pipe.generatedAt)))}</b> (${esc(ago(Date.parse(pipe.generatedAt)))})</div><div class="list mt">${Object.entries(pipe.sources || {}).map(([k, v]) => `<div class="li"><span class="grow t">${esc(k)}</span><span class="small faint">${esc(v.n != null ? v.n + ' itens' : '')}</span><span class="badge ${v.ok ? 'live' : 'bad'}">${esc(v.ok ? 'ok' : (v.err || L('falhou', 'failed')).slice(0, 60))}</span></div>`).join('')}</div>` : `<div class="callout warn">${ico('triangle-alert', 18)}<span>${esc(L('O robô ainda não publicou o arquivo de status. Confira a aba Actions do repositório.', 'The bot has not published its status file yet. Check the repository Actions tab.'))} ${extLink(NX.repoUrl + '/actions', 'GitHub Actions')}</span></div>`}</section>`;
+  <section class="panel mt">${panelHead('server', L('Robô de dados (GitHub Actions)', 'Data bot (GitHub Actions)'), { sub: esc(L('Traz o que o navegador não consegue (notícias, agenda global, bolsas e índices) e mantém o banco de dados ativo.', 'Fetches what the browser cannot (news, global calendar, indices) and keeps the database awake.')) })}
+    ${pipe ? `<div class="small muted">${esc(L('Última execução:', 'Last run:'))} <b>${esc(fmtDateTime(Date.parse(pipe.generatedAt)))}</b> (${esc(ago(Date.parse(pipe.generatedAt)))})</div>${pipe.sources && pipe.sources.db && !pipe.sources.db.ok ? `<div class="callout warn mt">${ico('triangle-alert', 18)}<span>${esc(L('Na última execução o robô não conseguiu falar com o banco de dados. Se o Supabase pausou o projeto por falta de uso, abra o painel e clique em "Resume project".', 'On its last run the bot could not reach the database. If Supabase paused the project for inactivity, open the dashboard and click "Resume project".'))} ${extLink('https://supabase.com/dashboard/project/' + NX.supabaseUrl.split('//')[1].split('.')[0], L('Painel do Supabase', 'Supabase dashboard'))}</span></div>` : ''}<div class="list mt">${Object.entries(pipe.sources || {}).map(([k, v]) => `<div class="li"><span class="grow t">${esc(pipeName(k))}</span><span class="small faint">${esc(v.n != null ? v.n + ' ' + L('itens', 'items') : '')}</span><span class="badge ${v.ok ? 'live' : 'bad'}">${esc(v.ok ? 'ok' : (v.err || L('falhou', 'failed')).slice(0, 60))}</span></div>`).join('')}</div>` : `<div class="callout warn">${ico('triangle-alert', 18)}<span>${esc(L('O robô ainda não publicou o arquivo de status. Confira a aba Actions do repositório.', 'The bot has not published its status file yet. Check the repository Actions tab.'))} ${extLink(NX.repoUrl + '/actions', 'GitHub Actions')}</span></div>`}</section>`;
+}
+// nomes das tarefas do robô (status.json) para o painel
+function pipeName(k) {
+  const n = { news: L('Notícias', 'News'), calendar: L('Agenda econômica', 'Economic calendar'), markets: L('Arquivo de mercados', 'Markets file'), quotes: L('Bolsas e índices', 'Stock indices'), etfs: L('Cotas de ETFs', 'ETF quotes'), world: L('Maiores ativos do mundo', 'Largest assets'), db: L('Banco de dados ativo (contas e Vault)', 'Database awake (accounts and Vault)') }[k];
+  return n || k;
 }
 ACT.admReload = () => admLoad();
 ACT.admQ = debounce((el) => { ADM.q = el.value.trim(); admLoad(); }, 400);

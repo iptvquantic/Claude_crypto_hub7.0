@@ -12,7 +12,7 @@ Painel em português de cripto e mercado, ao vivo: preços, on-chain, juros (Fed
 |---|---|---|
 | Site (app) | `index.html` (gerado a partir de `src/`) | Tudo roda no navegador. Preços da Binance por WebSocket, demais dados direto das fontes públicas. |
 | Contas e Vault | Supabase (projeto `nexus-hub`, São Paulo) | Login, plano/teste de 15 dias, aportes. Regras de acesso no servidor: cada conta só vê os próprios dados. |
-| Robô de dados | `.github/workflows/atualizar-dados.yml` + `scripts/atualizar-dados.mjs` | A cada ~20 min busca notícias, agenda econômica global (com resultado), bolsas, ETFs e o ranking mundial, e publica no ramo `data`. Se falhar, o site busca direto nas fontes. |
+| Robô de dados | `.github/workflows/atualizar-dados.yml` + `scripts/atualizar-dados.mjs` | A cada ~20 min busca notícias, agenda econômica global (com resultado), bolsas, ETFs e o ranking mundial, e publica no ramo `data`. Se falhar, o site busca direto nas fontes. Também faz uma consulta mínima ao banco para o Supabase grátis não pausar o projeto. |
 | App no celular | `manifest.webmanifest` + `sw.js` | Instala como aplicativo (Android, iPhone e computador), sem Play Store. |
 
 ## Tarefas do dia a dia (dono)

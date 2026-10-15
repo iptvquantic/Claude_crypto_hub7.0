@@ -21,6 +21,7 @@ for fase in "schema" "schema+migracoes"; do
     if [ "$fase" != "schema" ]; then for m in migrations/*.sql; do q -f "$m"; done; fi
   done
   q -f test/rls.sql
+  if [ "$fase" != "schema" ]; then q -f test/perm.sql; fi
   echo "   ok: $fase"
 done
 echo "✅ banco: tudo certo"

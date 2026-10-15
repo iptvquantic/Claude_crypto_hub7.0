@@ -133,5 +133,7 @@ select pg_temp.expect_empty($q$select * from public.payment_claims$q$, 'anon ler
 select pg_temp.expect_fail($q$insert into public.vault_entries(user_id,type,asset_id,sym,date,qty,amount_usd,amount_brl) values ('00000000-0000-0000-0000-00000000000b','buy','bitcoin','BTC','2025-01-15',1,1,1)$q$, 'anon gravar aporte');
 select pg_temp.expect_fail($q$select public.admin_overview()$q$, 'anon usar admin');
 do $$ begin if public.my_profile() is not null then raise exception 'anon não tem perfil'; end if; exception when insufficient_privilege then null; end $$;
+-- sinal de vida do robô funciona sem login
+do $$ begin if not (public.ping()->>'ok')::boolean then raise exception 'ping deveria responder ok'; end if; end $$;
 reset role;
 select 'RLS OK' as resultado;

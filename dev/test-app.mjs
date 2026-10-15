@@ -210,6 +210,7 @@ console.log('\n[5] Administrador');
   ok(await page.$('#sb .sb-i[data-page=admin]') !== null, 'menu mostra o Painel do administrador');
   await goPage(page, 'admin', 2500);
   ok(await page.$eval('#pg-admin', (e) => /pagou@teste\.com/.test(e.innerText)).catch(() => false), 'pedidos e usuários aparecem');
+  ok(await page.$eval('#pg-admin', (e) => /Banco de dados ativo/.test(e.innerText) && /Resume project/.test(e.innerText) && /Agenda econômica/.test(e.innerText)).catch(() => false), 'status do robô com nomes claros e aviso de banco pausado');
   await shot(page, 'a-admin');
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
   await browser.close();

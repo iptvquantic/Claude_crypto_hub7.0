@@ -9,11 +9,13 @@ const now = Date.now();
 const rfc = (ms) => new Date(ms).toUTCString();
 const rss = (src, n = 8, extra = '') => `<?xml version="1.0"?><rss><channel><title>${src}</title>${Array.from({ length: n }, (_, i) => `<item><title><![CDATA[${src} manchete ${i} &amp; mercado${extra}]]></title><link>https://news.test/${encodeURIComponent(src)}/${i}</link><pubDate>${rfc(now - (i * 50 + 2) * 60e3)}</pubDate><description><![CDATA[<p>Resumo <b>${i}</b></p>]]></description><media:content url="https://img.test/${i}.jpg" medium="image"/></item>`).join('')}<item><title>velha</title><link>https://news.test/old</link><pubDate>${rfc(now - 9 * 86400e3)}</pubDate></item></channel></rss>`;
 let calls = 0;
+let pingFails = false; let pings = [];
 const failing = new Set(['https://www.criptofacil.com/feed/', 'https://nfs.faireconomy.media/ff_calendar_nextweek.json']);
-globalThis.fetch = async (url) => {
+globalThis.fetch = async (url, opts = {}) => {
   calls++;
   const u = String(url);
   const res = (body, ok = true, status = 200) => ({ ok, status, text: async () => (typeof body === 'string' ? body : JSON.stringify(body)), json: async () => (typeof body === 'string' ? JSON.parse(body) : body) });
+  if (u.includes('.supabase.co/rest/v1/rpc/ping')) { pings.push({ u, method: opts.method, key: (opts.headers || {}).apikey }); return pingFails ? res('paused', false, 540) : res({ ok: true, server_time: new Date().toISOString() }); }
   if (failing.has(u)) return res('erro', false, 503);
   if (u.startsWith('https://raw.githubusercontent.com/')) return res('404', false, 404);
   if (u.includes('news.google.com')) return res(rss('Google', 6, ' - Folha de S.Paulo'));
@@ -54,5 +56,13 @@ const st = read('status');
 ok(st.sources.news.ok && st.sources.calendar.ok && st.sources.markets.ok, 'status registra as fontes');
 ok(/6\/7/.test(st.sources.news.feeds) || /\d+\/\d+/.test(st.sources.news.feeds), `feeds com falha contados (${st.sources.news.feeds})`);
 ok(existsSync(join(out, 'README.md')), 'README do ramo de dados');
+ok(st.sources.db && st.sources.db.ok && pings.length === 1 && pings[0].method === 'POST' && /^sb_publishable_/.test(pings[0].key), 'banco mantido ativo (ping com a chave publicável da configuração)');
+// 2ª execução: banco pausado não derruba o robô
+pingFails = true;
+const out2 = mkdtempSync(join(tmpdir(), 'nx-robot-'));
+process.argv[2] = out2;
+await import(pathToFileURL(new URL('../scripts/atualizar-dados.mjs', import.meta.url).pathname).href + '?run=2');
+const st2 = JSON.parse(readFileSync(join(out2, 'status.json'), 'utf8'));
+ok(st2.sources.db && !st2.sources.db.ok && /pausado/.test(st2.sources.db.err) && st2.sources.news.ok && existsSync(join(out2, 'news.json')), 'banco pausado: avisa no status e o resto continua');
 console.log(`\n${fails.length ? '✗ ' + fails.length + ' falha(s)' : '✓ robô: tudo certo'} (${calls} pedidos simulados)`);
 process.exit(fails.length ? 1 : 0);
