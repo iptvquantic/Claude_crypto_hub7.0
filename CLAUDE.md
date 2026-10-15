@@ -29,3 +29,8 @@ Responda ao dono em português do Brasil, direto. Ele não programa: entregue pr
 
 ## Antes de publicar
 `node dev/build.mjs --beta && node dev/test-app.mjs && node dev/test-robot.mjs`, conferir `/beta/` no navegador real, então `node dev/build.mjs` (raiz).
+Mexeu em CSS do menu ou em cores? `node dev/check-menu.mjs` (menu cabe sem rolar em 5 tamanhos de tela) e `node dev/shot-theme.mjs light` (capturas em `dev/out/`). Contraste mínimo: 4,5:1 em todos os temas.
+
+## Documentos do projeto
+`PROJETO_CONTEXTO.md` e `RELATORIO_FASES_1-3.md` ficam no Conhecimento do Projeto no claude.ai (e numa cópia na pasta Crypto Hub do dono), não neste repositório. Atualize-os ao fim de cada entrega.
+Desta sessão na nuvem o push de tags é recusado; as versões ficam no `CHANGELOG.md` e no histórico.
