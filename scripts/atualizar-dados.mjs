@@ -118,7 +118,7 @@ async function markets(prev) {
   status.etfs = { ok: okE > 0, n: okE };
   // ranking mundial
   let world = prev && prev.world, worldAt = prev && prev.worldAt, worldSrc = (prev && prev.worldSrc) || 'companiesmarketcap.com';
-  try { const w = await worldRanking(); if (w.length >= 20) { world = w; worldAt = new Date().toISOString(); } status.world = { ok: true, n: w.length }; }
+  try { const w = await worldRanking(); if (w.length < 20) throw new Error(`só ${w.length} linhas`); world = w; worldAt = new Date().toISOString(); worldSrc = 'companiesmarketcap.com'; status.world = { ok: true, n: w.length, ...(worldDebug ? { debug: worldDebug } : {}) }; }
   catch (e) { status.world = { ok: false, err: String(e.message || e) }; }
   if (!okQ && !okE && !(status.world && status.world.ok)) throw new Error('nenhuma cotação nesta execução');
   save('markets', { generatedAt: new Date().toISOString(), quotes, etfs, world, worldAt, worldSrc });
@@ -130,17 +130,41 @@ function csvRows(text) {
   const head = split(lines[0]).map((h) => h.trim().toLowerCase());
   return lines.slice(1).map((l) => Object.fromEntries(split(l).map((v, i) => [head[i], v.trim()])));
 }
-async function worldRanking() {
-  const KIND = { gold: 'metal', silver: 'metal', bitcoin: 'crypto', ethereum: 'crypto' };
-  let rows;
-  try { rows = csvRows(await get('https://companiesmarketcap.com/assets-by-market-cap/?download=csv')); } catch { rows = null; }
-  if (!rows || rows.length < 20) rows = csvRows(await get('https://companiesmarketcap.com/?download=csv'));
-  return rows.slice(0, 100).map((r) => {
-    const name = r.name || r['company'] || ''; const key = name.toLowerCase();
-    const mcap = Number(r.marketcap || r['market cap'] || r['marketcap (usd)']); const p = Number(r['price (usd)'] || r.price);
-    return { rank: Number(r.rank) || null, n: name, s: r.symbol || '', kind: KIND[key] || (/etf/i.test(name) ? 'etf' : 'stock'), mcap, p: Number.isFinite(p) ? p : null, country: r.country || '' };
-  }).filter((x) => x.n && Number.isFinite(x.mcap) && x.mcap > 0);
+// Página "assets by market cap" (ouro, prata, bitcoin e empresas). A tabela traz os números crus em data-sort.
+function parseAssetsHtml(html) {
+  const rows = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map((m) => m[1]).filter((r) => /company-name/.test(r));
+  return rows.map((r) => {
+    const name = strip((r.match(/class="company-name"[^>]*>([\s\S]*?)<\/div>/i) || [])[1]);
+    const code = strip(((r.match(/class="company-code"[^>]*>([\s\S]*?)<\/div>/i) || [])[1] || '').replace(/<span[^>]*rank[^>]*>[\s\S]*?<\/span>/i, ''));
+    const sorts = [...r.matchAll(/data-sort="(-?[\d.]+)"/g)].map((m) => Number(m[1]));
+    const tds = [...r.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => strip(m[1]));
+    const money = (t) => { const m = String(t).replace(/,/g, '').match(/\$\s?(-?[\d.]+)\s*([TBMK])?/i); if (!m) return null; const k = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 }[(m[2] || '').toUpperCase()] || 1; return Number(m[1]) * k; };
+    const capTxt = tds.find((t) => /\$[\d.,]+\s*[TBM]\b/.test(t)); const priceTxt = tds.find((t) => t !== capTxt && /^\$[\d.,]+$/.test(t));
+    const pctTxt = tds.find((t) => /^-?[\d.]+%$/.test(t));
+    const rank = sorts.length ? sorts[0] : null;
+    const country = tds.length ? tds[tds.length - 1].replace(/[^\p{L}\s.]/gu, '').trim() : '';
+    return { rank, n: name, s: code, mcap: money(capTxt), p: money(priceTxt), chg: pctTxt ? Number(pctTxt.replace('%', '')) : null, country };
+  }).filter((x) => x.n && Number.isFinite(x.mcap) && x.mcap > 1e9);
 }
+async function worldRanking() {
+  const KIND = { gold: 'metal', silver: 'metal', platinum: 'metal', palladium: 'metal', copper: 'metal', bitcoin: 'crypto', ethereum: 'crypto', xrp: 'crypto', tether: 'crypto', bnb: 'crypto', solana: 'crypto' };
+  const kind = (n) => KIND[n.toLowerCase()] || (/\b(etf|trust|fund)\b/i.test(n) ? 'etf' : 'stock');
+  let list = [], debug = '';
+  try {
+    const html = await get('https://companiesmarketcap.com/assets-by-market-cap/');
+    list = parseAssetsHtml(html).map((x, i) => ({ ...x, rank: x.rank || i + 1, kind: kind(x.n) }));
+    if (list.length < 20) { const k = html.indexOf('company-name'); debug = html.slice(Math.max(0, k - 900), k + 1100).replace(/\s+/g, ' '); }
+  } catch (e) { debug = String(e.message || e); }
+  if (list.length < 20) {
+    // reserva: planilha das empresas (sem metais e cripto)
+    const rows = csvRows(await get('https://companiesmarketcap.com/?download=csv'));
+    if (!rows.length || !('marketcap' in rows[0])) throw new Error('formato da planilha mudou; ' + debug.slice(0, 300));
+    list = rows.slice(0, 100).map((r, i) => ({ rank: Number(r.rank) || i + 1, n: r.name, s: r.symbol || '', kind: 'stock', mcap: Number(r.marketcap), p: Number(r['price (usd)']), chg: null, country: r.country || '' })).filter((x) => x.n && x.mcap > 0);
+    worldDebug = debug.slice(0, 2000);
+  }
+  return list.slice(0, 100);
+}
+let worldDebug = '';
 
 // ---------- execução ----------
 const t0 = Date.now();
