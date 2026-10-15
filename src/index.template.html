@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="__CSP__">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
+<meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
+<meta name="theme-color" content="#0f1627">
+<meta property="og:type" content="website">
+<meta property="og:title" content="NEXUS HUB · Cripto e mercado ao vivo, em português">
+<meta property="og:description" content="Preços ao vivo, on-chain, Fed e Copom, agenda econômica, Polymarket, notícias e sua carteira. Cada número com fonte e horário.">
+<meta property="og:image" content="https://iptvquantic.github.io/Claude_crypto_hub7.0/og.png">
+<meta property="og:locale" content="pt_BR">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.binance.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Pular para o conteúdo</a>
+<div id="boot" aria-hidden="true">
+  <svg class="brand-mark" viewBox="0 0 32 32"><defs><linearGradient id="nxg-a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9aa3ff"/><stop offset="1" stop-color="#5b64e0"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#nxg-a)"/><polyline points="9.5,22.5 9.5,9.5 22.5,22.5 22.5,12" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22.5" cy="9.2" r="3.2" fill="#f4b43f" stroke="#0c1220" stroke-width="1.2"/></svg>
+  <div class="brand-name">NEXUS HUB</div>
+  <div class="bar"><i style="width:45%"></i></div>
+</div>
+<div class="app">
+  <div id="ticker" aria-label="Cotações ao vivo"><div class="tk-track" id="tk-track"></div></div>
+  <header id="hdr">
+    <button class="hdr-tog" id="sb-tog" data-act="sbToggle" aria-label="Recolher menu"></button>
+    <a class="brand" href="#/dash" aria-label="NEXUS HUB, ir para o Dashboard">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="nxg-b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9aa3ff"/><stop offset="1" stop-color="#5b64e0"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#nxg-b)"/><polyline points="9.5,22.5 9.5,9.5 22.5,22.5 22.5,12" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22.5" cy="9.2" r="3.2" fill="#f4b43f" stroke="#0c1220" stroke-width="1.2"/></svg>
+      <span class="brand-name">NEXUS HUB</span>
+    </a>
+    <span class="live-pill" id="live-pill" title="Conectando à Binance…"><i class="dot"></i><span class="txt">Conectando</span></span>
+    <span class="hdr-btc" id="hdr-btc"></span>
+    <span class="hdr-sp"></span>
+    <button class="hdr-search" id="hdr-search" data-act="cmdk"><svg class="ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span class="txt">Buscar página ou moeda</span><kbd>Ctrl K</kbd></button>
+    <span class="hdr-clock" id="hdr-clock"></span>
+    <div class="hdr-act">
+      <div class="lang-sw hide-m" role="group" aria-label="Idioma"><button data-act="setLang" data-v="pt" aria-pressed="true">PT</button><button data-act="setLang" data-v="en" aria-pressed="false">EN</button></div>
+      <div class="rel hide-m"><button class="icon-btn" id="theme-btn" data-act="menu" aria-haspopup="menu" aria-expanded="false" aria-label="Tema"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button><div class="menu" data-build="theme" role="menu"></div></div>
+      <button class="icon-btn ai-btn" id="ai-btn" data-act="ai" aria-label="Assistente de IA"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.13 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z"/></svg></button>
+      <div class="rel" id="acct"></div>
+    </div>
+  </header>
+  <nav id="sb" aria-label="Menu principal"></nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+<div id="sb-ov" data-act="sbClose"></div>
+<div id="toasts" aria-live="polite"></div>
+<div id="scrim" class="scrim"></div>
+<aside id="ai" aria-label="Assistente de IA">
+  <div class="ai-h"><b class="grow">Assistente de IA</b><button class="icon-btn" data-act="ai" aria-label="Fechar"><svg class="ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="ai-msgs" id="ai-msgs"></div>
+  <div class="ai-f"><textarea class="inp" id="ai-in" rows="1" maxlength="2000" placeholder="Pergunte sobre o mercado…" aria-label="Sua pergunta"></textarea><button class="btn pri" id="ai-send" data-act="aiSend" aria-label="Enviar"><svg class="ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></div>
+</aside>
+<noscript><div style="padding:24px;font-family:sans-serif">O NEXUS HUB precisa de JavaScript ativado.</div></noscript>
+<script>
+/*__JS__*/
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "nexus-hub-dev",
+  "private": true,
+  "description": "Ferramentas e testes do NEXUS HUB. Nada daqui é carregado pelo site.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node build.mjs",
+    "build:beta": "node build.mjs --beta",
+    "test": "node build.mjs --beta && node test-app.mjs",
+    "test:db": "bash supabase/test-db.sh"
+  },
+  "devDependencies": {
+    "@fontsource-variable/archivo": "5.2.8",
+    "@supabase/supabase-js": "2.117.2",
+    "lightweight-charts": "4.2.3",
+    "puppeteer-core": "24.43.1"
+  }
+}

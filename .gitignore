@@ -1,0 +1,4 @@
+dev/node_modules/
+dev/out/
+*.log
+.DS_Store
