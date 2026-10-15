@@ -6,7 +6,7 @@
 // atual): calendários oficiais + IBGE ao vivo + robô (ForexFactory).
 // =====================================================================
 const MONTHS_EN_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const CTRY = { US: ['EUA', 'US'], BR: ['BR', 'BR'], EU: ['UE', 'EU'], GB: ['RU', 'UK'], JP: ['JP', 'JP'], CN: ['CN', 'CN'], CA: ['CA', 'CA'], AU: ['AU', 'AU'], NZ: ['NZ', 'NZ'], CH: ['CH', 'CH'], WD: ['Global', 'Global'] };
+const CTRY = { US: ['EUA', 'US'], BR: ['BR', 'BR'], EU: ['UE', 'EU'], DE: ['ALE', 'DE'], GB: ['RU', 'UK'], JP: ['JP', 'JP'], CN: ['CN', 'CN'], CA: ['CA', 'CA'], AU: ['AU', 'AU'], NZ: ['NZ', 'NZ'], CH: ['CH', 'CH'], WD: ['Global', 'Global'] };
 const FF_CTRY = { USD: 'US', EUR: 'EU', GBP: 'GB', JPY: 'JP', CNY: 'CN', CAD: 'CA', AUD: 'AU', NZD: 'NZ', CHF: 'CH', BRL: 'BR', ALL: 'WD' };
 const ctryTag = (c) => `<span class="flag" title="${esc(c)}">${esc(L(...(CTRY[c] || [c, c])))}</span>`;
 function registerMacroSources() {
@@ -45,8 +45,8 @@ function registerMacroSources() {
   });
   source({
     id: 'ffcal', label: L('Calendário econômico global', 'Global economic calendar'), provider: L('robô NEXUS · ForexFactory', 'NEXUS bot · ForexFactory'), every: 30 * 60e3, need,
-    run: async () => { const j = await getPipeline('calendar', 8 * 3600e3); if (!Array.isArray(j.events)) throw new Error('calendar'); return { ev: j.events, gen: Date.parse(j.generatedAt) }; },
-    onData: (d) => { HEALTH.ffcal.dataTs = d.gen; _markDirty('AGENDA'); },
+    run: async () => { const j = await getPipeline('calendar', 8 * 3600e3); if (!Array.isArray(j.events)) throw new Error('calendar'); return { ev: j.events, gen: Date.parse(j.generatedAt), src: j.src || 'ForexFactory' }; },
+    onData: (d) => { HEALTH.ffcal.dataTs = d.gen; SRC.ffcal.provider = L(`robô NEXUS · ${d.src}`, `NEXUS bot · ${d.src}`); _markDirty('AGENDA'); },
   });
   source({
     id: 'pm-fed', label: L('Apostas sobre o Fed', 'Fed bets'), provider: 'Polymarket', every: 10 * 60e3,
@@ -58,18 +58,18 @@ function registerMacroSources() {
   });
 }
 // ---------- IBGE: só as divulgações que mexem com o mercado ----------
-const IBGE_PICK = [
-  [/amplo - 15|IPCA-15/i, 'Prévia da inflação (IPCA-15)', 'Inflation preview (IPCA-15)', 2],
-  [/Preços ao Consumidor Amplo|^IPCA/i, 'Inflação oficial (IPCA)', 'Official inflation (IPCA)', 3],
-  [/Contas Nacionais Trimestrais/i, 'PIB trimestral', 'Quarterly GDP', 3],
-  [/Amostra de Domicílios Contínua Mensal/i, 'Desemprego (PNAD Contínua)', 'Unemployment (PNAD)', 2],
-  [/Pesquisa Industrial Mensal - Produção Física - Brasil|Produção Física – Brasil/i, 'Produção industrial', 'Industrial production', 1],
-  [/Pesquisa Mensal de Comércio/i, 'Vendas no varejo', 'Retail sales', 1],
-  [/Pesquisa Mensal de Serviços/i, 'Volume de serviços', 'Services volume', 1],
+const IBGE_PICK = [ // títulos exatos do calendário do IBGE (conferidos em 15/10/2026)
+  [/^Índice Nacional de Preços ao Consumidor Amplo 15$/i, 'Prévia da inflação (IPCA-15)', 'Inflation preview (IPCA-15)', 2],
+  [/^Índice Nacional de Preços ao Consumidor Amplo$/i, 'Inflação oficial (IPCA)', 'Official inflation (IPCA)', 3],
+  [/^Sistema de Contas Nacionais Trimestrais$/i, 'PIB trimestral', 'Quarterly GDP', 3],
+  [/^Pesquisa Nacional por Amostra de Domicílios Contínua Mensal$/i, 'Desemprego (PNAD Contínua)', 'Unemployment (PNAD)', 2],
+  [/^Pesquisa Industrial Mensal: Produção Física - Brasil$/i, 'Produção industrial', 'Industrial production', 1],
+  [/^Pesquisa Mensal de Comércio$/i, 'Vendas no varejo', 'Retail sales', 1],
+  [/^Pesquisa Mensal de Serviços$/i, 'Volume de serviços', 'Services volume', 1],
 ];
 function ibgeEvent(x) {
   const title = String(x.titulo || '');
-  const hit = IBGE_PICK.find(([re]) => re.test(title) || re.test(String(x.nome_produto || '')));
+  const hit = IBGE_PICK.find(([re]) => re.test(title.trim()));
   if (!hit) return null;
   const at = parseDate(x.data_divulgacao).getTime();
   if (!isNum(at)) return null;
@@ -77,6 +77,14 @@ function ibgeEvent(x) {
 }
 // ---------- tradução dos títulos do calendário global ----------
 const FF_PT = [
+  [/^Fed Interest Rate Decision$/, 'Juros do Fed (decisão)'], [/^Interest Rate Decision$/, 'Decisão de juros'], [/^ECB Interest Rate Decision$/, 'Juros do Banco Central Europeu'], [/^BoE Interest Rate Decision$/, 'Juros do Banco da Inglaterra'], [/^BoJ Interest Rate Decision$/, 'Juros do Banco do Japão'],
+  [/^Inflation Rate YoY$/, 'Inflação em 12 meses'], [/^Inflation Rate MoM$/, 'Inflação no mês'], [/^Core Inflation Rate YoY$/, 'Núcleo da inflação em 12 meses'], [/^Core Inflation Rate MoM$/, 'Núcleo da inflação no mês'],
+  [/^Mid-month Inflation Rate YoY$/, 'Prévia da inflação (IPCA-15) em 12 meses'], [/^Mid-month Inflation Rate MoM$/, 'Prévia da inflação (IPCA-15) no mês'],
+  [/^Non Farm Payrolls$/, 'Criação de empregos (payroll)'], [/^GDP Growth Rate QoQ( Adv| Final| 2nd Est)?$/, 'PIB no trimestre'], [/^GDP Growth Rate YoY( Adv| Final)?$/, 'PIB em 12 meses'],
+  [/^Retail Sales MoM$/, 'Vendas no varejo, mensal'], [/^Retail Sales YoY$/, 'Vendas no varejo em 12 meses'], [/^PPI MoM$/, 'Inflação ao produtor, mensal'], [/^Industrial Production MoM$/, 'Produção industrial, mensal'],
+  [/^Initial Jobless Claims$/, 'Pedidos de seguro-desemprego'], [/^Michigan Consumer Sentiment( Prel| Final)?$/, 'Confiança do consumidor (Michigan)'], [/^ISM Manufacturing PMI$/, 'PMI industrial (ISM)'], [/^ISM Services PMI$/, 'PMI de serviços (ISM)'],
+  [/^Core PCE Price Index MoM$/, 'Núcleo do PCE (inflação preferida do Fed), mensal'], [/^PCE Price Index MoM$/, 'Inflação PCE, mensal'], [/^Balance of Trade$/, 'Balança comercial'], [/^Unemployment Rate$/, 'Taxa de desemprego'],
+  [/^Copom Meeting Minutes$/, 'Ata do Copom'], [/^FOMC Minutes$/, 'Ata do Fed (FOMC)'], [/^(Fed )?Chair .* Speech$|^Fed Chair .*$/, 'Discurso do presidente do Fed'],
   [/^Federal Funds Rate$/, 'Juros do Fed (decisão)'], [/^FOMC Statement$/, 'Comunicado do Fed (FOMC)'], [/^FOMC Press Conference$/, 'Entrevista do presidente do Fed'],
   [/^FOMC Meeting Minutes$/, 'Ata da reunião do Fed'], [/^FOMC Economic Projections$/, 'Projeções do Fed (dot plot)'],
   [/^Core CPI m\/m$/, 'Núcleo da inflação ao consumidor (CPI), mensal'], [/^CPI m\/m$/, 'Inflação ao consumidor (CPI), mensal'], [/^CPI y\/y$/, 'Inflação ao consumidor (CPI), em 12 meses'],
@@ -94,6 +102,7 @@ const FF_PT = [
   [/^Durable Goods Orders m\/m$/, 'Encomendas de bens duráveis, mensal'], [/^Industrial Production m\/m$/, 'Produção industrial, mensal'], [/^Empire State Manufacturing Index$/, 'Índice industrial de Nova York'], [/^Philly Fed Manufacturing Index$/, 'Índice industrial da Filadélfia'],
   [/^(.*) Speaks$/, 'Discurso: $1'], [/^Bank Holiday$/, 'Feriado bancário'],
 ];
+const tvPeriod = (p) => (S.lang === 'en' ? p : String(p).replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, (m) => MONTHS_PT[MONTHS_EN.indexOf(m)]).replace(/\bQ([1-4])\b/, '$1º tri'));
 const ffNum = (v) => (S.lang === 'en' || !v ? v || '' : String(v).replace(/(\d)\.(\d)/g, '$1,$2'));
 function ffTitle(t) { if (S.lang === 'en') return t; for (const [re, pt] of FF_PT) if (re.test(t)) return t.replace(re, pt); return t; }
 const FF_IMP = { High: 3, Medium: 2, Low: 1, Holiday: 0 };
@@ -115,12 +124,16 @@ function allEvents() {
     for (const x of ff.v.ev) {
       const at = Date.parse(x.date); if (!isNum(at)) continue;
       const country = FF_CTRY[x.country] || x.country;
-      const near = ev.find((e) => e.country === country && Math.abs(e.at - at) < 2 * 3600e3 && ((/CPI/.test(x.title) && e.kind === 'cpi') || (/Non-Farm Employment Change|Unemployment Rate/.test(x.title) && e.kind === 'nfp') || (/Federal Funds Rate|FOMC Statement/.test(x.title) && e.kind === 'fomc')));
-      if (near) { // completa o oficial com previsão e anterior
-        if (/^CPI y\/y$|^Federal Funds Rate$|^Non-Farm Employment Change$/.test(x.title)) Object.assign(near, { fc: x.forecast || near.fc, prev: x.previous || near.prev, act: x.actual || near.act, metric: x.title });
+      const near = ev.find((e) => e.country === country && Math.abs(e.at - at) < 4 * 3600e3 && (
+        (e.kind === 'cpi' && /CPI|Inflation Rate/.test(x.title)) || (e.kind === 'nfp' && /Non.?Farm|Unemployment Rate|Average Hourly/.test(x.title)) ||
+        (e.kind === 'fomc' && /Federal Funds Rate|FOMC|Fed Interest Rate|Interest Rate Decision/.test(x.title)) || (e.kind === 'copom' && /Interest Rate Decision|Selic/.test(x.title)) ||
+        (e.kind === 'ibge' && /IPCA|Inflation Rate|Mid-month Inflation|GDP Growth|Unemployment Rate|Retail Sales|Industrial Production|Services/.test(x.title) && Math.abs(e.at - at) < 2 * 3600e3)));
+      if (near) { // completa o evento oficial com previsão, anterior e resultado
+        if (/^CPI y\/y$|^Inflation Rate YoY$|^Federal Funds Rate$|^Fed Interest Rate Decision$|^Interest Rate Decision$|^Non-Farm Employment Change$|^Non Farm Payrolls$|^Mid-month Inflation Rate YoY$|^GDP Growth Rate QoQ|^Unemployment Rate$/.test(x.title) && !near.metric) Object.assign(near, { fc: x.forecast || near.fc, prev: x.previous || near.prev, act: x.actual || near.act, metric: x.title });
         continue;
       }
-      ev.push({ id: 'ff-' + x.country + '-' + x.date + '-' + x.title, at, t: ffTitle(x.title), tEn: x.title, country, imp: FF_IMP[x.impact] ?? 1, src: 'ForexFactory', url: 'https://www.forexfactory.com/calendar', kind: 'ff', fc: x.forecast || '', prev: x.previous || '', act: x.actual || '', allDay: /^(All Day|Tentative)$/i.test(x.time || '') });
+      const tv = ff.v.src === 'TradingView';
+      ev.push({ id: 'ff-' + x.country + '-' + x.date + '-' + x.title, at, t: ffTitle(x.title) + (x.period ? ` (${tvPeriod(x.period)})` : ''), tEn: x.title, country, imp: FF_IMP[x.impact] ?? 1, src: tv ? 'TradingView' : 'ForexFactory', url: tv ? 'https://www.tradingview.com/economic-calendar/' : 'https://www.forexfactory.com/calendar', kind: 'ff', fc: x.forecast || '', prev: x.previous || '', act: x.actual || '', allDay: /^(All Day|Tentative)$/i.test(x.time || '') });
     }
   }
   return ev.sort((a, b) => a.at - b.at);

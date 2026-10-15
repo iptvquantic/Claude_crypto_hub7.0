@@ -23,7 +23,7 @@ globalThis.fetch = async (url) => {
     const sym = decodeURIComponent(u.split('/chart/')[1].split('?')[0]);
     if (sym === 'NG=F') return res({ chart: { result: null, error: { code: 'Not Found' } } });
     const p = sym === '^TNX' ? 41.2 : sym.endsWith('.SA') ? 88.4 : 100 + sym.length;
-    return res({ chart: { result: [{ meta: { regularMarketPrice: p, chartPreviousClose: p / 1.01, regularMarketVolume: 12345, regularMarketTime: Math.floor(now / 1000) - 600, currency: 'USD' } }] } });
+    return res({ chart: { result: [{ meta: { regularMarketPrice: p, chartPreviousClose: p / 1.2, regularMarketVolume: 12345, regularMarketTime: Math.floor(now / 1000) - 600, currency: 'USD' }, indicators: { quote: [{ close: [p / 1.1, p / 1.05, null, p / 1.01, p] }] } }] } });
   }
   if (u.includes('companiesmarketcap.com/assets-by-market-cap')) return res('nope', false, 404);
   if (u.includes('companiesmarketcap.com')) return res('Rank,Name,Symbol,marketcap,price (USD),country\n' + Array.from({ length: 40 }, (_, i) => `${i + 1},"Empresa ${i + 1}, Inc.",E${i},${(40 - i) * 1e11},${100 + i},United States`).join('\n'));

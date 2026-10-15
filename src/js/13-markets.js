@@ -8,11 +8,16 @@ function registerMarketSources() {
     id: 'bcb', label: L('Juros e inflação (BCB)', 'Rates & inflation (BCB)'), provider: 'Banco Central', every: 60 * 60e3,
     need: () => ['markets', 'macro', 'agenda'].includes(S.page),
     run: async () => {
-      const sgs = async (n, last) => {
-        const a = await getJSON(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.${n}/dados/ultimos/${last}?formato=json`, { timeout: 12000 });
+      // "ultimos/N" aceita no máximo 20 valores; a Selic (432) vem preenchida até a próxima reunião, então usa período
+      const br = (t) => { const d = new Date(t); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
+      const sgs = async (n, q) => {
+        const a = await getJSON(`https://api.bcb.gov.br/dados/serie/bcdata.sgs.${n}/dados${q}${q.includes('?') ? '&' : '?'}formato=json`, { timeout: 12000 });
         return a.map((x) => ({ d: parseDate(x.data).getTime(), v: num(x.valor) })).filter((x) => isNum(x.v)).sort((a, b) => a.d - b.d);
       };
-      const [selic, cdi, ipca] = await Promise.all([sgs(432, 40), sgs(4389, 5), sgs(13522, 13)]);
+      const [selic, cdi, ipca] = await Promise.all([
+        sgs(432, `?dataInicial=${br(Date.now() - 400 * 86400e3)}&dataFinal=${br(Date.now() + 60 * 86400e3)}`),
+        sgs(4389, '/ultimos/5'), sgs(13522, '/ultimos/13'),
+      ]);
       const today = Date.now();
       const selicNow = [...selic].reverse().find((x) => x.d <= today + 12 * 3600e3) || selic[selic.length - 1];
       const selicPrev = [...selic].reverse().find((x) => x.v !== selicNow.v && x.d < selicNow.d);

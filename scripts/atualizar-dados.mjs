@@ -73,14 +73,32 @@ async function news() {
   return { n, feeds: `${okFeeds}/${all}` };
 }
 
-// ---------- calendário (ForexFactory) ----------
-async function calendar() {
+// ---------- calendário econômico ----------
+// 1º TradingView (traz o resultado "atual", 3 semanas, inclui Brasil); reserva: ForexFactory (semana atual).
+const tvNum = (v, unit, scale) => (v === null || v === undefined || v === '' ? '' : `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 3 })}${scale || ''}${unit === '%' ? '%' : unit && unit.length <= 3 ? ' ' + unit : ''}`);
+async function tvCalendar() {
+  const from = new Date(Date.now() - 3 * 86400e3).toISOString(), to = new Date(Date.now() + 24 * 86400e3).toISOString();
+  const j = await get(`https://economic-calendar.tradingview.com/events?from=${from}&to=${to}&countries=US,BR,EU,DE,GB,JP,CN,CA,AU`, { as: 'json', headers: { origin: 'https://www.tradingview.com', referer: 'https://www.tradingview.com/' } });
+  const r = (j && j.result) || [];
+  return r.filter((x) => x && x.title && x.date && x.country).map((x) => ({
+    title: String(x.title).slice(0, 120), country: x.country, date: x.date,
+    impact: x.importance === 1 ? 'High' : x.importance === 0 ? 'Medium' : 'Low',
+    forecast: tvNum(x.forecast, x.unit, x.scale), previous: tvNum(x.previous, x.unit, x.scale), actual: tvNum(x.actual, x.unit, x.scale),
+    period: x.period || '',
+  }));
+}
+async function ffCalendar() {
   const urls = ['https://nfs.faireconomy.media/ff_calendar_thisweek.json', 'https://nfs.faireconomy.media/ff_calendar_nextweek.json'];
   const parts = await pool(urls, 2, (u) => get(u, { as: 'json' }));
-  const ev = parts.filter(Array.isArray).flat().filter((x) => x && x.title && x.date && x.country).map((x) => ({ title: String(x.title).slice(0, 120), country: x.country, date: x.date, impact: x.impact, forecast: x.forecast || '', previous: x.previous || '', actual: x.actual || '' }));
   if (!Array.isArray(parts[0])) throw new Error('semana atual indisponível: ' + (parts[0] && parts[0].err));
-  save('calendar', { generatedAt: new Date().toISOString(), events: ev });
-  return { n: ev.length };
+  return parts.filter(Array.isArray).flat().filter((x) => x && x.title && x.date && x.country).map((x) => ({ title: String(x.title).slice(0, 120), country: x.country, date: x.date, impact: x.impact, forecast: x.forecast || '', previous: x.previous || '', actual: x.actual || '' }));
+}
+async function calendar() {
+  let ev = [], src = 'TradingView', note = '';
+  try { ev = await tvCalendar(); } catch (e) { note = 'TradingView: ' + String(e.message || e); }
+  if (ev.length < 10) { src = 'ForexFactory'; ev = await ffCalendar(); }
+  save('calendar', { generatedAt: new Date().toISOString(), src, events: ev });
+  return { n: ev.length, src, ...(note ? { note } : {}) };
 }
 
 // ---------- cotações (Yahoo) ----------
@@ -96,9 +114,11 @@ async function yahoo(sym) {
   for (const host of ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']) {
     try {
       const j = await get(`https://${host}/v8/finance/chart/${encodeURIComponent(sym)}?range=5d&interval=1d`, { as: 'json', timeout: 15000 });
-      const m = j.chart && j.chart.result && j.chart.result[0] && j.chart.result[0].meta;
+      const res = j.chart && j.chart.result && j.chart.result[0]; const m = res && res.meta;
       if (!m || !Number.isFinite(m.regularMarketPrice)) throw new Error('sem preço');
-      const prev = m.chartPreviousClose ?? m.previousClose;
+      // variação do DIA: fechamento anterior = penúltimo fechamento diário (chartPreviousClose é de antes dos 5 dias)
+      const closes = ((res.indicators && res.indicators.quote && res.indicators.quote[0] && res.indicators.quote[0].close) || []).filter(Number.isFinite);
+      const prev = closes.length >= 2 ? closes[closes.length - 2] : m.previousClose;
       return { p: m.regularMarketPrice, prev, chg: Number.isFinite(prev) && prev ? (m.regularMarketPrice / prev - 1) * 100 : null, vol: m.regularMarketVolume ?? null, t: (m.regularMarketTime || 0) * 1000, cur: m.currency };
     } catch (e) { lastErr = e; }
   }
