@@ -56,6 +56,8 @@ function boot() {
   registerOnchainSources(); registerLabSources(); registerEtfSources(); registerWhaleSources(); registerMacroSources(); registerNewsSources();
   buildSidebar();
   accountBoot();
+  renderInstallUI();
+  if (isStandalone()) document.body.classList.add('standalone');
   // preços: foto imediata pelo REST e depois o WebSocket (pares conferidos)
   runSource('px-rest', { force: true }).then(() => { buildTicker(); hideBoot(); });
   validateUniverse().catch(() => {}).finally(() => wsStart());
@@ -73,7 +75,7 @@ function boot() {
   window.addEventListener('offline', () => toast(L('Sem internet: mostrando os últimos valores lidos, com o horário de cada um.', 'Offline: showing last values read, each with its time.'), { type: 'warn', ms: 6000 }));
   window.addEventListener('resize', debounce(() => { if (window.innerWidth <= 900) document.body.classList.remove('sb-mini'); else if (LS.get('sb-mini', false)) document.body.classList.add('sb-mini'); }, 200));
   // PWA (só nesta pasta; nunca guarda dados de mercado)
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 window.addEventListener('error', (e) => { console.error('[NX] erro', e.message, e.filename, e.lineno); });
 window.addEventListener('unhandledrejection', (e) => { console.warn('[NX] promessa sem tratamento', e.reason); });

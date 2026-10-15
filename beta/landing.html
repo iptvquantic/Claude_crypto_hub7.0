@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-0hTLYC++tIsN22PtLoX7j7qm5N5qml2yxwV9gIiwodY='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://api.binance.com https://data-api.binance.vision https://economia.awesomeapi.com.br; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-4Coedmd/NsmjGPeiHUsZOkgxiqPuhNVoTNL2mI0CgL8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://api.binance.com https://data-api.binance.vision https://economia.awesomeapi.com.br; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Cripto e mercado ao vivo, em português</title>
 <meta name="description" content="Preços de cripto ao vivo, on-chain, juros do Fed e do Copom, agenda econômica, Polymarket, notícias em português e sua carteira com preço médio. Cada número com fonte e horário. Grátis, com PRO opcional.">
@@ -14,6 +14,7 @@
 <meta property="og:image" content="https://iptvquantic.github.io/Claude_crypto_hub7.0/og.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
@@ -35,6 +36,7 @@ a { color: var(--accent); text-decoration: none; }
 .btn:active { transform: translateY(1px); }
 .btn.pri { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .btn.pri:hover { color: var(--accent-ink); }
+[hidden] { display: none !important; }
 /* topo */
 .top { position: sticky; top: 0; z-index: 10; background: rgba(12,18,32,.86); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .top .wrap { display: flex; align-items: center; gap: 16px; height: 64px; }
@@ -121,15 +123,15 @@ footer a { color: var(--text-2); }
 <body>
 <header class="top"><div class="wrap">
   <a class="brand" href="landing.html" aria-label="NEXUS HUB"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9aa3ff"/><stop offset="1" stop-color="#5b64e0"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#g)"/><polyline points="9.5,22.5 9.5,9.5 22.5,22.5 22.5,12" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22.5" cy="9.2" r="3.2" fill="#f4b43f" stroke="#0c1220" stroke-width="1.2"/></svg>NEXUS HUB</a>
-  <nav aria-label="Seções"><a href="#dentro" class="hide">O que tem</a><a href="#regras" class="hide">Como funciona</a><a href="#planos">Planos</a><a class="btn pri" href="index.html">Abrir o painel</a></nav>
+  <nav aria-label="Seções"><a href="#dentro" class="hide">O que tem</a><a href="#regras" class="hide">Como funciona</a><a href="#planos">Planos</a><a class="btn" data-install href="index.html#/app" hidden>Baixar o app</a><a class="btn pri" href="index.html">Abrir o painel</a></nav>
 </div></header>
 <main>
 <section class="hero"><div class="wrap">
   <div>
     <h1>O mercado inteiro numa tela.<span>Com a fonte e a hora de cada número.</span></h1>
     <p class="lead">Preços de cripto ao vivo, saúde da rede Bitcoin, juros do Fed e do Copom, agenda econômica, apostas do Polymarket e notícias em português — num painel só, que se atualiza sozinho. E a sua carteira, com preço médio e resultado de verdade.</p>
-    <div class="cta"><a class="btn pri" href="index.html">Abrir o painel grátis</a><a class="btn" href="index.html#/plans">Ver o PRO</a></div>
-    <p class="fine">Sem cadastro para usar o painel. O PRO tem 15 dias grátis, sem cartão.</p>
+    <div class="cta"><a class="btn pri" href="index.html">Abrir o painel grátis</a><a class="btn" data-install href="index.html#/app" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>Baixar o app</a><a class="btn" href="index.html#/plans">Ver o PRO</a></div>
+    <p class="fine">Sem cadastro para usar o painel. O PRO tem 15 dias grátis, sem cartão. Também funciona como app no Android, no iPhone e no computador.</p>
   </div>
   <div class="live" aria-label="Cotações ao vivo">
     <div class="live-h"><span>Bitcoin agora</span><span class="stamp" id="st"><i></i><b>Binance</b>&nbsp;<span id="st-t">conectando…</span></span></div>
@@ -182,7 +184,7 @@ footer a { color: var(--text-2); }
   <div class="faq">
     <details><summary>Preciso criar conta para usar?</summary><p>Não. O painel, as cotações, a macro, a agenda e as notícias abrem direto. A conta só é necessária para o PRO e para salvar a sua carteira.</p></details>
     <details><summary>De onde vêm os números?</summary><p>De fontes como Binance, CoinGecko, Banco Central do Brasil, IBGE, Fed de Nova York, Coin Metrics, mempool.space, Polymarket e veículos de imprensa. Cada painel mostra qual é a fonte e quando foi a leitura.</p></details>
-    <details><summary>Funciona no celular?</summary><p>Sim. O site se ajusta à tela e pode ser instalado como aplicativo pelo navegador ("Adicionar à tela inicial").</p></details>
+    <details><summary>Tem aplicativo para celular?</summary><p>Tem. No Android, toque em "Baixar o app" (ou, no Chrome, menu ⋮ → Instalar app). No iPhone, abra no Safari, toque em Compartilhar e em "Adicionar à Tela de Início". O app abre em tela cheia, com ícone próprio, atualiza sozinho e usa a mesma conta do site — sem Play Store e sem permissões extras.</p></details>
     <details><summary>Como o PRO é ativado?</summary><p>Você cria a conta (com 15 dias grátis), paga o plano pelo PagBank e avisa em "Já paguei". O pagamento é conferido e o PRO é ativado, normalmente no mesmo dia útil.</p></details>
     <details><summary>O NEXUS HUB recomenda investimentos?</summary><p>Não. Ele organiza informação pública para você decidir por conta própria. Nada no site é recomendação de compra ou venda.</p></details>
   </div>
@@ -250,6 +252,17 @@ const COPOM = [
     const when = new Date(x.t).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
     box.innerHTML = `<div><b>Próxima decisão de juros</b><br><span>${x.n} · ${when}${x.approx ? ' (após o fechamento)' : ''}</span></div><div class="cd">${d > 0 ? d + ' d ' : ''}${h} h ${String(m).padStart(2, '0')} min</div>`;
   }
+  // baixar o app (PWA): pedido de instalação do navegador; sem ele, a página com o passo a passo
+  let inst = null;
+  const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const mobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+  const btns = [...document.querySelectorAll('[data-install]')];
+  const showInst = () => btns.forEach((b) => { b.hidden = standalone || !(inst || mobile); });
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); inst = e; showInst(); });
+  window.addEventListener('appinstalled', () => { inst = null; showInst(); });
+  btns.forEach((b) => b.addEventListener('click', async (e) => { if (!inst) return; e.preventDefault(); const ev = inst; inst = null; ev.prompt(); await ev.userChoice.catch(() => null); showInst(); }));
+  showInst();
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
   prices(); fx(); nextEvent();
   setInterval(() => { if (!document.hidden) prices(); }, 15000);
   setInterval(() => { if (!document.hidden) fx(); }, 60000);

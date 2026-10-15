@@ -1005,3 +1005,5 @@ details.li[open] > summary::after { content: '−'; }
 .nc.lead { grid-row: span 2; }
 .nc.lead .nc-img { aspect-ratio: auto; height: clamp(160px, 22vw, 260px); }
 @media (max-width: 900px) { .nc.lead { grid-row: auto; } }
+
+[hidden] { display: none !important; }

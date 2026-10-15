@@ -84,7 +84,14 @@ const FF_PT = [
   [/^Retail Sales MoM$/, 'Vendas no varejo, mensal'], [/^Retail Sales YoY$/, 'Vendas no varejo em 12 meses'], [/^PPI MoM$/, 'Inflação ao produtor, mensal'], [/^Industrial Production MoM$/, 'Produção industrial, mensal'],
   [/^Initial Jobless Claims$/, 'Pedidos de seguro-desemprego'], [/^Michigan Consumer Sentiment( Prel| Final)?$/, 'Confiança do consumidor (Michigan)'], [/^ISM Manufacturing PMI$/, 'PMI industrial (ISM)'], [/^ISM Services PMI$/, 'PMI de serviços (ISM)'],
   [/^Core PCE Price Index MoM$/, 'Núcleo do PCE (inflação preferida do Fed), mensal'], [/^PCE Price Index MoM$/, 'Inflação PCE, mensal'], [/^Balance of Trade$/, 'Balança comercial'], [/^Unemployment Rate$/, 'Taxa de desemprego'],
-  [/^Copom Meeting Minutes$/, 'Ata do Copom'], [/^FOMC Minutes$/, 'Ata do Fed (FOMC)'], [/^(Fed )?Chair .* Speech$|^Fed Chair .*$/, 'Discurso do presidente do Fed'],
+  [/^Copom Meeting Minutes$/, 'Ata do Copom'], [/^BCB Focus Market Readout$/, 'Boletim Focus (Banco Central)'], [/^BCB National Monetary Council Meeting$/, 'Reunião do Conselho Monetário Nacional'],
+  [/^Presidential Elections? - 2nd Round$/, 'Eleição presidencial: 2º turno'], [/^Presidential Elections?$/, 'Eleição presidencial'], [/^Exports YoY$/, 'Exportações em 12 meses'], [/^Imports YoY$/, 'Importações em 12 meses'],
+  [/^Business Confidence$/, 'Confiança empresarial'], [/^Consumer Confidence$/, 'Confiança do consumidor'], [/^S&P Global Services PMI$/, 'PMI de serviços (S&P Global)'], [/^S&P Global Manufacturing PMI$/, 'PMI industrial (S&P Global)'],
+  [/^S&P Global Composite PMI$/, 'PMI composto (S&P Global)'], [/^RBA Meeting Minutes$/, 'Ata do banco central australiano'], [/^ECB President Lagarde Speech$/, 'Discurso: Lagarde (BCE)'], [/^BoE Gov Bailey Speech$/, 'Discurso: Bailey (Banco da Inglaterra)'],
+  [/^Fed Chair Warsh Speech$/, 'Discurso: Warsh (presidente do Fed)'], [/^(.*) Speech$/, 'Discurso: $1'], [/^Existing Home Sales$/, 'Vendas de imóveis usados'], [/^New Home Sales$/, 'Vendas de imóveis novos'], [/^Housing Starts$/, 'Início de obras residenciais'],
+  [/^Industrial Production YoY$/, 'Produção industrial em 12 meses'], [/^House Price Index YoY$/, 'Preço dos imóveis em 12 meses'], [/^Fixed Asset Investment \(YTD\) YoY$/, 'Investimento em ativos fixos no ano'],
+  [/^Export Prices MoM$/, 'Preços de exportação, mensal'], [/^Import Prices MoM$/, 'Preços de importação, mensal'], [/^Monthly Budget Statement$/, 'Resultado fiscal mensal'], [/^Net Long-term TIC Flows$/, 'Fluxo de capital estrangeiro (TIC)'],
+  [/^ZEW Economic Sentiment Index$/, 'Índice ZEW de confiança econômica'], [/^Ifo Business Climate$/, 'Clima de negócios Ifo'], [/^Current Account$/, 'Conta corrente'], [/^Foreign Direct Investment$/, 'Investimento estrangeiro direto'], [/^FOMC Minutes$/, 'Ata do Fed (FOMC)'], [/^(Fed )?Chair .* Speech$|^Fed Chair .*$/, 'Discurso do presidente do Fed'],
   [/^Federal Funds Rate$/, 'Juros do Fed (decisão)'], [/^FOMC Statement$/, 'Comunicado do Fed (FOMC)'], [/^FOMC Press Conference$/, 'Entrevista do presidente do Fed'],
   [/^FOMC Meeting Minutes$/, 'Ata da reunião do Fed'], [/^FOMC Economic Projections$/, 'Projeções do Fed (dot plot)'],
   [/^Core CPI m\/m$/, 'Núcleo da inflação ao consumidor (CPI), mensal'], [/^CPI m\/m$/, 'Inflação ao consumidor (CPI), mensal'], [/^CPI y\/y$/, 'Inflação ao consumidor (CPI), em 12 meses'],
@@ -102,7 +109,7 @@ const FF_PT = [
   [/^Durable Goods Orders m\/m$/, 'Encomendas de bens duráveis, mensal'], [/^Industrial Production m\/m$/, 'Produção industrial, mensal'], [/^Empire State Manufacturing Index$/, 'Índice industrial de Nova York'], [/^Philly Fed Manufacturing Index$/, 'Índice industrial da Filadélfia'],
   [/^(.*) Speaks$/, 'Discurso: $1'], [/^Bank Holiday$/, 'Feriado bancário'],
 ];
-const tvPeriod = (p) => (S.lang === 'en' ? p : String(p).replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, (m) => MONTHS_PT[MONTHS_EN.indexOf(m)]).replace(/\bQ([1-4])\b/, '$1º tri'));
+const tvPeriod = (p) => (S.lang === 'en' ? p : String(p).replace(/\bSept\b/g, 'Sep').replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, (m) => MONTHS_PT[MONTHS_EN.indexOf(m)]).replace(/\bQ([1-4])\b/, '$1º tri'));
 const ffNum = (v) => (S.lang === 'en' || !v ? v || '' : String(v).replace(/(\d)\.(\d)/g, '$1,$2'));
 function ffTitle(t) { if (S.lang === 'en') return t; for (const [re, pt] of FF_PT) if (re.test(t)) return t.replace(re, pt); return t; }
 const FF_IMP = { High: 3, Medium: 2, Low: 1, Holiday: 0 };

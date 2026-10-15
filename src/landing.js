@@ -44,6 +44,17 @@
     const when = new Date(x.t).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
     box.innerHTML = `<div><b>Próxima decisão de juros</b><br><span>${x.n} · ${when}${x.approx ? ' (após o fechamento)' : ''}</span></div><div class="cd">${d > 0 ? d + ' d ' : ''}${h} h ${String(m).padStart(2, '0')} min</div>`;
   }
+  // baixar o app (PWA): pedido de instalação do navegador; sem ele, a página com o passo a passo
+  let inst = null;
+  const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const mobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+  const btns = [...document.querySelectorAll('[data-install]')];
+  const showInst = () => btns.forEach((b) => { b.hidden = standalone || !(inst || mobile); });
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); inst = e; showInst(); });
+  window.addEventListener('appinstalled', () => { inst = null; showInst(); });
+  btns.forEach((b) => b.addEventListener('click', async (e) => { if (!inst) return; e.preventDefault(); const ev = inst; inst = null; ev.prompt(); await ev.userChoice.catch(() => null); showInst(); }));
+  showInst();
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
   prices(); fx(); nextEvent();
   setInterval(() => { if (!document.hidden) prices(); }, 15000);
   setInterval(() => { if (!document.hidden) fx(); }, 60000);

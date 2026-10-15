@@ -190,6 +190,7 @@ function registerDashSources() {
 function dashHtml() {
   const p = PAGES.dash;
   return `${pageHead(p, `<button class="btn sm pri" id="d-add" data-act="pcAdd">${ico('plus', 16)}${esc(L('Adicionar moeda', 'Add coin'))}</button><button class="btn sm ghost" data-act="pcReset" title="${esc(L('Voltar aos cards padrão', 'Reset cards'))}">${ico('undo-2', 16)}<span class="hide-m">${esc(L('Cards padrão', 'Default cards'))}</span></button><button class="btn sm" data-act="refreshAll">${ico('refresh-cw', 16)}${esc(L('Atualizar', 'Refresh'))}</button>`)}
+  <div id="d-install"></div>
   <div class="pcards" id="d-cards"></div>
   <div class="panel flush mt"><div class="strip s8" id="d-strip">${skel(1, 34)}</div><div class="row wrap" style="padding:8px 14px 12px;gap:6px" id="d-strip-src"></div></div>
   <div class="grid g-3 mt">
@@ -361,7 +362,7 @@ function drawEvents() {
   box.innerHTML = panelHead('calendar-days', L('Próximos eventos que mexem com o mercado', 'Upcoming market-moving events'), { sub: esc(L('Calendários oficiais. Quando um evento passa, o próximo assume sozinho.', 'Official calendars. When an event passes, the next one takes its place.')), right: `<a class="link-btn" href="#/agenda">${esc(L('Agenda completa', 'Full calendar'))}${ico('chevron-right', 15)}</a>` }) +
     (evs.length ? `<div>${evs.map((e, i) => `<div class="ev ${i === 0 ? 'next' : ''}"><div class="ev-d">${esc(fmtDate(e.at, { day: '2-digit', month: 'short' }))}<small>${esc(fmtTime(e.at))}</small></div><div><div class="ev-t">${ctryTag(e.country)}${esc(e.t)}<span class="imp i${e.imp}" title="${esc(L('Impacto', 'Impact'))}"><i></i><i></i><i></i></span></div><div class="ev-m"><span>${esc(e.src)}</span></div></div><span class="badge ${i === 0 ? 'pro' : ''}" data-until="${e.at}">${esc(until(e.at))}</span></div>`).join('')}</div>` : emptyBox('calendar-days', L('Sem eventos programados', 'No events scheduled')));
 }
-function dashDraw() { drawCards(); drawStrip(); drawFng(); drawDom(); drawRsi(); drawHeat(); drawMovers(); drawTrend(); drawMonthly(); drawEvents(); }
+function dashDraw() { setHTML('#d-install', typeof installHint === 'function' ? installHint() : ''); drawCards(); drawStrip(); drawFng(); drawDom(); drawRsi(); drawHeat(); drawMovers(); drawTrend(); drawMonthly(); drawEvents(); }
 onPrice((set) => {
   if (S.page !== 'dash' || !$('#pg-dash.on')) return;
   updCards(set);

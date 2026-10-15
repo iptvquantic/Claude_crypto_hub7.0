@@ -21,10 +21,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // ruído do ambiente de teste: WebSocket sem rede e service worker (o interceptador do teste não serve scripts de SW)
 const NOISE = /WebSocket connection|Failed to load resource|net::ERR_|ERR_BLOCKED|favicon|fetching the script/i;
 
+const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36';
 async function open({ width = 1280, height = 860, hash = '#/dash', pipeline = true, supa = null, storage = {}, mobile = false } = {}) {
   const browser = await puppeteer.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--lang=pt-BR', '--disable-background-networking', '--disable-component-update', '--no-first-run'] });
   const page = await browser.newPage();
   await page.emulateTimezone('America/Sao_Paulo');
+  if (mobile) await page.setUserAgent(ANDROID_UA);
   await page.setViewport({ width, height, deviceScaleFactor: 1, isMobile: mobile, hasTouch: mobile });
   const errors = [], unhandled = [];
   page.on('console', (m) => { if (m.type() === 'error' && !NOISE.test(m.text())) errors.push(m.text().slice(0, 300)); });
@@ -123,6 +125,14 @@ console.log('\n[2] Visitante · celular (390×844)');
     ok(!r.overflow, `${id}: sem rolagem lateral ${r.wide.join(' ')}`);
     await shot(page, 'm-' + id);
   }
+  await goPage(page, 'dash', 1500);
+  ok(await page.$('#d-install .callout') !== null, 'celular: aviso "Instale o app" no Dashboard');
+  ok(await page.$eval('#inst-btn', (b) => !b.hidden).catch(() => false), 'celular: botão de baixar o app no topo');
+  await page.click('#d-install [data-act=installLater]'); await sleep(300);
+  ok(await page.$('#d-install .callout') === null, '"Agora não" esconde o aviso');
+  await goPage(page, 'app', 1500);
+  ok(await page.$eval('#app-body', (e) => /Android/.test(e.querySelector('.panel[style*=accent]')?.innerText || '')).catch(() => false), 'página Baixar o app mostra o passo a passo do Android primeiro');
+  await shot(page, 'm-app');
   await page.click('#sb-tog'); await sleep(500);
   ok(await page.evaluate(() => document.body.classList.contains('sb-open')), 'botão abre o menu no celular');
   await shot(page, 'm-menu', false);
@@ -214,6 +224,34 @@ console.log('\n[6] Sem os arquivos do robô (fallback)');
   ok(await page.$eval('#mk-quotes', (e) => /ainda não disponíveis|Carregando|robô/.test(e.innerText) || e.querySelector('.skel')).catch(() => false), 'bolsas mostram aviso honesto (sem número inventado)');
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
   await browser.close();
+}
+// ---------- 7. app instalável (PWA) num servidor local (localhost conta como seguro) ----------
+console.log('\n[7] App instalável (PWA)');
+{
+  const http = await import('node:http');
+  const srv = http.createServer((req, res) => {
+    const u = decodeURIComponent(req.url.split('?')[0]);
+    const rel = u.replace(/^\/Claude_crypto_hub7\.0\//, '');
+    let f = join(ROOT, rel.endsWith('/') || rel === '' ? rel + 'index.html' : rel);
+    if (!existsSync(f) || !statSync(f).isFile()) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { 'content-type': TYPES[extname(f)] || 'application/octet-stream' }); res.end(readFileSync(f));
+  }).listen(0);
+  const port = srv.address().port;
+  const browser = await puppeteer.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-background-networking'] });
+  for (const file of ['index.html', 'landing.html']) {
+    const page = await browser.newPage();
+    await page.goto(`http://localhost:${port}/Claude_crypto_hub7.0/${BASE}${file}`, { waitUntil: 'domcontentloaded' });
+    const sw = await page.evaluate(() => Promise.race([navigator.serviceWorker.ready.then((r) => !!r.active), new Promise((r) => setTimeout(() => r(false), 8000))]));
+    ok(sw, `${file}: service worker ativo`);
+    await sleep(500);
+    const cdp = await page.target().createCDPSession();
+    const { installabilityErrors } = await cdp.send('Page.getInstallabilityErrors');
+    ok(!installabilityErrors.length, `${file}: pode ser instalado como app ${installabilityErrors.map((e) => e.errorId).join(',')}`);
+    const m = await cdp.send('Page.getAppManifest');
+    ok(m.errors.length === 0 && /NEXUS HUB/.test(m.data || ''), `${file}: manifesto válido`);
+    await page.close();
+  }
+  await browser.close(); srv.close();
 }
 console.log(`\n${fails.length ? '✗ ' + fails.length + ' falha(s)' : '✓ tudo certo'}`);
 process.exit(fails.length ? 1 : 0);
