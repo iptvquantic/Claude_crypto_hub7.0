@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-4PenvKLgssPiT9zA12qN3NPIEaMa1Y8o+9dV4LfGO3I=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-1iHJjG3LCjx+Fpfiy8OGePT1W5KXmfmqm+FDdZ9pW1M=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -1088,7 +1088,7 @@ details.li[open] > summary::after { content: '−'; }
 // =====================================================================
 const NX = {
   version: '3.0.1',
-  build: '20261015-2224-c3e246e-beta',
+  build: '20261015-2229-79c1070-beta',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',
@@ -2742,7 +2742,7 @@ function dbHeartbeat() {
     const last = num(LS.get('dbPing', 0));
     if (isNum(last) && Date.now() - last < 20 * 3600e3) return;
     LS.set('dbPing', Date.now());
-    fetch(NX.supabaseUrl + '/rest/v1/rpc/ping', { method: 'POST', headers: { apikey: NX.supabaseKey, 'content-type': 'application/json' }, body: '{}', credentials: 'omit', keepalive: true }).catch(() => {});
+    fetch(NX.supabaseUrl + '/rest/v1/rpc/ping', { method: 'POST', headers: { apikey: NX.supabaseKey, 'content-type': 'application/json' }, body: '{}', credentials: 'omit' }).catch(() => {});
   } catch { /* nunca atrapalha o site */ }
 }
 

@@ -319,6 +319,6 @@ function dbHeartbeat() {
     const last = num(LS.get('dbPing', 0));
     if (isNum(last) && Date.now() - last < 20 * 3600e3) return;
     LS.set('dbPing', Date.now());
-    fetch(NX.supabaseUrl + '/rest/v1/rpc/ping', { method: 'POST', headers: { apikey: NX.supabaseKey, 'content-type': 'application/json' }, body: '{}', credentials: 'omit', keepalive: true }).catch(() => {});
+    fetch(NX.supabaseUrl + '/rest/v1/rpc/ping', { method: 'POST', headers: { apikey: NX.supabaseKey, 'content-type': 'application/json' }, body: '{}', credentials: 'omit' }).catch(() => {});
   } catch { /* nunca atrapalha o site */ }
 }
