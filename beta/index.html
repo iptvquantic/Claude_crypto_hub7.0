@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-9N7tJXKU7lM3Bemqr6uqolkl0zm4OqMhAyIkrYGVQR0=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-7OeTmQjgjS219OEexHUCjOJg3Kcu48MrPIQ7W/AEa9w=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -1083,7 +1083,7 @@ details.li[open] > summary::after { content: '−'; }
 // =====================================================================
 const NX = {
   version: '3.0.0',
-  build: '20261015-2135-50958ba-beta',
+  build: '20261015-2139-04605f9-beta',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',
@@ -3499,8 +3499,8 @@ function drawRates() {
     mkCard('Selic (meta)', B ? esc(fmtPct(B.selic.v, 2, false)) + ` <span class="small faint">${esc(L('ao ano', 'a year'))}</span>` : '—', B && B.selicPrev ? `${esc(L('antes:', 'previous:'))} ${esc(fmtPct(B.selicPrev.v, 2, false))}` : '', { stampId: 'bcb', foot: esc(L('Definida pelo Copom. Série 432 do Banco Central.', 'Set by Copom. Central Bank series 432.')) }),
     mkCard(L('CDI', 'CDI'), B && B.cdi ? esc(fmtPct(B.cdi.v, 2, false)) + ` <span class="small faint">${esc(L('ao ano', 'a year'))}</span>` : '—', B && B.cdi ? `<span class="faint">${esc(L('taxa de', 'rate of'))} ${esc(fmtDate(B.cdi.d, { day: '2-digit', month: 'short', timeZone: 'UTC' }))}</span>` : '', { stampId: 'bcb', foot: esc(L('Referência da renda fixa. Série 4389 do Banco Central.', 'Fixed-income benchmark. Series 4389.')) }),
     mkCard(L('Inflação (IPCA 12 meses)', 'Inflation (IPCA 12m)'), B && B.ipca ? esc(fmtPct(B.ipca.v, 2, false)) : '—', B && B.ipcaPrev ? `${esc(L('mês anterior:', 'prior month:'))} ${esc(fmtPct(B.ipcaPrev.v, 2, false))}` : '', { stampId: 'bcb', foot: ipcaRef ? esc(L(`Acumulado até ${monthName(ipcaRef.getUTCMonth())}/${ipcaRef.getUTCFullYear()}. Série 13522.`, `12 months to ${monthName(ipcaRef.getUTCMonth())}/${ipcaRef.getUTCFullYear()}. Series 13522.`)) : '' }),
-    mkCard(L('Expectativa do mercado (Focus)', 'Market expectations (Focus)'), B && B.focus && isNum(B.focus.ipca) ? `IPCA ${B.focus.y}: ${esc(fmtPct(B.focus.ipca, 2, false))}` : '—', B && B.focus && isNum(B.focus.selic) ? `Selic ${esc(L('fim de', 'end of'))} ${B.focus.y}: <b>${esc(fmtPct(B.focus.selic, 2, false))}</b>` : '', { stampId: 'bcb', foot: B && B.focus ? esc(L(`Mediana do boletim Focus de ${fmtDate(B.focus.date, { day: '2-digit', month: 'short', timeZone: 'UTC' })}.`, `Focus survey median of ${fmtDate(B.focus.date)}.`)) : '' }),
-    mkCard(L('Juros dos EUA (Fed)', 'US rate (Fed)'), F ? `${esc(fmtNum(F.from, 2, 2))}–${esc(fmtNum(F.to, 2, 2))}%` : '—', F ? `${esc(L('taxa efetiva (EFFR):', 'effective rate (EFFR):'))} <b>${esc(fmtNum(F.effr, 2, 2))}%</b>` : '', { stampId: 'fed', foot: F ? esc(L(`Faixa-alvo do Fed. Leitura de ${fmtDate(F.date, { day: '2-digit', month: 'short', timeZone: 'UTC' })} (Fed de Nova York).`, `Fed target range, as of ${fmtDate(F.date)} (New York Fed).`)) : '' }),
+    mkCard(L('Expectativa do mercado (Focus)', 'Market expectations (Focus)'), B && B.focus && isNum(B.focus.ipca) ? `IPCA ${B.focus.y}: ${esc(fmtPct(B.focus.ipca, 2, false))}` : '—', B && B.focus && isNum(B.focus.selic) ? `Selic ${esc(L('fim de', 'end of'))} ${B.focus.y}: <b>${esc(fmtPct(B.focus.selic, 2, false))}</b>` : '', { stampId: 'bcb', foot: B && B.focus ? esc(L(`Mediana do boletim Focus de ${fmtDate(B.focus.date, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })}.`, `Focus survey median of ${fmtDate(B.focus.date)}.`)) : '' }),
+    mkCard(L('Juros dos EUA (Fed)', 'US rate (Fed)'), F ? `${esc(fmtNum(F.from, 2, 2))}–${esc(fmtNum(F.to, 2, 2))}%` : '—', F ? `${esc(L('taxa efetiva (EFFR):', 'effective rate (EFFR):'))} <b>${esc(fmtNum(F.effr, 2, 2))}%</b>` : '', { stampId: 'fed', foot: F ? esc(L(`Faixa-alvo do Fed. Leitura de ${fmtDate(F.date, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })} (Fed de Nova York).`, `Fed target range, as of ${fmtDate(F.date)} (New York Fed).`)) : '' }),
   ].join('');
   setHTML('#mk-rates', html);
 }
