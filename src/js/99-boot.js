@@ -56,6 +56,7 @@ function boot() {
   registerOnchainSources(); registerLabSources(); registerEtfSources(); registerWhaleSources(); registerMacroSources(); registerNewsSources();
   buildSidebar();
   accountBoot();
+  setTimeout(dbHeartbeat, 6000);
   renderInstallUI();
   if (isStandalone()) document.body.classList.add('standalone');
   // preços: foto imediata pelo REST e depois o WebSocket (pares conferidos)

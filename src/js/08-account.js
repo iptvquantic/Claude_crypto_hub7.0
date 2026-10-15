@@ -311,3 +311,14 @@ async function accountBoot() {
     toast(L('Não foi possível conectar ao servidor de contas agora. O painel funciona normalmente.', 'Could not reach the account server. The dashboard still works.'), { type: 'warn' });
   }
 }
+// Mantém o banco ativo: o Supabase grátis pausa o projeto após ~7 dias sem consultas (login e Vault parariam).
+// O robô de dados já faz isso; como reforço, cada navegador faz no máximo 1 consulta técnica por dia,
+// anônima (função ping, que não lê tabela nenhuma), sem enviar dado da pessoa.
+function dbHeartbeat() {
+  try {
+    const last = num(LS.get('dbPing', 0));
+    if (isNum(last) && Date.now() - last < 20 * 3600e3) return;
+    LS.set('dbPing', Date.now());
+    fetch(NX.supabaseUrl + '/rest/v1/rpc/ping', { method: 'POST', headers: { apikey: NX.supabaseKey, 'content-type': 'application/json' }, body: '{}', credentials: 'omit', keepalive: true }).catch(() => {});
+  } catch { /* nunca atrapalha o site */ }
+}

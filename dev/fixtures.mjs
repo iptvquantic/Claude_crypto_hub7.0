@@ -227,6 +227,7 @@ export function respond(url, method = 'GET', body = '', opts = {}) {
     const d = opts.pipeline !== false && name ? pipeline(name) : null;
     return d ? { ...json(d), headers: { 'access-control-allow-origin': '*' } } : { status: 404, contentType: 'text/plain', body: '404: Not Found', headers: { 'access-control-allow-origin': '*' } };
   }
+  if (/\.supabase\.co$/.test(h) && p === '/rest/v1/rpc/ping') { if (opts.pings) opts.pings.push(method); return json({ ok: true, server_time: new Date().toISOString() }); }
   if (/\.supabase\.co$/.test(h) && opts.supabase) return opts.supabase.handle(url, method, body, opts.headers || {});
   return null;
 }

@@ -111,6 +111,7 @@ console.log('\n[1] Visitante · computador · todas as páginas');
   const csp = await page.evaluate(() => window.__csp);
   ok(!csp.length, `sem violação de CSP ${csp.join(' | ')}`);
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
+  ok(await page.evaluate(() => !!localStorage.getItem('nx3:dbPing')), 'sinal de vida do banco enviado (no máximo 1 vez por dia)');
   if (unhandled.length) console.log('    · pedidos sem simulação:', [...new Set(unhandled)].slice(0, 12).join('\n      '));
   await browser.close();
 }
