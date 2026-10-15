@@ -236,7 +236,7 @@ function drawFng() {
   if (!a || !a.length) { box.innerHTML = head + (HEALTH.fng && HEALTH.fng.ok === false ? emptyBox('wifi-off', L('Índice indisponível agora', 'Index unavailable now'), esc(L('Tentando de novo automaticamente.', 'Retrying automatically.'))) : skel(5, 18)); return; }
   const v = num(a[0].value), col = fgColor(v);
   const days = a.slice(0, 7).reverse();
-  const dayHtml = days.map((d) => { const n = num(d.value), ts = num(d.timestamp) * 1000; return `<div class="fg-day" title="${esc(fmtDate(ts))}"><div class="d">${esc(fmtDate(ts, { day: '2-digit', month: '2-digit', timeZone: 'UTC' }))}</div><div class="n" style="color:${fgColor(n)}">${n}</div><div class="c">${esc(fgLabel(d.value_classification))}</div></div>`; }).join('');
+  const dayHtml = days.map((d) => { const n = num(d.value), ts = num(d.timestamp) * 1000; return `<div class="fg-day" title="${esc(`${fmtDate(ts)} · ${n} · ${fgLabel(d.value_classification)}`)}"><div class="d">${esc(fmtDate(ts, { day: '2-digit', month: '2-digit', timeZone: 'UTC' }))}</div><div class="n" style="color:${fgColor(n)}">${n}</div><div class="c">${esc(fgLabel(d.value_classification))}</div></div>`; }).join('');
   const avg30 = avg(a.slice(0, 30).map((d) => num(d.value)).filter(isNum));
   const ref = (k, i) => (a[i] ? `<span>${esc(k)} <b style="color:${fgColor(num(a[i].value))}">${esc(a[i].value)}</b></span>` : '');
   box.innerHTML = `${head}<div class="fg-wrap">${gaugeSVG(v)}<div class="fg-val" style="color:${col}">${v}</div><div class="fg-lbl">${esc(fgLabel(a[0].value_classification))}</div>
