@@ -1,40 +1,12 @@
 [
- {
-  "id": "bitinfo",
-  "url": "https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html",
-  "save": "bitinfo.html",
-  "sampleLen": 100
- },
- {
-  "id": "ll-hype-full",
-  "url": "https://api.llama.fi/summary/fees/hyperliquid?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
-  "save": "ll-hype.json",
-  "sampleLen": 100,
-  "timeout": 40000
- },
- {
-  "id": "ll-eth-full",
-  "url": "https://api.llama.fi/summary/fees/ethereum?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
-  "save": "ll-eth.json",
-  "sampleLen": 100,
-  "timeout": 40000
- },
- {
-  "id": "cm-sample",
-  "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD,CapMVRVCur,CapMrktCurUSD,IssTotUSD,HashRate,AdrActCnt,SplyCur,SplyExNtv,FlowInExNtv,FlowOutExNtv,FeeTotNtv,TxCnt&frequency=1d&page_size=5&paging_from=end",
-  "save": "cm-sample.json",
-  "sampleLen": 100
- },
- {
-  "id": "cm-first",
-  "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD,CapMVRVCur,SplyExNtv,FlowInExNtv&frequency=1d&page_size=3&start_time=2010-01-01",
-  "save": "cm-first.json",
-  "sampleLen": 100
- },
- {
-  "id": "gn-geo-en",
-  "url": "https://news.google.com/rss/search?q=%28site%3Areuters.com%20OR%20site%3Aapnews.com%20OR%20site%3Aafp.com%29%20%28war%20OR%20strike%20OR%20sanctions%20OR%20missile%20OR%20ceasefire%29%20when%3A2d&hl=en-US&gl=US&ceid=US:en",
-  "save": "gn-geo-en.xml",
-  "sampleLen": 100
- }
+ { "id": "mp-blocks", "url": "https://mempool.space/api/v1/blocks", "save": "mp-blocks.json" },
+ { "id": "mp-pools-1w", "url": "https://mempool.space/api/v1/mining/pools/1w", "save": "mp-pools.json" },
+ { "id": "mp-ln", "url": "https://mempool.space/api/v1/lightning/statistics/latest", "save": "mp-ln.json" },
+ { "id": "mp-mblocks", "url": "https://mempool.space/api/v1/fees/mempool-blocks", "save": "mp-mblocks.json" },
+ { "id": "mp-price", "url": "https://mempool.space/api/v1/prices" },
+ { "id": "mp-hash-1y", "url": "https://mempool.space/api/v1/mining/hashrate/1y", "save": "mp-hash1y.json" },
+ { "id": "mp-reward", "url": "https://mempool.space/api/v1/mining/reward-stats/144" },
+ { "id": "mp-diff", "url": "https://mempool.space/api/v1/mining/difficulty-adjustments/1y" },
+ { "id": "cg-treas-eth", "url": "https://api.coingecko.com/api/v3/companies/public_treasury/ethereum", "save": "cg-treas-eth.json" },
+ { "id": "cg-eth-detail", "url": "https://api.coingecko.com/api/v3/coins/ethereum?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false", "save": "cg-eth.json" }
 ]
