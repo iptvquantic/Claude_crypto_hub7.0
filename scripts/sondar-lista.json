@@ -1,12 +1,12 @@
 [
- { "id": "mp-blocks", "url": "https://mempool.space/api/v1/blocks", "save": "mp-blocks.json" },
- { "id": "mp-pools-1w", "url": "https://mempool.space/api/v1/mining/pools/1w", "save": "mp-pools.json" },
- { "id": "mp-ln", "url": "https://mempool.space/api/v1/lightning/statistics/latest", "save": "mp-ln.json" },
- { "id": "mp-mblocks", "url": "https://mempool.space/api/v1/fees/mempool-blocks", "save": "mp-mblocks.json" },
- { "id": "mp-price", "url": "https://mempool.space/api/v1/prices" },
- { "id": "mp-hash-1y", "url": "https://mempool.space/api/v1/mining/hashrate/1y", "save": "mp-hash1y.json" },
- { "id": "mp-reward", "url": "https://mempool.space/api/v1/mining/reward-stats/144" },
- { "id": "mp-diff", "url": "https://mempool.space/api/v1/mining/difficulty-adjustments/1y" },
- { "id": "cg-treas-eth", "url": "https://api.coingecko.com/api/v3/companies/public_treasury/ethereum", "save": "cg-treas-eth.json" },
- { "id": "cg-eth-detail", "url": "https://api.coingecko.com/api/v3/coins/ethereum?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false", "save": "cg-eth.json" }
+ { "id": "cm-catalog2", "url": "https://community-api.coinmetrics.io/v4/catalog-v2/asset-metrics?assets=btc&page_size=2000", "pick": "cm-catalog", "timeout": 40000 },
+ { "id": "cm-SplyAct1yr", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyAct1yr&frequency=1d&page_size=3&paging_from=end" },
+ { "id": "cm-SplyActEver", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyActEver&frequency=1d&page_size=3&paging_from=end" },
+ { "id": "cm-RevUSD", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=RevUSD&frequency=1d&page_size=3&paging_from=end" },
+ { "id": "cm-TxTfrValAdjUSD", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=TxTfrValAdjUSD&frequency=1d&page_size=3&paging_from=end" },
+ { "id": "cm-NVTAdj", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=NVTAdj&frequency=1d&page_size=3&paging_from=end" },
+ { "id": "cm-CapRealUSD", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=CapRealUSD&frequency=1d&page_size=3&paging_from=end" },
+ { "id": "cm-SplyAct10yr", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyAct10yr,SplyAct5yr,SplyAct2yr,SplyAct180d&frequency=1d&page_size=3&paging_from=end" },
+ { "id": "cm-VelCur1yr", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=VelCur1yr,SER,ROI30d&frequency=1d&page_size=3&paging_from=end" },
+ { "id": "cm-first-act1yr", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyAct1yr,TxTfrValAdjUSD,RevUSD&frequency=1d&page_size=3&start_time=2010-07-18" }
 ]
