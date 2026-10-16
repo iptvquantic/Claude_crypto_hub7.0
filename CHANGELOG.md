@@ -1,5 +1,13 @@
 # Mudanças
 
+## 3.1.0 — 16/10/2026 (em andamento)
+- **Faixa do topo rolando de novo**, agora com os destaques do dia: maiores altas e baixas das 100 maiores criptomoedas (sem stablecoins), além de BTC, ETH, SOL, BNB, XRP, dólar, ouro e prata. Ela parava no Windows com os "efeitos de animação" desligados; agora só para se você desligar em Configurações › Aparência.
+- **Dashboard sem o mapa de calor**; maiores altas e baixas passam a usar o Top 100.
+- **Menu com ícones coloridos** (cada página com a sua cor; a atual fica preenchida) e **letras maiores dentro dos quadros**.
+- **Menu inteiro sem rolar em qualquer altura de tela de computador**: a altura dos itens é calculada pelo espaço disponível.
+- **Robô de dados:** histórico on-chain do BTC, recompra e queima por token, 100 maiores endereços de BTC e geopolítica de 7 dias (acumula entre execuções, só veículos reconhecidos, acentos corrigidos); segunda grade de horários para cobrir quando o GitHub pula execuções.
+- **Banco:** permissões extras aplicadas (visitante sem login só chama o sinal de vida).
+
 ## 3.0.1 — 15/10/2026
 - **Banco de dados sempre ativo:** o plano grátis do Supabase pausa o projeto depois de ~7 dias sem uso (login e Vault parariam). O robô de dados agora faz uma consulta mínima a cada execução e, como reforço, cada navegador que abre o site faz no máximo uma por dia (anônima, sem dado pessoal; política de privacidade atualizada). O Painel do administrador mostra se o banco respondeu, com o caminho para reativar caso ele pause.
 - **Painel do administrador:** status do robô com nomes claros (Notícias, Agenda econômica, Bolsas e índices…).

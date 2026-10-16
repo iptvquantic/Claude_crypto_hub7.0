@@ -3,7 +3,7 @@
 // dominância, RSI, mapa de calor, maiores altas/baixas, em alta,
 // próximos eventos e retornos mensais (BTC/ETH).
 // =====================================================================
-const DASH = { cards: null, flashAt: {}, hm: '24h', mr: 'BTC', t: {} };
+const DASH = { cards: null, flashAt: {}, mr: 'BTC', t: {} };
 
 // ---------- cards: leitura/migração ----------
 function dashCards() {
@@ -198,7 +198,6 @@ function dashHtml() {
     <section class="panel" id="d-dom"></section>
     <section class="panel" id="d-rsi"></section>
   </div>
-  <section class="panel mt" id="d-hm"></section>
   <div class="grid g-3 mt">
     <section class="panel" id="d-up"></section>
     <section class="panel" id="d-down"></section>
@@ -276,47 +275,20 @@ function drawRsi() {
   const grp = (b) => `<div class="rsi-g"><div class="rsi-h">${coinLogo({ ...BY_BASE[b], logo: LOGOS[BY_BASE[b].cg] }, 20)}${esc(b)}</div>${['1h', '4h', '1d', '1w'].map((tf) => { const v = r.v[b] && r.v[b][tf]; const [cls, st] = rsiState(v); return `<div class="rsi-r"><span class="tf">${tfn[tf]}</span><div class="rsi-bar">${isNum(v) ? `<i style="left:${clamp(v, 0, 100)}%"></i>` : ''}</div><span class="v">${isNum(v) ? fmtNum(v, 1, 1) : '—'}</span><span class="st ${cls}">${esc(st)}</span></div>`; }).join('')}</div>`;
   box.innerHTML = head + grp('BTC') + grp('ETH') + note(L('Método de Wilder sobre as velas da Binance; a vela atual entra no cálculo (como nas corretoras).', 'Wilder method on Binance candles; the current candle is included (as on exchanges).'));
 }
-// ---------- mapa de calor ----------
-function heatCoins() {
-  const coins = liveCoins().filter((c) => PX[c.s]);
-  const mc = (c) => (CGM[c.cg] && CGM[c.cg].market_cap) || 0;
-  return coins.sort((a, b) => mc(b) - mc(a));
-}
-function drawHeat() {
-  const box = $('#d-hm'); if (!box) return;
-  const coins = heatCoins();
-  const sc0 = DASH.hm === '7d' ? 15 : 8;
-  const val = (c) => (DASH.hm === '7d' ? num(CGM[c.cg] && CGM[c.cg].price_change_percentage_7d_in_currency) : PX[c.s].chg);
-  // mesma ordem: só troca cores e números (não pisca e não perde o foco)
-  const order = coins.map((c) => c.s).join(',') + '|' + DASH.hm, grid = $('#d-hm-grid');
-  if (grid && DASH.hmOrder === order && grid.children.length === coins.length) {
-    coins.forEach((c, i) => { const el = grid.children[i], v = val(c); el.style.background = heatBg(v, sc0); el.children[1].textContent = isNum(v) ? fmtPct(v, 2) : '—'; el.children[2].textContent = usd(PX[c.s].p); });
-    return;
-  }
-  DASH.hmOrder = coins.length ? order : '';
-  const tools = `<div class="row" style="gap:8px">${seg('dhm', [['24h', '24h'], ['7d', '7d']], DASH.hm)}${stamp('px-rest', 'Binance')}</div>`;
-  const head = panelHead('grid-3x3', L('Mapa de calor', 'Heatmap'), { sub: esc(L('Tamanho pelo valor de mercado; cor pela variação. Clique para ver o gráfico.', 'Size by market cap; color by change. Click for the chart.')), right: tools });
-  if (!coins.length) { box.innerHTML = head + skel(4, 40); return; }
-  const cells = coins.map((c, i) => {
-    const v = val(c);
-    const t = i === 0 ? 't1' : i === 1 ? 't2' : i < 10 ? 't3' : 't4';
-    return `<button class="hm-c ${t}" style="background:${heatBg(v, DASH.hm === '7d' ? 15 : 8)}" data-act="go" data-to="chart" data-params='${esc(JSON.stringify({ s: c.s }))}' title="${esc(c.n + ' · ' + usd(PX[c.s].p))}"><span class="s">${esc(c.b)}</span><span class="p">${isNum(v) ? esc(fmtPct(v, 2)) : '—'}</span><span class="x">${esc(usd(PX[c.s].p))}</span></button>`;
-  }).join('');
-  const sc = DASH.hm === '7d' ? 15 : 8;
-  box.innerHTML = head + `<div class="hm" id="d-hm-grid">${cells}</div><div class="hm-scale">${[-1, -0.6, -0.3, 0, 0.3, 0.6, 1].map((f) => `<div style="flex:1;text-align:center"><i style="background:${heatBg(f * sc, sc)}"></i>${f === 0 ? '0%' : esc(fmtPct(f * sc, 0))}</div>`).join('')}</div>` +
-    (DASH.hm === '7d' ? note(L('Variação de 7 dias do CoinGecko (atualiza a cada 10 min).', '7-day change from CoinGecko (every 10 min).')) : '');
-}
-ACT.seg_dhm = (v) => { DASH.hm = v; drawHeat(); };
 function moverList(dir) {
+  const mv = typeof tickerMovers === 'function' ? tickerMovers() : { up: [], down: [] };
+  const top = dir > 0 ? mv.up : mv.down;
+  if (top.length >= 4) return top.slice(0, 6).map((x) => ({ n: x.n, b: x.sym, cg: x.cg, logo: x.logo, p: x.p, chg: x.chg, s: x.to && x.to.s }));
   const coins = liveCoins().filter((c) => PX[c.s] && isNum(PX[c.s].chg));
   coins.sort((a, b) => (dir > 0 ? PX[b.s].chg - PX[a.s].chg : PX[a.s].chg - PX[b.s].chg));
-  return coins.slice(0, 6);
+  return coins.slice(0, 6).map((c) => ({ n: c.n, b: c.b, cg: c.cg, logo: LOGOS[c.cg], p: PX[c.s].p, chg: PX[c.s].chg, s: c.s }));
 }
 function drawMovers() {
   for (const [id, dir, icon, t] of [['#d-up', 1, 'trending-up', L('Maiores altas 24h', 'Top gainers 24h')], ['#d-down', -1, 'trending-down', L('Maiores baixas 24h', 'Top losers 24h')]]) {
     const box = $(id); if (!box) continue;
     const list = moverList(dir);
-    box.innerHTML = panelHead(icon, t, { right: stamp('px-rest', 'Binance') }) + (list.length ? `<div class="list">${list.map((c) => `<a class="li" href="#/chart?s=${c.s}">${coinLogo({ ...c, logo: LOGOS[c.cg] }, 28)}<span class="grow"><span class="t" style="display:block">${esc(c.n)}</span><span class="m">${esc(c.b)} · ${esc(usd(PX[c.s].p))}</span></span>${chg(PX[c.s].chg)}</a>`).join('')}</div>` : skel(5, 18));
+    const sub = esc(L('Entre as 100 maiores criptomoedas, sem stablecoins.', 'Among the top 100 cryptocurrencies, excluding stablecoins.'));
+    box.innerHTML = panelHead(icon, t, { sub, right: stamp('top100') }) + (list.length ? `<div class="list">${list.map((c) => `<a class="li" href="${c.s ? '#/chart?s=' + esc(c.s) : '#/top100'}">${coinLogo({ b: c.b, logo: c.logo, cg: c.cg }, 30)}<span class="grow"><span class="t" style="display:block">${esc(c.n)}</span><span class="m">${esc(c.b)} · ${esc(usd(c.p))}</span></span>${chg(c.chg)}</a>`).join('')}</div>` : skel(5, 18));
   }
 }
 function drawTrend() {
@@ -362,7 +334,7 @@ function drawEvents() {
   box.innerHTML = panelHead('calendar-days', L('Próximos eventos que mexem com o mercado', 'Upcoming market-moving events'), { sub: esc(L('Calendários oficiais. Quando um evento passa, o próximo assume sozinho.', 'Official calendars. When an event passes, the next one takes its place.')), right: `<a class="link-btn" href="#/agenda">${esc(L('Agenda completa', 'Full calendar'))}${ico('chevron-right', 15)}</a>` }) +
     (evs.length ? `<div>${evs.map((e, i) => `<div class="ev ${i === 0 ? 'next' : ''}"><div class="ev-d">${esc(fmtDate(e.at, { day: '2-digit', month: 'short' }))}<small>${esc(fmtTime(e.at))}</small></div><div><div class="ev-t">${ctryTag(e.country)}${esc(e.t)}<span class="imp i${e.imp}" title="${esc(L('Impacto', 'Impact'))}"><i></i><i></i><i></i></span></div><div class="ev-m"><span>${esc(e.src)}</span></div></div><span class="badge ${i === 0 ? 'pro' : ''}" data-until="${e.at}">${esc(until(e.at))}</span></div>`).join('')}</div>` : emptyBox('calendar-days', L('Sem eventos programados', 'No events scheduled')));
 }
-function dashDraw() { setHTML('#d-install', typeof installHint === 'function' ? installHint() : ''); drawCards(); drawStrip(); drawFng(); drawDom(); drawRsi(); drawHeat(); drawMovers(); drawTrend(); drawMonthly(); drawEvents(); }
+function dashDraw() { setHTML('#d-install', typeof installHint === 'function' ? installHint() : ''); drawCards(); drawStrip(); drawFng(); drawDom(); drawRsi(); drawMovers(); drawTrend(); drawMonthly(); drawEvents(); }
 onPrice((set) => {
   if (S.page !== 'dash' || !$('#pg-dash.on')) return;
   updCards(set);
@@ -374,8 +346,7 @@ onPrice((set) => {
   if (set.has('TREND')) drawTrend();
   if (set.has('MONTHLY')) drawMonthly(); else if (set.has('BTCUSDT') || set.has('ETHUSDT')) updMonthlyCur();
   const now = Date.now();
-  if (now - (DASH.t.hm || 0) > 2500) { DASH.t.hm = now; drawHeat(); }
-  if (now - (DASH.t.mv || 0) > 4000) { DASH.t.mv = now; drawMovers(); }
+  if (set.has('TOP100') || now - (DASH.t.mv || 0) > 4000) { DASH.t.mv = now; drawMovers(); }
 });
 page({
   id: 'dash', group: 'mercado', icon: 'layout-dashboard', pt: 'Dashboard', en: 'Dashboard',

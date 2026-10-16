@@ -97,11 +97,13 @@ function drawStLook() {
     <div><div class="lbl-t" style="margin-bottom:8px">${esc(L('Idioma', 'Language'))}</div><div class="row wrap" style="gap:8px"><button class="btn sm ${S.lang === 'pt' ? 'pri' : ''}" data-act="setLang" data-v="pt">Português</button><button class="btn sm ${S.lang === 'en' ? 'pri' : ''}" data-act="setLang" data-v="en">English</button></div></div>
     <label class="row between" style="gap:12px;cursor:pointer"><span><b class="small">${esc(L('Menu lateral compacto', 'Compact side menu'))}</b><div class="tiny faint">${esc(L('Mostra só os ícones (no computador).', 'Icons only (desktop).'))}</div></span><span class="sw"><input type="checkbox" data-chg="stMini" ${document.body.classList.contains('sb-mini') ? 'checked' : ''}><span></span></span></label>
     <label class="row between" style="gap:12px;cursor:pointer"><span><b class="small">${esc(L('Faixa de preços no topo', 'Price ticker on top'))}</b><div class="tiny faint">${esc(L('A faixa para quando você passa o mouse.', 'The strip pauses on hover.'))}</div></span><span class="sw"><input type="checkbox" data-chg="stTicker" ${LS.get('ticker', true) ? 'checked' : ''}><span></span></span></label>
+    <label class="row between" style="gap:12px;cursor:pointer"><span><b class="small">${esc(L('Faixa rolando', 'Scrolling ticker'))}</b><div class="tiny faint">${esc(L('Desligue para deixar a faixa parada.', 'Turn off to keep the strip still.'))}</div></span><span class="sw"><input type="checkbox" data-chg="stTickerMotion" ${LS.get('tickerMotion', 'roll') !== 'still' ? 'checked' : ''}><span></span></span></label>
   </div>`);
 }
 ACT.stTheme = (el) => { applyTheme(el.dataset.v); drawStLook(); };
 ACT.stMini = (el) => setSbMini(el.checked);
 ACT.stTicker = (el) => { LS.set('ticker', el.checked); document.body.classList.toggle('no-ticker', !el.checked); };
+ACT.stTickerMotion = (el) => { LS.set('tickerMotion', el.checked ? 'roll' : 'still'); applyTickerMotion(); };
 function drawStAi() {
   const k = aiKey();
   setHTML('#st-ai', panelHead('sparkles', L('Assistente de IA (opcional)', 'AI assistant (optional)'), { sub: esc(L('Para tradução de notícias, resumos e pesquisas. Usa a sua própria chave da Anthropic: ela fica só neste navegador e o uso é cobrado na sua conta da Anthropic.', 'For news translation, summaries and research. Uses your own Anthropic key: it stays in this browser and usage is billed to your Anthropic account.')) }) +

@@ -26,10 +26,10 @@ for (const [w, h] of [[1366, 657], [1440, 789], [1536, 730], [1280, 600], [1920,
   await page.goto(SITE + BASE + 'index.html?w=' + w + 'x' + h + '#/dash', { waitUntil: 'domcontentloaded' });
   await new Promise((r) => setTimeout(r, 1500));
   const m = await page.evaluate(() => { const sb = document.querySelector('#sb'); const last = [...sb.querySelectorAll('.sb-i')].pop().getBoundingClientRect(); return { sh: sb.scrollHeight, ch: sb.clientHeight, lastBottom: Math.round(last.bottom), vh: innerHeight, items: sb.querySelectorAll('.sb-i').length }; });
-  if (w === 1366) await page.screenshot({ path: join(ROOT, 'dev/out/menu-1366x657.png') });
+  if (w === 1366 || w === 1920) await page.screenshot({ path: join(ROOT, `dev/out/menu-${w}x${h}.png`), clip: { x: 0, y: 0, width: 520, height: h } });
   const over = m.sh - m.ch; worst = Math.max(worst, over);
   // conta de admin tem 1 item a mais (Painel do administrador)
-  const adm = await page.evaluate(() => { const sb = document.querySelector('#sb'); const it = [...sb.querySelectorAll('.sb-i')].pop(); it.after(it.cloneNode(true)); return sb.scrollHeight - sb.clientHeight; });
+  const adm = await page.evaluate(() => { const sb = document.querySelector('#sb'); const it = [...sb.querySelectorAll('.sb-i')].pop(); it.after(it.cloneNode(true)); sb.style.setProperty('--sb-n', String(sb.querySelectorAll('.sb-i').length)); return sb.scrollHeight - sb.clientHeight; });
   worst = Math.max(worst, adm);
   console.log(`${w}×${h}: menu ${m.sh}px / espaço ${m.ch}px · ${m.items} itens · ${over > 0 ? 'ROLA ' + over + 'px' : 'cabe'} · com admin: ${adm > 0 ? 'ROLA ' + adm + 'px' : 'cabe'}`);
 }

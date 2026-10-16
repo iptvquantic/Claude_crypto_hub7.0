@@ -6,7 +6,7 @@
 const T100 = { tab: 'crypto', q: '', sort: 'rank', dir: 1, t: 0 };
 function registerTop100Sources() {
   source({
-    id: 'top100', label: 'Top 100', provider: 'CoinGecko', every: 3 * 60e3, need: onPage('top100'), persist: false,
+    id: 'top100', label: 'Top 100', provider: 'CoinGecko', every: 3 * 60e3, need: () => S.page === 'top100' || !document.body.classList.contains('no-ticker'), persist: false,
     run: async () => getJSON('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=1h,24h,7d,30d', { timeout: 15000 }),
     validate: (a) => Array.isArray(a) && a.length >= 50,
     onData: (a) => { a.forEach((m) => { if (m.image) LOGOS[m.id] = m.image; }); _markDirty('TOP100'); },
