@@ -55,6 +55,15 @@ for (const p of list) {
       } else if (p.pick === 'llama-sum') {
         const ch = j.totalDataChart || [];
         res.sum = { n: j.displayName || j.name, gecko: j.gecko_id, sym: j.symbol, d1: j.total24h, d7: j.total7d, d30: j.total30d, y1: j.total1y, all: j.totalAllTime, last: ch.slice(-3), meth: j.methodology, children: (j.childProtocols || []).map((c) => c.displayName || c.name) };
+      } else if (p.pick === 'rpc-len') {
+        res.rpc = { len: typeof j.result === 'string' ? j.result.length : null, err: j.error, head: String(j.result || '').slice(0, 200) };
+      } else if (p.pick === 'llama-n') {
+        const c = j.coins || {}; res.n = Object.keys(c).length; res.sample = Object.entries(c).slice(0, 3);
+      } else if (p.pick === 'cg-n') {
+        res.n = Object.keys(j || {}).length; res.sample = Object.entries(j || {}).slice(0, 2);
+      } else if (p.pick === 'hl-ctx') {
+        const [meta, ctx] = Array.isArray(j) ? j : [{}, []];
+        res.hl = { tokens: (meta.tokens || []).length, universe: (meta.universe || []).length, tok: (meta.tokens || []).slice(0, 4), uni: (meta.universe || []).slice(0, 4), ctx: (ctx || []).slice(0, 3), hype: (meta.tokens || []).find((t) => t.name === 'HYPE'), hypePair: (meta.universe || []).find((u) => u.tokens && u.tokens[0] === ((meta.tokens || []).find((t) => t.name === 'HYPE') || {}).index) };
       } else if (p.pick === 'openapi') {
         res.paths = Object.keys(j.paths || {}).slice(0, 400);
       } else res.shape = shape(j);
