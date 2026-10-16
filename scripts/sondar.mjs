@@ -47,6 +47,14 @@ for (const p of list) {
         res.protocolKeys = j.protocols && j.protocols[0] ? Object.keys(j.protocols[0]) : [];
         res.rootKeys = Object.keys(j);
         res.count = (j.protocols || []).length;
+      } else if (p.pick === 'llama-find') {
+        const terms = (p.find || []).map((t) => t.toLowerCase());
+        const hit = (x) => terms.some((t) => [x.name, x.displayName, x.slug, x.parentProtocol, x.module].some((v) => String(v || '').toLowerCase().includes(t)));
+        res.found = (j.protocols || []).filter(hit).map((x) => ({ n: x.displayName || x.name, slug: x.slug, mod: x.module, parent: x.parentProtocol, id: x.defillamaId, gecko: x.gecko_id, cat: x.category, d1: x.total24h, d7: x.total7d, d30: x.total30d, y1: x.total1y, meth: typeof x.methodology === 'string' ? x.methodology.slice(0, 160) : x.methodology && (x.methodology.HoldersRevenue || '').slice(0, 160) }));
+        res.count = (j.protocols || []).length;
+      } else if (p.pick === 'llama-sum') {
+        const ch = j.totalDataChart || [];
+        res.sum = { n: j.displayName || j.name, gecko: j.gecko_id, sym: j.symbol, d1: j.total24h, d7: j.total7d, d30: j.total30d, y1: j.total1y, all: j.totalAllTime, last: ch.slice(-3), meth: j.methodology, children: (j.childProtocols || []).map((c) => c.displayName || c.name) };
       } else if (p.pick === 'openapi') {
         res.paths = Object.keys(j.paths || {}).slice(0, 400);
       } else res.shape = shape(j);

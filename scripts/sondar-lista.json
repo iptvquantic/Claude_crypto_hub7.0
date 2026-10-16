@@ -1,12 +1,84 @@
 [
- { "id": "cm-catalog2", "url": "https://community-api.coinmetrics.io/v4/catalog-v2/asset-metrics?assets=btc&page_size=2000", "pick": "cm-catalog", "timeout": 40000 },
- { "id": "cm-SplyAct1yr", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyAct1yr&frequency=1d&page_size=3&paging_from=end" },
- { "id": "cm-SplyActEver", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyActEver&frequency=1d&page_size=3&paging_from=end" },
- { "id": "cm-RevUSD", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=RevUSD&frequency=1d&page_size=3&paging_from=end" },
- { "id": "cm-TxTfrValAdjUSD", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=TxTfrValAdjUSD&frequency=1d&page_size=3&paging_from=end" },
- { "id": "cm-NVTAdj", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=NVTAdj&frequency=1d&page_size=3&paging_from=end" },
- { "id": "cm-CapRealUSD", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=CapRealUSD&frequency=1d&page_size=3&paging_from=end" },
- { "id": "cm-SplyAct10yr", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyAct10yr,SplyAct5yr,SplyAct2yr,SplyAct180d&frequency=1d&page_size=3&paging_from=end" },
- { "id": "cm-VelCur1yr", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=VelCur1yr,SER,ROI30d&frequency=1d&page_size=3&paging_from=end" },
- { "id": "cm-first-act1yr", "url": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyAct1yr,TxTfrValAdjUSD,RevUSD&frequency=1d&page_size=3&start_time=2010-07-18" }
+ {
+  "id": "llama-hr",
+  "url": "https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true&dataType=dailyHoldersRevenue",
+  "pick": "llama-find",
+  "timeout": 90000,
+  "find": [
+   "sky",
+   "aster",
+   "pons",
+   "stonk",
+   "maker",
+   "spark",
+   "ethena",
+   "aave",
+   "jupiter",
+   "raydium",
+   "chainlink",
+   "uniswap",
+   "pump",
+   "hyperliquid",
+   "lido",
+   "dydx",
+   "ore",
+   "venice",
+   "lighter",
+   "near"
+  ]
+ },
+ {
+  "id": "llama-sky",
+  "url": "https://api.llama.fi/summary/fees/sky?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
+  "pick": "llama-sum",
+  "timeout": 40000
+ },
+ {
+  "id": "llama-aster",
+  "url": "https://api.llama.fi/summary/fees/aster?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
+  "pick": "llama-sum",
+  "timeout": 40000
+ },
+ {
+  "id": "llama-pons",
+  "url": "https://api.llama.fi/summary/fees/pons?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
+  "pick": "llama-sum",
+  "timeout": 40000
+ },
+ {
+  "id": "llama-stonkfun",
+  "url": "https://api.llama.fi/summary/fees/stonkfun?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
+  "pick": "llama-sum",
+  "timeout": 40000
+ },
+ {
+  "id": "llama-sky-lending",
+  "url": "https://api.llama.fi/summary/fees/sky-lending?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
+  "pick": "llama-sum",
+  "timeout": 40000
+ },
+ {
+  "id": "llama-makerdao",
+  "url": "https://api.llama.fi/summary/fees/makerdao?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
+  "pick": "llama-sum",
+  "timeout": 40000
+ },
+ {
+  "id": "llama-aster-perps",
+  "url": "https://api.llama.fi/summary/fees/aster-perps?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
+  "pick": "llama-sum",
+  "timeout": 40000
+ },
+ {
+  "id": "llama-hyperliquid",
+  "url": "https://api.llama.fi/summary/fees/hyperliquid?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
+  "pick": "llama-sum",
+  "timeout": 40000
+ },
+ {
+  "id": "llama-chainlink",
+  "url": "https://api.llama.fi/summary/fees/chainlink?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true",
+  "pick": "llama-sum",
+  "timeout": 40000
+ }
 ]
