@@ -1414,3 +1414,18 @@ a.oc-cube:hover { color: #fff; filter: brightness(1.12); }
   .geo-front { flex: 0 0 78%; scroll-snap-align: start; }
 }
 .bb-new { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--accent-ink); background: var(--accent); border-radius: 5px; padding: 0 5px; margin-left: 4px; vertical-align: middle; }
+
+/* =====================================================================
+   TOKENOMICS
+   ===================================================================== */
+.tk-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; scrollbar-width: none; }
+.tk-chips::-webkit-scrollbar { display: none; }
+.tk-chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px 0 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text-2); font-weight: 700; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+.tk-chip:hover { border-color: var(--line-2); color: var(--text); }
+.tk-chip.on { border-color: var(--accent); background: var(--accent-bg); color: var(--text); }
+.tk-chip .coin-logo, .tk-chip .coin-fb { width: 20px; height: 20px; }
+.tk-mbars { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; height: 150px; align-items: end; }
+.tk-mbars .mb { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; min-width: 0; }
+.tk-mbars .bs { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+.tk-mbars .bs i { display: block; width: 30%; max-width: 12px; border-radius: 3px 3px 1px 1px; }
+.tk-mbars span { font-size: 11.5px; color: var(--text-3); }

@@ -16,11 +16,11 @@ async function tkLoad(id) {
     if (d.image && d.image.large) LOGOS[id] = d.image.large;
   } catch (e) { if (seq !== TK.seq) return; TK.err = e.status === 429 ? L('O CoinGecko pediu uma pausa (muitas consultas). Tente em 1 minuto.', 'CoinGecko asked for a pause (rate limit). Try again in 1 minute.') : String(e.message || e); }
   tkDraw();
-  tkFees(seq); tkHacks(); if (typeof ensureNews === 'function') ensureNews('cripto');
+  tkFees(seq); tkHacks(); tkPx(seq); if (typeof ensureNews === 'function') ensureNews('cripto');
 }
 async function tkFees(seq) {
-  const slug = LLAMA_SLUG[TK.id] || TK.id;
-  const get = async (type) => { try { return await getJSON(`https://api.llama.fi/summary/fees/${encodeURIComponent(slug)}?dataType=${type}&excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true`, { timeout: 15000 }); } catch (e) { if (e.status === 404 || e.status === 400 || e.status === 500) return null; throw e; } };
+  const bbt = tkBurn(); const slug = (bbt && bbt.src[0] && bbt.src[0].id) || LLAMA_SLUG[TK.id] || TK.id;
+  const get = async (type) => { try { return await getJSON(`https://api.llama.fi/summary/fees/${encodeURIComponent(slug)}?dataType=${type}&excludeTotalDataChartBreakdown=true`, { timeout: 20000 }); } catch (e) { if (e.status === 404 || e.status === 400 || e.status === 500) return null; throw e; } };
   try {
     const [fees, rev, hold] = await Promise.all([get('dailyFees'), get('dailyRevenue'), get('dailyHoldersRevenue')]);
     if (seq !== TK.seq) return;
@@ -59,7 +59,7 @@ function tkDraw() {
   const toAth = isNum(ath) && isNum(price) ? ath / price : null;
   const stampTk = `<span class="stamp live"><i class="dot"></i><b>CoinGecko</b><span class="st">${esc(ago(TK.at))}</span></span>`;
   const dil = !isNum(ratio) ? '' : ratio >= 3 ? `<span class="badge bad">${esc(L('diluição alta', 'high dilution'))}</span>` : ratio >= 1.5 ? `<span class="badge warn">${esc(L('diluição moderada', 'moderate dilution'))}</span>` : `<span class="badge live">${esc(L('diluição baixa', 'low dilution'))}</span>`;
-  box.innerHTML = `<div class="row wrap between" style="gap:12px">${pickBtn}<div class="row wrap" style="gap:6px 22px">${kpiBox(L('Preço', 'Price'), isNum(price) ? esc(usd(price)) : '—', live ? chg(live.chg) + ` <span class="faint">${esc(L('Binance ao vivo', 'Binance live'))}</span>` : chg(num(m.price_change_percentage_24h)))}${kpiBox(L('Ranking', 'Rank'), d.market_cap_rank ? '#' + d.market_cap_rank : '—')}</div></div>
+  box.innerHTML = `${tkChips()}<div class="row wrap between" style="gap:12px">${pickBtn}<div class="row wrap" style="gap:6px 22px">${kpiBox(L('Preço', 'Price'), isNum(price) ? esc(usd(price)) : '—', live ? chg(live.chg) + ` <span class="faint">${esc(L('Binance ao vivo', 'Binance live'))}</span>` : chg(num(m.price_change_percentage_24h)))}${kpiBox(L('Ranking', 'Rank'), d.market_cap_rank ? '#' + d.market_cap_rank : '—')}</div></div>
   <div class="grid g-2 mt">
     <section class="panel">${panelHead('package', L('Oferta e diluição', 'Supply & dilution'), { sub: esc(L('Quanto da moeda já circula e quanto ainda pode entrar no mercado.', 'How much already circulates and how much can still hit the market.')), right: stampTk })}
       <div class="grid g-2" style="gap:14px">
@@ -68,7 +68,7 @@ function tkDraw() {
         ${kpiBox(L('Valor de mercado', 'Market cap'), esc(fmtCompact(mcap)), esc(L('preço × circulante', 'price × circulating')))}
         ${kpiBox(L('Valor totalmente diluído (FDV)', 'Fully diluted value (FDV)'), esc(fmtCompact(fdv)), isNum(ratio) ? `${esc(fmtNum(ratio, 2, 2))}× ${esc(L('o valor de mercado', 'market cap'))} ${dil}` : '')}
       </div>
-      ${isNum(pctCirc) ? `<div class="bar mt"><i style="width:${clamp(pctCirc, 0, 100)}%"></i></div><div class="row between tiny faint" style="margin-top:6px"><span>${esc(L('circulando', 'circulating'))}</span><span>${esc(L('ainda bloqueado ou por emitir', 'locked or unissued'))}: ${esc(fmtPct(100 - pctCirc, 1, false))}</span></div>` : ''}
+      ${isNum(pctCirc) ? `<div class="donut-wrap mt">${donutSVG([{ v: pctCirc, c: 'var(--accent)', t: L('Em circulação', 'Circulating') }, { v: 100 - pctCirc, c: 'var(--panel-3)', t: L('Bloqueado ou por emitir', 'Locked or unissued') }], { size: 120, thick: 18, label: L('Oferta', 'Supply') })}<div class="legend"><div><i style="background:var(--accent)"></i>${esc(L('Em circulação', 'Circulating'))}<span class="lv">${esc(fmtPct(pctCirc, 1, false))}</span></div><div><i style="background:var(--panel-3);box-shadow:0 0 0 1px var(--line-2) inset"></i>${esc(L('Bloqueado ou por emitir', 'Locked or unissued'))}<span class="lv">${esc(fmtPct(100 - pctCirc, 1, false))}</span></div>${isNum(circ) && isNum(fullSupply) ? `<div class="tiny faint" style="margin-top:2px">${esc(L(`${fmtCompact(fullSupply - circ, null)} ${d.symbol.toUpperCase()} ainda podem entrar no mercado`, `${fmtCompact(fullSupply - circ, null)} ${d.symbol.toUpperCase()} can still hit the market`))}</div>` : ''}</div></div>` : ''}
       ${note(L('FDV alto em relação ao valor de mercado indica que muitas moedas ainda vão entrar em circulação (desbloqueios e emissões), o que pode pressionar o preço.', 'High FDV vs market cap means many tokens will still enter circulation (unlocks/emissions), which can pressure price.'))}
     </section>
     <section class="panel">${panelHead('target', L('Distância da máxima histórica', 'Distance from all-time high'), { right: stampTk })}
@@ -81,10 +81,12 @@ function tkDraw() {
       ${note(L('Para voltar ao topo com mais moedas em circulação, o mercado precisa colocar mais dinheiro do que no topo anterior. São contas, não previsão.', 'To return to the top with more tokens circulating, the market must put in more money than at the prior top. Math, not a forecast.'))}
     </section>
   </div>
+  <section class="panel mt" id="tk-px"></section>
+  <section class="panel mt" id="tk-bb"></section>
   <section class="panel mt" id="tk-fees"></section>
   <div class="grid g-2 mt"><section class="panel" id="tk-unl"></section><section class="panel" id="tk-sec"></section></div>
   <section class="panel mt" id="tk-news"></section>`;
-  tkDrawFees(); tkDrawUnlocks(); tkDrawSec(); tkDrawNews();
+  tkDrawFees(); tkDrawUnlocks(); tkDrawSec(); tkDrawNews(); tkDrawPx(); tkDrawBurn();
 }
 function tkDrawFees() {
   const box = $('#tk-fees'); if (!box || !TK.data) return;
@@ -97,7 +99,20 @@ function tkDrawFees() {
   const yearHold = F.hold && num(F.hold.total1y), yearRev = F.rev && num(F.rev.total1y);
   box.innerHTML = head + `<div class="grid g-3" style="gap:14px">${col(L('Taxas pagas pelos usuários (30 dias)', 'Fees paid by users (30d)'), F.fees)}${col(L('Receita do protocolo (30 dias)', 'Protocol revenue (30d)'), F.rev)}${col(L('Repassado aos detentores (30 dias)', 'To holders (30d)'), F.hold)}</div>
     <div class="row wrap mt" style="gap:8px 22px">${isNum(yearHold) && isNum(mcap) && mcap > 0 ? `<span class="small">${esc(L('Retorno anual aos detentores:', 'Annual yield to holders:'))} <b>${esc(fmtPct(yearHold / mcap * 100, 2, false))}</b> ${esc(L('do valor de mercado', 'of market cap'))} ${modelBadge(L('Repasse aos detentores nos últimos 12 meses ÷ valor de mercado atual.', 'Holder revenue over 12 months ÷ current market cap.'))}</span>` : ''}${isNum(yearRev) && yearRev > 0 && isNum(mcap) ? `<span class="small">${esc(L('Valor de mercado ÷ receita anual:', 'Market cap ÷ annual revenue:'))} <b>${esc(fmtNum(mcap / yearRev, 1, 1))}×</b> ${modelBadge(L('Parecido com o P/L de ações: quantos anos de receita o mercado paga.', 'Similar to a P/E ratio: how many years of revenue the market pays.'))}</span>` : ''}</div>
+    ${tkMonthlyHtml(F)}
     ${note(L(`Fonte: DefiLlama (${esc(F.slug)}). "Repassado aos detentores" inclui recompras, queimas e distribuições, conforme a metodologia da DefiLlama.`, `Source: DefiLlama (${esc(F.slug)}). "To holders" includes buybacks, burns and distributions per DefiLlama’s methodology.`))}`;
+}
+function tkMonthlyHtml(F) {
+  const fm = tkMonthly(F.fees), rm = tkMonthly(F.rev), hm = tkMonthly(F.hold);
+  const keys = [...new Set([...Object.keys(fm), ...Object.keys(rm)])].sort().slice(-12);
+  if (keys.length < 2) return '';
+  const cur = new Date(); const curK = `${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, '0')}`;
+  const mx = Math.max(...keys.map((k) => Math.max(fm[k] || 0, rm[k] || 0, hm[k] || 0)), 1);
+  const bar = (v, c, lb, k) => `<i style="height:${Math.max(isNum(v) && v > 0 ? 2 : 0, (v || 0) / mx * 100)}%;background:${c}" title="${esc(`${lb} · ${monthName(+k.slice(5) - 1)}/${k.slice(2, 4)}: ${isNum(v) ? fmtCompact(v) : '—'}`)}"></i>`;
+  const lf = L('Taxas pagas', 'Fees paid'), lr = L('Receita do protocolo', 'Protocol revenue'), lh = L('Repassado aos detentores', 'To holders');
+  return `<h3 class="lab-h3">${esc(L('Mês a mês (últimos 12 meses)', 'Month by month (last 12 months)'))}</h3>
+    <div class="tk-mbars">${keys.map((k) => `<div class="mb"><div class="bs">${bar(fm[k], 'var(--info)', lf, k)}${bar(rm[k], 'var(--accent)', lr, k)}${bar(hm[k], '#ff8a4c', lh, k)}</div><span>${esc(monthName(+k.slice(5) - 1))}${k === curK ? '*' : ''}</span></div>`).join('')}</div>
+    <div class="row wrap tiny faint" style="gap:4px 16px;margin-top:6px"><span><i class="oc-lg" style="background:var(--info)"></i>${esc(L('taxas pagas pelos usuários', 'fees paid by users'))}</span><span><i class="oc-lg" style="background:var(--accent)"></i>${esc(L('receita do protocolo', 'protocol revenue'))}</span><span><i class="oc-lg" style="background:#ff8a4c"></i>${esc(L('repassado aos detentores', 'paid to holders'))}</span><span>${esc(L('* mês em andamento', '* month in progress'))}</span></div>`;
 }
 function tkDrawUnlocks() {
   const box = $('#tk-unl'); if (!box || !TK.data) return;
@@ -138,17 +153,84 @@ function tkDrawNews() {
     (items.length ? `<div class="list">${items.slice(0, 8).map((n) => `<a class="li" href="${esc(safeUrl(n.u))}" target="_blank" rel="noopener noreferrer"><span class="grow"><span class="t" style="display:block">${esc(n.t)}</span><span class="m">${esc(n.src)} · ${esc(ago(n.d))}</span></span>${ico('external-link', 15)}</a>`).join('')}</div>`
       : `<div class="callout">${ico('newspaper', 18)}<span>${esc(L('Nenhuma manchete recente cita esta moeda.', 'No recent headline mentions this coin.'))} ${extLink(`https://news.google.com/search?q=${encodeURIComponent(d.name + ' crypto')}&hl=pt-BR&gl=BR&ceid=BR:pt-419`, 'Google Notícias')}</span></div>`);
 }
+// ---------- atalhos de moedas ----------
+const TK_QUICK = ['hyperliquid', 'ethereum', 'solana', 'chainlink', 'uniswap', 'aave', 'pump-fun', 'sky', 'ondo-finance', 'pendle', 'jupiter-exchange-solana', 'ethena', 'arbitrum', 'tron', 'binancecoin'];
+function tkChips() {
+  const sym = (id) => { const m = CGM[id]; const u = BY_CG[id]; return (m && String(m.symbol || '').toUpperCase()) || (u && u.b) || id.split('-')[0].toUpperCase().slice(0, 5); };
+  return `<div class="tk-chips" role="group" aria-label="${esc(L('Moedas mais procuradas', 'Popular coins'))}">${TK_QUICK.map((id) => `<button class="tk-chip${id === TK.id ? ' on' : ''}" data-act="go" data-to="tokenomics" data-params='${esc(JSON.stringify({ id }))}'>${coinLogo({ b: sym(id), cg: id, logo: LOGOS[id] || (CGM[id] && CGM[id].image) }, 18)}${esc(sym(id))}</button>`).join('')}</div>`;
+}
+// ---------- preço em 1 ano (Binance quando a moeda é listada lá; senão CoinGecko) ----------
+async function tkPx(seq) {
+  TK.px = null; tkDrawPx();
+  try {
+    const u = BY_CG[TK.id];
+    let pts;
+    if (u) pts = (await klines(u.s, '1d', 366)).map((k) => ({ t: k.t, v: k.c }));
+    else pts = ((await getJSON(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(TK.id)}/market_chart?vs_currency=usd&days=365&interval=daily`, { timeout: 15000 })).prices || []).map(([t, v]) => ({ t, v })).filter((x) => isNum(x.v) && x.v > 0);
+    if (seq !== TK.seq) return;
+    TK.px = { pts, src: u ? 'Binance' : 'CoinGecko', at: Date.now() };
+  } catch (e) { if (seq === TK.seq) TK.px = { err: String(e.message || e) }; }
+  tkDrawPx();
+}
+async function tkDrawPx() {
+  const box = $('#tk-px'); if (!box || !TK.data) return;
+  const P = TK.px;
+  const src = P && P.src ? `<span class="stamp live"><i class="dot"></i><b>${esc(P.src)}</b><span class="st">${esc(ago(P.at))}</span></span>` : '';
+  const head = panelHead('chart-line', L('Preço no último ano', 'Price over the last year'), { sub: esc(L('Fechamento diário, com a máxima histórica (ATH) tracejada para comparar.', 'Daily close, with the all-time high (ATH) dashed for comparison.')), right: src });
+  if (!P) { setHTML(box, head + '<div class="skel" style="height:260px"></div>'); return; }
+  if (P.err || !P.pts.length) { setHTML(box, head + emptyBox('wifi-off', L('Histórico de preço indisponível agora', 'Price history unavailable'), esc(P.err || ''))); return; }
+  const pts = P.pts; const last = pts[pts.length - 1].v;
+  const ret = (days) => { const t0 = pts[pts.length - 1].t - days * 86400e3; const a = pts.find((x) => x.t >= t0); return a ? (last / a.v - 1) * 100 : null; };
+  const hi = Math.max(...pts.map((x) => x.v)), lo = Math.min(...pts.map((x) => x.v));
+  const m = TK.data.market_data || {}; const ath = num(m.ath && m.ath.usd);
+  if (!$('#tk-pxc')) setHTML(box, head + `<div class="row wrap" style="gap:6px 22px" id="tk-pxk"></div><div id="tk-pxc" style="height:280px;margin-top:10px"></div>`);
+  setHTML('#tk-pxk', [[L('30 dias', '30 days'), ret(30)], [L('90 dias', '90 days'), ret(90)], [L('1 ano', '1 year'), ret(365)]].map(([k, v]) => kpiBox(k, isNum(v) ? `<span class="${tone(v)}">${esc(fmtPct(v, 1))}</span>` : '—')).join('') + kpiBox(L('Máxima e mínima do ano', 'Year high and low'), `<span class="small">${esc(usd(hi))} · ${esc(usd(lo))}</span>`));
+  const el = $('#tk-pxc'); const key = TK.id + pts.length + S.theme;
+  if (el.dataset.k === key && el.querySelector('canvas')) return; el.dataset.k = key;
+  let r; try { r = await makeChart(el, { onTheme: () => { el.dataset.k = ''; tkDrawPx(); } }); } catch { return; }
+  const { ch, c } = r;
+  const up = last >= pts[0].v;
+  const s1 = ch.addAreaSeries({ lineColor: up ? c.up : c.down, topColor: up ? 'rgba(49,214,127,.18)' : 'rgba(255,97,112,.16)', bottomColor: 'rgba(0,0,0,0)', lineWidth: 2, priceLineVisible: false });
+  s1.setData(pts.map((x) => ({ time: ctime(x.t, false), value: x.v })));
+  if (isNum(ath)) s1.createPriceLine({ price: ath, color: c.signal, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'ATH' });
+  ch.timeScale().fitContent();
+}
+// ---------- recompra e queima do token (dados do Burn, Baby, Burn) ----------
+function tkBurn() { const D = typeof bbData === 'function' ? bbData() : null; return D ? D.toks.find((t) => t.cg === TK.id) || null : null; }
+function tkDrawBurn() {
+  const box = $('#tk-bb'); if (!box || !TK.data) return;
+  const D = typeof bbData === 'function' ? bbData() : null; const t = tkBurn();
+  const head = panelHead('flame', 'Burn, Baby, Burn', { sub: esc(L('Quanto do que o protocolo fatura volta para este token: recompra, queima ou repasse.', 'How much of the protocol’s revenue goes back to this token: buybacks, burns or payouts.')), right: D ? stamp('buybacks') : '' });
+  if (!D) { setHTML(box, head + skel(2, 18)); return; }
+  if (!t) { setHTML(box, head + `<div class="callout">${ico('info', 18)}<span>${esc(L(`A DefiLlama não registra recompra, queima ou repasse de ${TK.data.name} nos últimos 60 dias.`, `DefiLlama records no buyback, burn or payout for ${TK.data.name} in the last 60 days.`))} <button class="link-btn" data-act="go" data-to="buybacks">${esc(L('Ver as moedas que têm', 'See the coins that do'))}</button></span></div>`); return; }
+  const w = (n) => bbWin(t, D, n, 0, 'all');
+  const d30 = w(30); const mcap = bbMcap(t); const y1 = t.src.map((x) => x.y1).filter(isNum).reduce((a, b) => a + b, 0) || null;
+  const spark = new Array(90).fill(0).map((_, k) => { const i = Math.min(t.end, D.N - 1) - 89 + k; let v = null; for (const s of t.src) { const x = s.arr[i]; if (isNum(x)) v = (v || 0) + x; } return v; });
+  const col = (BB_MECH()[t.src[0].type] || BB_MECH().share).c;
+  setHTML(box, head + `<div class="row wrap" style="gap:8px 18px;align-items:center"><div class="bb-mechs">${[...new Set(t.src.map((s) => s.type))].map(bbPill).join('')}</div><div class="grow"></div>${bbBars(spark, col, 220, 36)}</div>
+    <div class="bb-ks" style="margin-top:12px">${[[L('Último dia', 'Last day'), w(1)], [L('7 dias', '7 days'), w(7)], [L('30 dias', '30 days'), d30], [L('1 ano', '1 year'), y1]].map(([k, v]) => `<div class="bb-k"><span>${esc(k)}</span><b>${isNum(v) ? esc(fmtCompact(v)) : '—'}</b></div>`).join('')}
+    <div class="bb-k"><span>${esc(L('% do valor de mercado por ano', '% of market cap per year'))}</span><b>${isNum(d30) && mcap ? esc(fmtNum(d30 / 30 * 365 / mcap * 100, 2, 2) + '%') : '—'}</b><small>${esc(L('no ritmo de 30 dias', 'at the 30-day pace'))}</small></div>
+    <div class="bb-k"><span>${esc(L('Desde o início', 'All time'))}</span><b>${esc(fmtCompact(t.src.map((x) => x.all).filter(isNum).reduce((a, b) => a + b, 0)))}</b></div></div>
+    <div class="row wrap mt" style="gap:8px"><button class="btn sm" data-act="bbOpen" data-k="${esc(t.k)}">${ico('chart-column', 15)}${esc(L('Gráfico diário e metodologia', 'Daily chart & methodology'))}</button><button class="btn sm ghost" data-act="go" data-to="buybacks">${ico('flame', 15)}${esc(L('Comparar no Burn, Baby, Burn', 'Compare in Burn, Baby, Burn'))}</button></div>`);
+}
+// receita mês a mês (DefiLlama): taxas pagas × receita do protocolo
+function tkMonthly(sum) {
+  const ch = (sum && sum.totalDataChart) || []; const out = {};
+  for (const [t, v] of ch) { if (!isNum(v)) continue; const d = new Date((t < 1e12 ? t * 1000 : t)); const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`; out[k] = (out[k] || 0) + v; }
+  return out;
+}
 ACT.tkPick = () => openCoinPicker({ title: L('Escolher moeda', 'Pick a coin'), onPick: (p) => go('tokenomics', { id: p.cg }) });
 ACT.tkRetry = () => tkLoad(TK.id);
 onPrice((set) => {
   if (S.page !== 'tokenomics' || !TK.data) return;
   if (set.has('NEWS')) tkDrawNews();
+  if (set.has('BUYBACKS')) tkDrawBurn();
   const u = BY_CG[TK.id]; if (u && set.has(u.s) && Date.now() - (TK.t || 0) > 4000) { TK.t = Date.now(); tkDraw(); }
 });
 page({
   id: 'tokenomics', group: 'analise', icon: 'package', pt: 'Tokenomics', en: 'Tokenomics', pro: true, proWhat: 'o Tokenomics', proWhatEn: 'Tokenomics',
-  sub: 'Escolha uma moeda e veja oferta, diluição, distância do topo, receita, recompras, segurança e notícias.',
+  sub: 'Escolha uma moeda e veja oferta, diluição, preço no ano, distância do topo, receita mês a mês, recompra e queima, segurança e notícias.',
   subEn: 'Pick a coin and see supply, dilution, distance from the top, revenue, buybacks, security and news.',
-  init(el, params) { el.innerHTML = tkHtml(); if (!hasPro()) { tkDraw(); return; } tkLoad(params.id || LS.get('tk') || 'ondo-finance'); },
+  init(el, params) { el.innerHTML = tkHtml(); if (!hasPro()) { tkDraw(); return; } tkLoad(params.id || LS.get('tk') || 'hyperliquid'); },
   show(el, params) { if (!hasPro()) { tkDraw(); return; } if (params.id && params.id !== TK.id) tkLoad(params.id); else if (!TK.data && !TK.err) tkLoad(TK.id); },
 });

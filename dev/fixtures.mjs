@@ -228,6 +228,7 @@ export function respond(url, method = 'GET', body = '', opts = {}) {
   if (h === 'api.llama.fi') {
     if (p === '/hacks') return json([{ date: 1700000000, name: 'Ondo Finance', classification: 'Protocol Logic', technique: 'Teste', amount: 1200000, chain: ['Ethereum'], returnedFunds: null }, { date: 1650000000, name: 'Outro Protocolo', classification: 'Infra', technique: 'Teste', amount: 5e6, chain: ['BSC'] }]);
     if (p.startsWith('/summary/fees/ondo-finance')) return json({ total24h: 41000, total7d: 290000, total30d: 1.2e6, total1y: 14e6, change_1d: 2.1 });
+    if (p.startsWith('/summary/fees/hyperliquid')) { const k = { dailyFees: 4e6, dailyRevenue: 3.6e6, dailyHoldersRevenue: 3.4e6 }[q.get('dataType')] || 1e6; const ch = Array.from({ length: 400 }, (_, i) => [Math.floor((Math.floor(NOW() / DAY) * DAY - (399 - i) * DAY) / 1000), Math.round(k * (0.6 + 0.5 * Math.abs(Math.sin(i / 40))))]); return json({ name: 'Hyperliquid', total24h: k, total7d: k * 7, total30d: k * 30, total1y: k * 365, totalDataChart: q.get('excludeTotalDataChart') === 'true' ? [] : ch }); }
     if (p.startsWith('/summary/fees/')) return json({ message: 'not found' }, 404);
   }
   if (h === 'mempool.space' || h === 'blockstream.info') {
