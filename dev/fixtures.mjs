@@ -113,6 +113,15 @@ function pipeline(name) {
   const gen = new Date(NOW() - 12 * 60e3).toISOString();
   const real = realPipeline(name, gen); if (real) return real;
   if (name === 'lab') return labFixture(gen);
+  if (name === 'whales') {
+    const lab = ['Binance-coldwallet', 'Binance-coldwallet', 'Robinhood-coldwallet', 'Bitfinex-coldwallet', 'Tether', 'Bitfinex-Hack-Recovery', '', 'MtGox-hack', '', 'Mr.100'];
+    const top = Array.from({ length: 100 }, (_, i) => ({ r: i + 1, a: `bc1qteste${String(i).padStart(3, '0')}xyzxyzxyzxyzxyz${i}`, label: lab[i] || (i % 7 === 0 ? 'OKEx' : ''), bal: Math.round(250000 / (1 + i * 0.35)), pct: +(1.24 / (1 + i * 0.35)).toFixed(4), firstIn: '2018-10-18 12:59:18 UTC', lastIn: new Date(NOW() - (i % 9 + 1) * DAY).toISOString().slice(0, 19).replace('T', ' ') + ' UTC', ins: 500 + i, firstOut: i % 3 ? '2019-01-01 00:00:00 UTC' : '', lastOut: i % 3 ? new Date(NOW() - (i * 41 % 1900) * DAY).toISOString().slice(0, 19).replace('T', ' ') + ' UTC' : '', outs: i % 3 ? 40 + i : 0 }));
+    const R = ['(0 - 0.00001)', '[0.00001 - 0.0001)', '[0.0001 - 0.001)', '[0.001 - 0.01)', '[0.01 - 0.1)', '[0.1 - 1)', '[1 - 10)', '[10 - 100)', '[100 - 1,000)', '[1,000 - 10,000)', '[10,000 - 100,000)', '[100,000 - 1,000,000)'];
+    const coins = [46, 534, 5310, 44947, 278000, 1065591, 2037950, 4221225, 5266926, 4204066, 2274750, 696799];
+    const addr = [7833693, 12742777, 14200210, 12189853, 8267873, 3494715, 820204, 129690, 18394, 1942, 83, 4];
+    const ta = addr.reduce((x, y) => x + y, 0), tc = coins.reduce((x, y) => x + y, 0);
+    return { generatedAt: gen, src: 'bitinfocharts.com', top, dist: R.map((range, i) => ({ range, addr: addr[i], addrPct: +(addr[i] / ta * 100).toFixed(2), coins: coins[i], usd: coins[i] * 81500, coinsPct: +(coins[i] / tc * 100).toFixed(2) })) };
+  }
   if (name === 'news') {
     const cat = (c) => Array.from({ length: 12 }, (_, i) => ({ t: `Manchete ${c} ${i + 1}: mercado reage a dados`, u: `https://news.test/${c}/${i}`, d: NOW() - (i * 37 + 3) * 60e3, x: 'Resumo curto.', img: i === 0 ? 'https://assets.test/img/lead.png' : '', src: pick(['InfoMoney', 'Livecoins', 'g1', 'BBC News Brasil']), lang: i % 5 === 4 ? 'en' : 'pt' }));
     return { generatedAt: gen, cats: { cripto: cat('cripto'), economia: cat('economia'), tech: cat('tech'), mundo: cat('mundo').map((n, i) => ({ ...n, t: i % 2 ? 'Rússia e Ucrânia: novo cessar-fogo em discussão' : 'Israel amplia operação em Gaza' })) } };
@@ -215,6 +224,10 @@ export function respond(url, method = 'GET', body = '', opts = {}) {
     if (p.endsWith('/v1/mining/hashrate/3d')) return json({ hashrates: [], currentHashrate: 1.03e21, currentDifficulty: 1.327e14 });
     if (p.endsWith('/v1/fees/recommended')) return json({ fastestFee: 5, halfHourFee: 4, hourFee: 2, economyFee: 1, minimumFee: 1 });
     if (p.endsWith('/mempool')) return json({ count: 84390, vsize: 41066851, total_fee: 16938235 });
+    // respostas reais gravadas pela sondagem (dev/fixtures-data), só para teste
+    const rec = { '/v1/blocks': 'mp-blocks', '/v1/fees/mempool-blocks': 'mp-mblocks', '/v1/mining/hashrate/1y': 'mp-hash1y', '/v1/mining/pools/1w': 'mp-pools' };
+    for (const [end, f] of Object.entries(rec)) if (p.endsWith(end)) return { status: 200, contentType: 'application/json', body: readFileSync(join(DEV, 'fixtures-data', f + '.json')), headers: CORS };
+    if (p.endsWith('/v1/mining/reward-stats/144')) return json({ startBlock: 971508, endBlock: 971651, totalReward: '45296607114', totalFee: '296607114', totalTx: '687756' });
   }
   if (h === 'community-api.coinmetrics.io') {
     const start = q.get('start_time'); const now = Math.floor(NOW() / DAY) * DAY - DAY;

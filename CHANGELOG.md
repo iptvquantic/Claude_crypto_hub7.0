@@ -17,6 +17,14 @@
   - **Nomes como o mercado usa** (Realized Price, MVRV Z-Score, Mayer Multiple, 200W SMA, Pi Cycle Top, NUPL, SOPR, Puell Multiple, Hash Ribbons…), com a explicação em português.
   - Dados: histórico diário do robô (Coin Metrics desde 2010, BGeometrics e alternative.me); se o robô atrasar, a Coin Metrics é lida direto.
 - **Robô:** endereços com saldo (Coin Metrics) e histórico da BGeometrics que cresce a cada dia (o plano grátis só entrega 4 anos).
+- **On-chain BTC reorganizado e mais completo:**
+  - **Blocos: fila e minerados** (estilo mempool.space): os próximos blocos montados com as transações que esperam (taxa mediana e faixa) e os últimos minerados (transações, tamanho, pool e há quanto tempo), mais o total pago aos mineradores nas últimas 24 h e a fatia das taxas.
+  - **Halving e oferta** com inflação anual pela regra do protocolo e o progresso do ciclo; **taxas** em sat/vB, dólar e real.
+  - **Termômetro do ciclo:** MVRV, MVRV Z-Score, NUPL, Mayer Multiple, Puell, STH MVRV, AVIV e Pi Cycle, cada um numa barra da zona de fundo à de topo.
+  - **Custo médio de cada grupo:** o preço comparado ao Realized Price, STH/LTH Realized Price, True Market Mean, 200D/200W SMA, CVDD e Terminal Price.
+  - **Corretoras e uso da rede:** BTC nas corretoras, fluxo líquido de 7 dias, endereços ativos e transações, com gráfico do último ano.
+  - **Mineração:** hashrate e dificuldade do último ano e as pools da última semana.
+- **Baleias e tesourarias refeito:** resumo de quem guarda os bitcoins (baleias, 100 maiores endereços, corretoras, empresas); quanto cada tamanho de carteira guarda (camarões a megabaleias, com a barra da fatia de todas as moedas e as 12 faixas detalhadas); os 100 maiores endereços com dono conhecido, filtros (corretoras, outros donos, sem dono conhecido), última saída e entrada e o selo "parado"; empresas com BTC/ETH no caixa com barras.
 
 ## 3.0.1 — 15/10/2026
 - **Banco de dados sempre ativo:** o plano grátis do Supabase pausa o projeto depois de ~7 dias sem uso (login e Vault parariam). O robô de dados agora faz uma consulta mínima a cada execução e, como reforço, cada navegador que abre o site faz no máximo uma por dia (anônima, sem dado pessoal; política de privacidade atualizada). O Painel do administrador mostra se o banco respondeu, com o caminho para reativar caso ele pause.

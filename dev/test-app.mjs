@@ -103,6 +103,15 @@ console.log('\n[1] Visitante · computador · todas as páginas');
     if (r.skel > 2) console.log(`    · ${id}: ${r.skel} blocos ainda carregando`);
     await shot(page, 'd-' + id);
   }
+  // On-chain e Baleias: blocos, termômetro, escada de preços, mineração, faixas e top 100
+  await goPage(page, 'onchain', 3500);
+  ok(await page.$$eval('#oc-blocks .oc-cube', (a) => a.length >= 6).catch(() => false), 'On-chain: fila e blocos minerados');
+  ok(await page.$$eval('#oc-thermo .oc-th', (a) => a.length >= 8).catch(() => false), 'On-chain: termômetro do ciclo com 8 indicadores');
+  ok(await page.$$eval('#oc-ladder .oc-lr', (a) => a.length >= 6).catch(() => false), 'On-chain: custo médio de cada grupo');
+  ok(await page.$('#oc-mchart canvas') !== null, 'On-chain: gráfico de mineração');
+  await goPage(page, 'whales', 3000);
+  ok(await page.$$eval('#wh-dist .wh-tier', (a) => a.length === 6).catch(() => false), 'Baleias: 6 faixas por tamanho de carteira');
+  ok(await page.$$eval('#wh-top tbody tr', (a) => a.length >= 20).catch(() => false), 'Baleias: 100 maiores endereços');
   // troca de idioma e tema
   await page.evaluate(() => setLang('en')); await sleep(800);
   ok((await page.$eval('#sb .sb-i[data-page=markets] .lbl', (e) => e.textContent)) === 'Indices & FX', 'idioma EN troca o menu');
@@ -120,7 +129,7 @@ console.log('\n[2] Visitante · celular (390×844)');
 {
   const { browser, page, errors } = await open({ width: 390, height: 844, mobile: true });
   await sleep(3500);
-  for (const id of ['dash', 'top100', 'macro', 'agenda', 'news', 'vault', 'plans', 'onchain', 'markets', 'poly', 'chart']) {
+  for (const id of ['dash', 'top100', 'macro', 'agenda', 'news', 'vault', 'plans', 'onchain', 'whales', 'markets', 'poly', 'chart']) {
     await goPage(page, id, 1800);
     const r = await inspect(page);
     ok(!r.overflow, `${id}: sem rolagem lateral ${r.wide.join(' ')}`);
