@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-nhlrmTAcL5bmgQ0dj1OD5i6MItAen5y6h+LBUmbJ+pc=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-XhOxJ70V+qGa/P5103HbdhXGB7Pw2n9XUopYM+84Txo=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -1126,7 +1126,7 @@ details.li[open] > summary::after { content: '−'; }
 // =====================================================================
 const NX = {
   version: '3.1.0',
-  build: '20261016-0213-8f1ff7a-beta',
+  build: '20261016-0851-4e371a0-beta',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',
@@ -1143,7 +1143,8 @@ const NX = {
   planPrices: { mensal: 14.90, trimestral: 39.90, anual: 149.90 },
   planDays: { mensal: 31, trimestral: 92, anual: 366 },
   trialDays: 15,
-  support: '',          // contato de suporte (e-mail ou WhatsApp) — preencher quando houver
+  support: '(22) 99105-3813',                 // WhatsApp de suporte (o mesmo do Meu Caixa)
+  supportUrl: 'https://wa.me/5522991053813',
 };
 // Bibliotecas externas: versão fixa + integridade (SRI). Se o 1º endereço falhar, tenta o 2º.
 const LIBS = {
@@ -2687,7 +2688,7 @@ async function authSubmit(m) {
 ACT.login = () => authModal('login');
 ACT.signup = () => authModal('signup');
 ACT.forgot = () => {
-  openModal({ title: L('Esqueci a senha', 'Forgot password'), body: `<p class="muted" style="line-height:1.6">${esc(L('Por segurança, a redefinição é feita pelo administrador: ele gera uma senha temporária para você, e você troca por uma nova em Configurações › Conta.', 'For security, resets are done by the admin: they generate a temporary password, then you change it in Settings › Account.'))}</p>${NX.support ? `<div class="callout info mt">${ico('message-circle', 18)}<span>${esc(L('Suporte: ', 'Support: '))}<b>${esc(NX.support)}</b></span></div>` : ''}`, foot: `<button class="btn" data-act="login">${esc(L('Voltar', 'Back'))}</button>` });
+  openModal({ title: L('Esqueci a senha', 'Forgot password'), body: `<p class="muted" style="line-height:1.6">${esc(L('Por segurança, a redefinição é feita pelo administrador: ele gera uma senha temporária para você, e você troca por uma nova em Configurações › Conta.', 'For security, resets are done by the admin: they generate a temporary password, then you change it in Settings › Account.'))}</p>${NX.support ? `<div class="callout info mt">${ico('message-circle', 18)}<span>${esc(L('Suporte: ', 'Support: '))}<a class="b" href="${esc(safeUrl(NX.supportUrl + '?text=' + encodeURIComponent('Olá! Esqueci a senha do NEXUS HUB. Meu e-mail é: ')))}" target="_blank" rel="noopener noreferrer">WhatsApp ${esc(NX.support)}</a></span></div>` : ''}`, foot: `<button class="btn" data-act="login">${esc(L('Voltar', 'Back'))}</button>` });
 };
 ACT.logout = async () => {
   closeMenus();
@@ -5407,7 +5408,7 @@ function drawStAbout() {
     <div>NEXUS HUB <b>${esc(NX.version)}</b> · ${esc(L('versão', 'build'))} ${esc(NX.build)}</div>
     <div>${esc(L('Atalhos:', 'Shortcuts:'))} <span class="kbd">Ctrl</span> + <span class="kbd">K</span> ${esc(L('busca rápida', 'quick search'))} · <span class="kbd">Esc</span> ${esc(L('fecha janelas', 'closes dialogs'))}</div>
     <div>${esc(L('Nada aqui é recomendação de investimento. Confira sempre as fontes citadas.', 'Nothing here is investment advice. Always check the cited sources.'))}</div>
-    <div class="row wrap" style="gap:14px"><a href="termos.html" target="_blank" rel="noopener">${esc(L('Termos de uso', 'Terms'))}</a><a href="privacidade.html" target="_blank" rel="noopener">${esc(L('Privacidade', 'Privacy'))}</a><a href="landing.html" target="_blank" rel="noopener">${esc(L('Página de apresentação', 'Landing page'))}</a>${NX.support ? `<span>${esc(L('Suporte:', 'Support:'))} <b>${esc(NX.support)}</b></span>` : ''}</div></div>`);
+    <div class="row wrap" style="gap:14px"><a href="termos.html" target="_blank" rel="noopener">${esc(L('Termos de uso', 'Terms'))}</a><a href="privacidade.html" target="_blank" rel="noopener">${esc(L('Privacidade', 'Privacy'))}</a><a href="landing.html" target="_blank" rel="noopener">${esc(L('Página de apresentação', 'Landing page'))}</a>${NX.support ? `<a href="${esc(safeUrl(NX.supportUrl))}" target="_blank" rel="noopener noreferrer">${esc(L('Suporte no WhatsApp', 'WhatsApp support'))}: ${esc(NX.support)}</a>` : ''}</div></div>`);
 }
 function settingsDraw() { drawStAcct(); drawStLook(); drawStAi(); drawStHealth(); drawStStore(); drawStAbout(); }
 let _stT = 0;

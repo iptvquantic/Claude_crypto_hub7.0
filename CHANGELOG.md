@@ -7,6 +7,7 @@
 - **Menu inteiro sem rolar em qualquer altura de tela de computador**: a altura dos itens é calculada pelo espaço disponível.
 - **Robô de dados:** histórico on-chain do BTC, recompra e queima por token, 100 maiores endereços de BTC e geopolítica de 7 dias (acumula entre execuções, só veículos reconhecidos, acentos corrigidos); segunda grade de horários para cobrir quando o GitHub pula execuções.
 - **Banco:** permissões extras aplicadas (visitante sem login só chama o sinal de vida).
+- **Suporte pelo WhatsApp (22) 99105-3813** (o mesmo do Meu Caixa): em "Esqueci a senha" (com mensagem pronta), em Configurações › Sobre, nos Termos e na Política de privacidade.
 
 ## 3.0.1 — 15/10/2026
 - **Banco de dados sempre ativo:** o plano grátis do Supabase pausa o projeto depois de ~7 dias sem uso (login e Vault parariam). O robô de dados agora faz uma consulta mínima a cada execução e, como reforço, cada navegador que abre o site faz no máximo uma por dia (anônima, sem dado pessoal; política de privacidade atualizada). O Painel do administrador mostra se o banco respondeu, com o caminho para reativar caso ele pause.

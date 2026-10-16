@@ -23,7 +23,8 @@ const NX = {
   planPrices: { mensal: 14.90, trimestral: 39.90, anual: 149.90 },
   planDays: { mensal: 31, trimestral: 92, anual: 366 },
   trialDays: 15,
-  support: '',          // contato de suporte (e-mail ou WhatsApp) — preencher quando houver
+  support: '(22) 99105-3813',                 // WhatsApp de suporte (o mesmo do Meu Caixa)
+  supportUrl: 'https://wa.me/5522991053813',
 };
 // Bibliotecas externas: versão fixa + integridade (SRI). Se o 1º endereço falhar, tenta o 2º.
 const LIBS = {

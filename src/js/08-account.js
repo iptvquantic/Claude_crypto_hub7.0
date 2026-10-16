@@ -220,7 +220,7 @@ async function authSubmit(m) {
 ACT.login = () => authModal('login');
 ACT.signup = () => authModal('signup');
 ACT.forgot = () => {
-  openModal({ title: L('Esqueci a senha', 'Forgot password'), body: `<p class="muted" style="line-height:1.6">${esc(L('Por segurança, a redefinição é feita pelo administrador: ele gera uma senha temporária para você, e você troca por uma nova em Configurações › Conta.', 'For security, resets are done by the admin: they generate a temporary password, then you change it in Settings › Account.'))}</p>${NX.support ? `<div class="callout info mt">${ico('message-circle', 18)}<span>${esc(L('Suporte: ', 'Support: '))}<b>${esc(NX.support)}</b></span></div>` : ''}`, foot: `<button class="btn" data-act="login">${esc(L('Voltar', 'Back'))}</button>` });
+  openModal({ title: L('Esqueci a senha', 'Forgot password'), body: `<p class="muted" style="line-height:1.6">${esc(L('Por segurança, a redefinição é feita pelo administrador: ele gera uma senha temporária para você, e você troca por uma nova em Configurações › Conta.', 'For security, resets are done by the admin: they generate a temporary password, then you change it in Settings › Account.'))}</p>${NX.support ? `<div class="callout info mt">${ico('message-circle', 18)}<span>${esc(L('Suporte: ', 'Support: '))}<a class="b" href="${esc(safeUrl(NX.supportUrl + '?text=' + encodeURIComponent('Olá! Esqueci a senha do NEXUS HUB. Meu e-mail é: ')))}" target="_blank" rel="noopener noreferrer">WhatsApp ${esc(NX.support)}</a></span></div>` : ''}`, foot: `<button class="btn" data-act="login">${esc(L('Voltar', 'Back'))}</button>` });
 };
 ACT.logout = async () => {
   closeMenus();

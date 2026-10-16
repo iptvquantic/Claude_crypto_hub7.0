@@ -143,7 +143,7 @@ function drawStAbout() {
     <div>NEXUS HUB <b>${esc(NX.version)}</b> · ${esc(L('versão', 'build'))} ${esc(NX.build)}</div>
     <div>${esc(L('Atalhos:', 'Shortcuts:'))} <span class="kbd">Ctrl</span> + <span class="kbd">K</span> ${esc(L('busca rápida', 'quick search'))} · <span class="kbd">Esc</span> ${esc(L('fecha janelas', 'closes dialogs'))}</div>
     <div>${esc(L('Nada aqui é recomendação de investimento. Confira sempre as fontes citadas.', 'Nothing here is investment advice. Always check the cited sources.'))}</div>
-    <div class="row wrap" style="gap:14px"><a href="termos.html" target="_blank" rel="noopener">${esc(L('Termos de uso', 'Terms'))}</a><a href="privacidade.html" target="_blank" rel="noopener">${esc(L('Privacidade', 'Privacy'))}</a><a href="landing.html" target="_blank" rel="noopener">${esc(L('Página de apresentação', 'Landing page'))}</a>${NX.support ? `<span>${esc(L('Suporte:', 'Support:'))} <b>${esc(NX.support)}</b></span>` : ''}</div></div>`);
+    <div class="row wrap" style="gap:14px"><a href="termos.html" target="_blank" rel="noopener">${esc(L('Termos de uso', 'Terms'))}</a><a href="privacidade.html" target="_blank" rel="noopener">${esc(L('Privacidade', 'Privacy'))}</a><a href="landing.html" target="_blank" rel="noopener">${esc(L('Página de apresentação', 'Landing page'))}</a>${NX.support ? `<a href="${esc(safeUrl(NX.supportUrl))}" target="_blank" rel="noopener noreferrer">${esc(L('Suporte no WhatsApp', 'WhatsApp support'))}: ${esc(NX.support)}</a>` : ''}</div></div>`);
 }
 function settingsDraw() { drawStAcct(); drawStLook(); drawStAi(); drawStHealth(); drawStStore(); drawStAbout(); }
 let _stT = 0;
