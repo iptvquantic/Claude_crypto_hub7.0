@@ -7,6 +7,10 @@
 //   markets.json   bolsas, juros, dólar global, commodities e cotas de ETFs (Yahoo)
 //                  + ranking dos maiores ativos do mundo (companiesmarketcap)
 //   status.json    situação de cada fonte nesta execução
+//   lab.json       histórico diário on-chain do BTC (Bitcoin Lab e On-chain)
+//   buybacks.json  recompra, queima e repasse aos detentores por token
+//   whales.json    100 maiores endereços de BTC e distribuição por faixa
+//   (news.json também traz cats.geo: geopolítica por conflito, 7 dias)
 // E mantém o banco (Supabase grátis) ativo: o plano grátis pausa o projeto após ~7 dias sem consultas.
 // Regra de ouro: NUNCA quebrar o site. Se uma fonte falhar, o arquivo anterior é mantido
 // com o horário antigo (o site percebe que está velho e busca direto na fonte).
@@ -14,6 +18,7 @@
 // =====================================================================
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { geoNews, lab, buybacks, whales } from './robo/extras.mjs';
 
 const OUT = process.argv[2] || '_data';
 const REPO = process.env.GITHUB_REPOSITORY || 'iptvquantic/Claude_crypto_hub7.0';
@@ -29,6 +34,11 @@ async function get(url, { as = 'text', timeout = 20000, headers = {} } = {}) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return as === 'json' ? await r.json() : await r.text();
   } finally { clearTimeout(t); }
+}
+async function raw(url, { timeout = 20000, headers = {} } = {}) {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), timeout);
+  try { const r = await fetch(url, { signal: ctl.signal, headers: { 'user-agent': UA, accept: 'application/json', ...headers } }); return { status: r.status, ok: r.ok, text: await r.text() }; }
+  finally { clearTimeout(t); }
 }
 async function pool(items, n, fn) { const out = []; let i = 0; await Promise.all(Array.from({ length: n }, async () => { while (i < items.length) { const k = i++; try { out[k] = await fn(items[k], k); } catch (e) { out[k] = { err: String(e.message || e) }; } } })); return out; }
 async function previous(name) { try { return await get(PREV + name + '.json?t=' + Date.now(), { as: 'json', timeout: 15000 }); } catch { return null; } }
@@ -75,11 +85,12 @@ function parseRss(xml, src, lang) {
   }).filter((n) => n.t && /^https?:\/\//.test(n.u) && Number.isFinite(n.d));
 }
 const GN = (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+const GNE = (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
 const NEWS = {
   cripto: { maxH: 72, feeds: [['https://livecoins.com.br/feed/', 'Livecoins', 'pt'], ['https://portaldobitcoin.uol.com.br/feed/', 'Portal do Bitcoin', 'pt'], ['https://www.criptofacil.com/feed/', 'CriptoFácil', 'pt'], [GN('bitcoin OR criptomoedas OR ethereum when:2d'), 'Google Notícias', 'pt'], ['https://cointelegraph.com/rss', 'Cointelegraph', 'en'], ['https://www.coindesk.com/arc/outboundfeeds/rss/', 'CoinDesk', 'en'], ['https://decrypt.co/feed', 'Decrypt', 'en']] },
   economia: { maxH: 48, feeds: [['https://www.infomoney.com.br/feed/', 'InfoMoney', 'pt'], ['https://www.moneytimes.com.br/feed/', 'Money Times', 'pt'], ['https://g1.globo.com/rss/g1/economia/', 'g1 Economia', 'pt'], ['https://www.poder360.com.br/feed/', 'Poder360', 'pt'], [GN('economia OR Ibovespa OR Selic OR dólar when:1d'), 'Google Notícias', 'pt']] },
   tech: { maxH: 72, feeds: [['https://rss.tecmundo.com.br/feed', 'TecMundo', 'pt'], ['https://canaltech.com.br/rss/', 'Canaltech', 'pt'], ['https://olhardigital.com.br/feed/', 'Olhar Digital', 'pt'], ['https://g1.globo.com/rss/g1/tecnologia/', 'g1 Tecnologia', 'pt'], [GN('inteligência artificial when:2d'), 'Google Notícias', 'pt']] },
-  mundo: { maxH: 48, feeds: [['https://feeds.bbci.co.uk/portuguese/rss.xml', 'BBC News Brasil', 'pt'], ['https://g1.globo.com/rss/g1/mundo/', 'g1 Mundo', 'pt'], ['https://www.cnnbrasil.com.br/internacional/feed/', 'CNN Brasil', 'pt'], [GN('guerra OR Ucrânia OR Israel OR Irã OR Taiwan OR tarifas when:1d'), 'Google Notícias', 'pt'], ['https://feeds.bbci.co.uk/news/world/rss.xml', 'BBC World', 'en']] },
+  mundo: { maxH: 72, feeds: [['https://feeds.bbci.co.uk/portuguese/rss.xml', 'BBC News Brasil', 'pt'], ['https://g1.globo.com/rss/g1/mundo/', 'g1 Mundo', 'pt'], ['https://feeds.folha.uol.com.br/mundo/rss091.xml', 'Folha Mundo', 'pt'], [GN('guerra OR Ucrânia OR Israel OR Irã OR Taiwan OR tarifas when:1d'), 'Google Notícias', 'pt'], ['https://feeds.bbci.co.uk/news/world/rss.xml', 'BBC World', 'en']] },
 };
 async function news() {
   const cats = {}; let okFeeds = 0, all = 0; const now = Date.now();
@@ -94,8 +105,12 @@ async function news() {
   }
   const n = Object.values(cats).reduce((s, a) => s + a.length, 0);
   if (n < 20) throw new Error(`poucas notícias (${n})`);
-  save('news', { generatedAt: new Date().toISOString(), cats });
-  return { n, feeds: `${okFeeds}/${all}` };
+  // geopolítica: fontes próprias, 7 dias e cota por dia (mantém a do arquivo anterior se falhar)
+  let geoInfo = '';
+  try { const g = await geoNews(CTX); cats.geo = g.items; geoInfo = `${g.items.length} (${g.feeds}, ${g.days} dias)`; }
+  catch (e) { const old = await previous('news'); if (old && old.cats && Array.isArray(old.cats.geo)) cats.geo = old.cats.geo; geoInfo = 'falhou: ' + String(e.message || e).slice(0, 80); console.warn('  geo', geoInfo); }
+  save('news', { generatedAt: new Date().toISOString(), cats, geoAt: geoInfo.startsWith('falhou') ? undefined : new Date().toISOString() });
+  return { n, feeds: `${okFeeds}/${all}`, geo: geoInfo };
 }
 
 // ---------- calendário econômico ----------
@@ -212,9 +227,10 @@ async function worldRanking() {
 let worldDebug = '';
 
 // ---------- execução ----------
+const CTX = { get, raw, pool, previous, save, parseRss, strip, GN, GNE };
 const t0 = Date.now();
 const prevMarkets = await previous('markets');
-for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', () => markets(prevMarkets)]]) {
+for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', () => markets(prevMarkets)], ['lab', () => lab(CTX)], ['buybacks', () => buybacks(CTX)], ['whales', () => whales(CTX)]]) {
   try { const r = await fn(); status[name] = { ok: true, ...r }; console.log('✓', name, JSON.stringify(r)); }
   catch (e) {
     status[name] = { ok: false, err: String(e.message || e).slice(0, 160) };
