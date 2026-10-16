@@ -201,7 +201,8 @@ export async function lab(ctx) {
 // ---------------------------------------------------------------------
 function holdersType(text) {
   const t = String(text || '');
-  const bb = /buy[\s-]?backs?|bought back|repurchas|buys? (back )?(the )?token|assistance fund|token buy/i.test(t);
+  // "buyback", "bought back", "repurchase", "buying STONK", "used to buy ORCA", "Assistance Fund"...
+  const bb = /buy[\s-]?backs?|bought back|repurchas|assistance fund|token buy|\bbuy(?:s|ing)?\b(?:\s+back)?\s+(?:the\s+)?\$?[a-z]{2,12}\b/i.test(t) && !/\bbuy(?:s|ing)?\s+(?:liquidity|lp|insurance|bonds?)\b/i.test(t);
   const burn = /burn/i.test(t);
   return bb && burn ? 'buyback-burn' : bb ? 'buyback' : burn ? 'burn' : 'share';
 }
@@ -225,8 +226,18 @@ export async function buybacks(ctx) {
     g.parts.push({ n: p.displayName || p.name, d30: p.total30d || 0 });
     if (!g.method) g.method = methodText(p.methodology);
   }
-  const top = [...groups.values()].filter((g) => g.d30 >= 5000).sort((a, b) => b.d30 - a.d30).slice(0, 45);
-  const det = await ctx.pool(top, 4, (g) => ctx.get(`https://api.llama.fi/summary/fees/${encodeURIComponent(g.slug)}?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true`, { as: 'json', timeout: 40000 }));
+  const top = [...groups.values()].filter((g) => g.d30 >= 5000).sort((a, b) => b.d30 - a.d30).slice(0, 50);
+  const sum = (slug) => ctx.get(`https://api.llama.fi/summary/fees/${encodeURIComponent(slug)}?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true`, { as: 'json', timeout: 40000 });
+  const det = await ctx.pool(top, 4, (g) => sum(g.slug));
+  // alguns "pais" da DefiLlama têm outro nome no resumo (maker → sky, astherus → aster): tenta o apelido e a 1ª palavra do produto
+  const ALIAS = { maker: 'sky', astherus: 'aster' };
+  for (let i = 0; i < top.length; i++) {
+    if (det[i] && !det[i].err && det[i].gecko_id) continue;
+    const g = top[i]; const firstWord = String((g.parts[0] && g.parts[0].n) || g.n || '').toLowerCase().split(/[\s.]+/)[0].replace(/[^a-z0-9-]/g, '');
+    for (const alt of [...new Set([ALIAS[g.slug], firstWord].filter((x) => x && x !== g.slug))]) {
+      try { const d = await sum(alt); if (d && d.gecko_id) { det[i] = d; g.slug = alt; break; } } catch { /* tenta o próximo */ }
+    }
+  }
   const list = [];
   top.forEach((g, i) => {
     const d = det[i] && !det[i].err ? det[i] : null;
