@@ -1,0 +1,35 @@
+# Ferramenta de desenvolvimento: testa fontes de dados a partir dos servidores do GitHub
+# e publica o resultado no ramo "probe". Só roda quando alguém aperta "Run workflow".
+name: Sondar fontes (dev)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  sondar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sondar
+        run: node scripts/sondar.mjs _probe
+      - name: Publicar no ramo probe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd _probe
+          git init -q
+          git config user.name "nexus-hub-bot"
+          git config user.email "nexus-hub-bot@users.noreply.github.com"
+          git checkout -q -b probe
+          git add -A
+          git commit -q -m "sondagem $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" probe

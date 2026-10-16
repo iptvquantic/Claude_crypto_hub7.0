@@ -1,0 +1,181 @@
+[
+ {
+  "id": "cm-catalog",
+  "url": "https://community-api.coinmetrics.io/v4/catalog/asset-metrics?assets=btc",
+  "pick": "cm-catalog",
+  "timeout": 40000
+ },
+ {
+  "id": "cm-catalog2",
+  "url": "https://community-api.coinmetrics.io/v4/catalog-v2/asset-metrics?assets=btc&page_size=2000",
+  "pick": "cm-catalog",
+  "timeout": 40000
+ },
+ {
+  "id": "bd-apidocs",
+  "url": "https://bitcoin-data.com/v3/api-docs",
+  "pick": "openapi"
+ },
+ {
+  "id": "bd-apidocs2",
+  "url": "https://bitcoin-data.com/api-docs",
+  "pick": "openapi"
+ },
+ {
+  "id": "bd-root",
+  "url": "https://bitcoin-data.com/v1/",
+  "sampleLen": 1500
+ },
+ {
+  "id": "bd-sth-rp",
+  "url": "https://bitcoin-data.com/v1/sth-realized-price/last",
+  "pause": 4000
+ },
+ {
+  "id": "bd-lth-rp",
+  "url": "https://bitcoin-data.com/v1/lth-realized-price/last",
+  "pause": 4000
+ },
+ {
+  "id": "bd-lth-sopr",
+  "url": "https://bitcoin-data.com/v1/lth-sopr/last",
+  "pause": 4000
+ },
+ {
+  "id": "bd-aviv",
+  "url": "https://bitcoin-data.com/v1/aviv/last",
+  "pause": 4000
+ },
+ {
+  "id": "bd-cvdd",
+  "url": "https://bitcoin-data.com/v1/cvdd/last",
+  "pause": 4000
+ },
+ {
+  "id": "ll-holders",
+  "url": "https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true&dataType=dailyHoldersRevenue",
+  "pick": "llama-overview",
+  "timeout": 60000
+ },
+ {
+  "id": "ll-revenue",
+  "url": "https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true&dataType=dailyRevenue",
+  "pick": "llama-overview",
+  "timeout": 60000
+ },
+ {
+  "id": "ll-hype",
+  "url": "https://api.llama.fi/summary/fees/hyperliquid?dataType=dailyHoldersRevenue",
+  "timeout": 40000
+ },
+ {
+  "id": "ll-emissions",
+  "url": "https://api.llama.fi/emissions",
+  "timeout": 40000
+ },
+ {
+  "id": "ll-emission-arb",
+  "url": "https://api.llama.fi/emission/arbitrum",
+  "timeout": 40000
+ },
+ {
+  "id": "ll-buybacks",
+  "url": "https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true&dataType=dailyBuybacks",
+  "pick": "llama-overview",
+  "timeout": 60000
+ },
+ {
+  "id": "gdelt",
+  "url": "https://api.gdeltproject.org/api/v2/doc/doc?query=(war%20OR%20sanctions%20OR%20missile)%20sourcelang:english&mode=artlist&maxrecords=20&format=json&timespan=1d",
+  "timeout": 40000
+ },
+ {
+  "id": "rss-g1mundo",
+  "url": "https://g1.globo.com/rss/g1/mundo/",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-folhamundo",
+  "url": "https://feeds.folha.uol.com.br/mundo/rss091.xml",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-bbcbr",
+  "url": "https://feeds.bbci.co.uk/portuguese/rss.xml",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-cnnbr-int",
+  "url": "https://www.cnnbrasil.com.br/internacional/feed/",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-dwbr",
+  "url": "https://rss.dw.com/rdf/rss-br-all",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-estadao-int",
+  "url": "https://www.estadao.com.br/arc/outboundfeeds/feeds/rss/sections/internacional/?outputType=xml",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-aljazeera",
+  "url": "https://www.aljazeera.com/xml/rss/all.xml",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-guardian-world",
+  "url": "https://www.theguardian.com/world/rss",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-un",
+  "url": "https://news.un.org/feed/subscribe/pt/news/all/rss.xml",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-france24",
+  "url": "https://www.france24.com/pt/rss",
+  "sampleLen": 600
+ },
+ {
+  "id": "rss-uol-int",
+  "url": "https://rss.uol.com.br/feed/noticias.xml",
+  "sampleLen": 400
+ },
+ {
+  "id": "gn-world",
+  "url": "https://news.google.com/rss/search?q=(site:reuters.com%20OR%20site:apnews.com%20OR%20site:bbc.com%20OR%20site:theguardian.com)%20(war%20OR%20conflict%20OR%20sanctions)%20when:2d&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+  "sampleLen": 800
+ },
+ {
+  "id": "bitinfo-top",
+  "url": "https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html",
+  "sampleLen": 400
+ },
+ {
+  "id": "cg-treasury-eth",
+  "url": "https://api.coingecko.com/api/v3/companies/public_treasury/ethereum"
+ },
+ {
+  "id": "mempool-hashrate",
+  "url": "https://mempool.space/api/v1/mining/hashrate/3y"
+ },
+ {
+  "id": "binance-funding",
+  "url": "https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT"
+ },
+ {
+  "id": "binance-oi",
+  "url": "https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT"
+ },
+ {
+  "id": "bybit-funding",
+  "url": "https://api.bybit.com/v5/market/tickers?category=linear&symbol=BTCUSDT"
+ },
+ {
+  "id": "okx-funding",
+  "url": "https://www.okx.com/api/v5/public/funding-rate?instId=BTC-USDT-SWAP"
+ }
+]
