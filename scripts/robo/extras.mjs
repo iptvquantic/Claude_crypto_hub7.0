@@ -28,6 +28,11 @@ export const GEO_TOPICS = [
 ];
 const GEO_WORDS = /\b(guerra|war|conflito|conflict|ataques?|attacks?|bombardeio|airstrikes?|strikes?|m[íi]sseis?|m[íi]ssil|missiles?|drones?|tropas|troops|ex[ée]rcito|army|militar(es)?|military|cessar-fogo|ceasefire|tr[ée]gua|truce|invas[ãa]o|invasion|terroris|ref[ée]ns|hostages?|nuclear|ogivas?|otan|nato|onu\b|united nations|conselho de seguran[çc]a|security council|diplomac|diplomat|c[úu]pula|summit|g7|g20|bri[cç]s|golpe de estado|coup|sanç|pent[áa]gono|pentagon|centcom|marinha|navy)\b/i;
 const OFFTOPIC = /\b(futebol|football|soccer|copa do mundo|world cup|nba|nfl|t[êe]nis|f[óo]rmula 1|olimp[íi]|novela|bbb|reality|celebridade|famos[oa]s?|moda|fashion|receitas?|hor[óo]scopo|carnaval|shows?|cantora?|singer|atriz|ator|actress|actor|filmes?|movie|s[ée]ries?|netflix|gl[úu]teo|glutemax|bumbum|dieta|fitness|loteria|mega-sena|ganhador|novel[ae]|bilheteria|lifestyle|wellness|recipe|recipes|royal family|pr[íi]ncipe harry|meghan)\b/i;
+// política e sociedade (para "Internacional": sem isso, crime e variedades de outros países ficam de fora)
+const POLITICS = /\b(presidente|president|governo|government|elei[çc][ãa]o|elei[çc][õo]es|election|eleitor|parlament|congresso|congress|senado|senate|ministr[oa]|minister|premi[êe]|prime minister|protestos?|protests?|manifesta[çc]|greve|lei\b|law\b|reforma|economia|economy|infla[çc][ãa]o|inflation|banco central|central bank|diplomac|acordo|deal|c[úu]pula|summit|papa\b|pope|imigra|migrant|refugiad|refugee|direitos humanos|human rights|suprema corte|supreme court|tribunal|ditadura|regime|oposi[çc][ãa]o|opposition|crise|crisis|d[íi]vida|debt|fmi|imf|banco mundial|world bank|or[çc]amento|budget|impeachment|corrup[çc]|corruption)\b/i;
+// veículos aceitos quando a notícia vem pelo Google Notícias (os demais são descartados: sem fonte reconhecida)
+const GN_OK = /^(g1|globo|o globo|folha|estad[ãa]o|uol|cnn|valor|infomoney|exame|veja|bbc|deutsche welle|dw\b|reuters|ap news|associated press|afp|bloomberg|cnbc|times brasil|poder360|metr[óo]poles|r7|terra|gazeta do povo|correio braziliense|ag[êe]ncia brasil|jovem pan|sbt news|band|rfi|euronews|al jazeera|the guardian|the new york times|new york times|wall street journal|the wall street journal|financial times|the washington post|washington post|politico|axios|france 24|sky news|abc news|nbc news|cbs news|npr|the economist|times of israel|haaretz|kyiv independent|kyiv post|the moscow times|south china morning post|nikkei|the japan times|yonhap|al arabiya|gulf news|arab news|the times of india|xinhua|anadolu|ansa|efe|lusa|carta capital|istoé|isto[ée] dinheiro|o tempo|zero hora|gzh|o povo|nexo|piau[íi]|brasil de fato|agência pública)/i;
+const JUNK_TITLE = /(breaking updates from|top stories and breaking|news today\s*-|^live:? *$|newsletter|podcast\b|quiz\b|crossword|palavras cruzadas)/i;
 const ATTRIB = /\b(diz|dizem|afirma|afirmam|alega|alegam|acusa|acusam|segundo|nega|negam|amea[çc]a|says|said|claims?|alleges?|accuses?|according to|denies|warns?)\b/i;
 const STOP = new Set('a o os as de da do das dos e em no na nos nas um uma para por com sem que se ao à é foi diz após sobre contra entre the of to in on at for and is are was with by from after over as its it be has have new says'.split(' '));
 const words = (t) => new Set(String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w)));
@@ -65,12 +70,14 @@ export function geoFeeds(GN, GNE) {
 
 export function classifyGeo(n, kind) {
   const txt = `${n.t} ${n.x || ''}`;
-  if (OFFTOPIC.test(n.t)) return null;
+  if (OFFTOPIC.test(n.t) || JUNK_TITLE.test(n.t)) return null;
+  if ((kind === 'gn' || kind === 'agency') && !GN_OK.test(String(n.src || '').trim())) return null;
   const topics = GEO_TOPICS.filter(([, re]) => re.test(txt)).map(([k]) => k);
   // matéria marítima só entra quando fala de rota, ataque, apreensão ou energia (não de feira e carreira)
   if (kind === 'maritime' && !topics.length && !GEO_WORDS.test(txt)) return null;
   const geo = topics.length > 0 || GEO_WORDS.test(txt);
   if (!geo && kind !== 'br' && kind !== 'world') return null; // fora das editorias de mundo, só entra conflito
+  if (!geo && !POLITICS.test(txt)) return null; // "Internacional" = política e sociedade, não crime nem variedades
   return { cat: geo ? 'geo' : 'intl', topics, att: ATTRIB.test(n.t) };
 }
 
@@ -80,13 +87,16 @@ export async function geoNews(ctx) {
   const res = await ctx.pool(feeds, 4, async ([u, src, lang]) => ctx.parseRss(await ctx.get(u, { timeout: 25000 }), src, lang));
   let ok = 0; const raw = [];
   res.forEach((r, i) => { if (Array.isArray(r)) { ok++; const kind = feeds[i][3]; r.forEach((n) => raw.push({ ...n, kind })); } else console.warn('  geo falhou:', feeds[i][1], r && r.err); });
+  // soma com as notícias das execuções anteriores (é assim que a linha do tempo chega a 7 dias)
+  try { const old = await ctx.previous('news'); ((old && old.cats && old.cats.geo) || []).forEach((n) => raw.push({ ...n, kind: n.kind || 'br', old: true })); } catch { /* sem arquivo anterior */ }
   const seen = new Set(); const items = [];
-  for (const n of raw.sort((a, b) => b.d - a.d)) {
+  for (const n of raw.sort((a, b) => (a.old === b.old ? b.d - a.d : a.old ? 1 : -1)).sort((a, b) => b.d - a.d)) {
     if (n.d > now + 3600e3 || now - n.d > maxAge) continue;
     const key = n.u.split('?')[0]; const tkey = n.t.toLowerCase().replace(/\s+/g, ' ').slice(0, 70);
     if (seen.has(key) || seen.has(tkey)) continue; seen.add(key); seen.add(tkey);
     const c = classifyGeo(n, n.kind); if (!c) continue;
     items.push({ t: n.t, u: n.u, d: n.d, x: n.x, img: n.img, src: n.src, lang: n.lang, cat: c.cat, tp: c.topics, att: c.att || undefined, kind: n.kind });
+    delete items[items.length - 1].ns; delete items[items.length - 1].dup;
   }
   // mesma história em vários veículos (títulos parecidos em até 36 h): conta as fontes
   const W = items.map((n) => words(n.t));

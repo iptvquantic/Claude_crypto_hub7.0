@@ -30,7 +30,8 @@ const failing = new Set(['https://www.criptofacil.com/feed/', 'https://nfs.faire
 globalThis.fetch = async (url, opts = {}) => {
   calls++;
   const u = String(url);
-  const res = (body, ok = true, status = 200) => ({ ok, status, text: async () => (typeof body === 'string' ? body : JSON.stringify(body)), json: async () => (typeof body === 'string' ? JSON.parse(body) : body) });
+  const res = (body, ok = true, status = 200, ct = null) => { const txt = typeof body === 'string' ? body : JSON.stringify(body); return { ok, status, headers: { get: (h) => (h.toLowerCase() === 'content-type' ? ct : null) }, text: async () => txt, json: async () => (typeof body === 'string' ? JSON.parse(body) : body), arrayBuffer: async () => (body instanceof Uint8Array ? body : new TextEncoder().encode(txt)).buffer }; };
+  if (u.includes('feeds.folha.uol.com.br/mundo')) { const xml = `<?xml version="1.0" encoding="ISO-8859-1"?><rss><channel><title>Folha</title><item><title>Papa faz oração pela paz em Gaza e pede cessar-fogo</title><link>https://folha.test/1</link><pubDate>${new Date(now - 2 * 3600e3).toUTCString()}</pubDate></item></channel></rss>`; return res(Uint8Array.from(xml, (c) => c.charCodeAt(0)), true, 200, 'text/xml; charset=ISO-8859-1'); }
   if (u.includes('.supabase.co/rest/v1/rpc/ping')) { pings.push({ u, method: opts.method, key: (opts.headers || {}).apikey }); return pingFails ? res('paused', false, 540) : res({ ok: true, server_time: new Date().toISOString() }); }
   if (failing.has(u)) return res('erro', false, 503);
   if (u.includes('community-api.coinmetrics.io/v4/timeseries')) return res({ data: cmRows() });
@@ -88,6 +89,7 @@ ok(!geo.some((n) => /glutemaxxing|antiga demais/i.test(n.t)), 'geopolítica: sem
 ok(geo.some((n) => n.tp.includes('oriente')) && geo.some((n) => n.tp.includes('ucrania')) && geo.some((n) => n.tp.includes('rotas')) && geo.some((n) => n.tp.includes('asia')) && geo.some((n) => n.tp.includes('comercial')), 'geopolítica: notícias marcadas por conflito');
 ok(geo.some((n) => n.ns >= 2), 'geopolítica: mesma história em vários veículos é contada');
 ok(geo.some((n) => n.att), 'geopolítica: alegação atribuída marcada ("diz")');
+ok(geo.some((n) => /oração pela paz/.test(n.t)), 'feed em ISO-8859-1 com acentos corretos');
 const labj = read('lab');
 ok(labj.t0 === '2010-07-18' && labj.cm.price.length === labj.n && labj.cm.price.filter((v) => v !== null).length > 5000 && labj.cm.mvrv.length === labj.n, 'lab: histórico diário do Coin Metrics alinhado por dia');
 ok(Object.keys(labj.bd).length === 3 && labj.bd.cvdd && labj.bdLast.cvdd, 'lab: rodízio do bitcoin-data.com (3 por execução)');

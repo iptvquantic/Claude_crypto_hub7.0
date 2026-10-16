@@ -32,7 +32,12 @@ async function get(url, { as = 'text', timeout = 20000, headers = {} } = {}) {
   try {
     const r = await fetch(url, { signal: ctl.signal, headers: { 'user-agent': UA, accept: as === 'json' ? 'application/json' : '*/*', ...headers } });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return as === 'json' ? await r.json() : await r.text();
+    if (as === 'json') return await r.json();
+    // texto: respeita o charset (feeds em ISO-8859-1 como Folha e UOL viravam "ora��o")
+    const buf = new Uint8Array(await r.arrayBuffer());
+    const head = new TextDecoder('latin1').decode(buf.subarray(0, 300));
+    const cs = ((r.headers.get('content-type') || '').match(/charset=([\w-]+)/i) || head.match(/encoding=["']([\w-]+)["']/i) || [])[1] || 'utf-8';
+    try { return new TextDecoder(cs.toLowerCase()).decode(buf); } catch { return new TextDecoder('utf-8').decode(buf); }
   } finally { clearTimeout(t); }
 }
 async function raw(url, { timeout = 20000, headers = {} } = {}) {
