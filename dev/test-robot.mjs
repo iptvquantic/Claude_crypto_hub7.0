@@ -26,6 +26,23 @@ const llamaOverview = { protocols: [
   ...Array.from({ length: 12 }, (_, i) => ({ name: 'Proto ' + i, displayName: 'Proto ' + i, defillamaId: '9' + i, slug: 'proto-' + i, category: 'Dexs', chains: ['Ethereum'], total24h: 1e4 * (12 - i), total7d: 7e4 * (12 - i), total30d: 3e5 * (12 - i), total60dto30d: 2e5 * (12 - i), total1y: 3e6 * (12 - i), totalAllTime: 5e6, methodology: { HoldersRevenue: i % 2 ? 'Fees distributed to stakers' : 'Protocol buys back and burns the token' } })),
 ] };
 const bitinfoHtml = `<html><table class="t"><caption>Bitcoin distribution</caption><thead><tr><th>Balance, BTC</th><th>Addresses</th><th>% Addresses (Total)</th><th>BTC</th><th>USD</th><th>% BTC (Total)</th></tr></thead><tbody>${['(0 - 0.00001)', '[0.00001 - 0.0001)', '[0.0001 - 0.001)', '[0.001 - 0.01)', '[0.01 - 0.1)', '[0.1 - 1)', '[1 - 10)', '[10 - 100)'].map((r, i) => `<tr><td>${r}</td><td data-val='${1000 * (i + 1)}'>${1000 * (i + 1)}</td><td data-val='1'>1.5% (100%)</td><td data-val='${50 * i}'>${50 * i} BTC</td><td data-val='${50 * i}'>$${(50 * i * 80000).toLocaleString('en-US')}</td><td data-val='0'>${i}.5% (99%)</td></tr>`).join('')}</tbody></table><table id="tblOne"><tbody>${Array.from({ length: 60 }, (_, i) => `<tr><td>${i + 1}</td><td><a href="https://bitinfocharts.com/bitcoin/address/bc1qaddr${String(i).padStart(30, '0')}">bc1qaddr${i}</a> <small>wallet: Exchange-${i}</small></td><td>${(250000 - i * 1000).toLocaleString('en-US')} BTC ($20,000,000,000)</td><td>1.${i}%</td><td>2018-10-18 12:59:18 UTC</td><td>2026-10-12 01:06:56 UTC</td><td>5557</td><td>2018-10-18 13:19:26 UTC</td><td>2023-01-07 06:15:34 UTC</td><td>451</td></tr>`).join('')}</tbody></table></html>`;
+// ---- lista de tokens (Wallet Watch) ----
+process.env.NX_ROBOT_FAST = '1';
+const TK_MARKETS = (page) => Array.from({ length: 250 }, (_, i) => { const r = (page - 1) * 250 + i + 1; const id = r === 1 ? 'bitcoin' : r === 2 ? 'ethereum' : r === 3 ? 'tether' : r === 4 ? 'usd-coin' : r === 5 ? 'solana' : r === 6 ? 'tron' : r === 7 ? 'semdec' : 'coin-' + r; return { id, symbol: id.slice(0, 4), name: 'Nome ' + id, market_cap_rank: r, image: `https://coin-images.coingecko.com/coins/images/${r}/large/${id}.png?1700000000` }; });
+const TK_LIST = [
+  { id: 'tether', platforms: { ethereum: '0xdAC17F958D2ee523a2206206994597C13D831ec7', tron: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', 'the-open-network': 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs', solana: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', 'unknown-chain': '0xabc' } },
+  { id: 'usd-coin', platforms: { ethereum: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', base: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 'binance-smart-chain': '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d' } },
+  { id: 'semdec', platforms: { ethereum: '0x1111111111111111111111111111111111111111' } },
+  { id: 'fora-do-top', platforms: { ethereum: '0x2222222222222222222222222222222222222222' } },
+  ...Array.from({ length: 1200 }, (_, i) => ({ id: 'coin-' + (i + 8), platforms: i < 400 ? { 'binance-smart-chain': '0x' + (i + 1).toString(16).padStart(40, '0') } : {} })),
+  ...Array.from({ length: 5000 }, (_, i) => ({ id: 'resto-' + i, platforms: {} })),
+];
+function tkMcResult(n, dec) { // resposta do Multicall3.aggregate3 com n resultados uint8
+  const w = (v) => BigInt(v).toString(16).padStart(64, '0');
+  let head = w(0x20) + w(n), offs = '', body = ''; let cur = 32 * n;
+  for (let i = 0; i < n; i++) { offs += w(cur); const t = w(1) + w(0x40) + w(32) + w(dec); body += t; cur += t.length / 2; }
+  return '0x' + head + offs + body;
+}
 let calls = 0;
 let pingFails = false; let pings = [];
 const failing = new Set(['https://www.criptofacil.com/feed/', 'https://nfs.faireconomy.media/ff_calendar_nextweek.json']);
@@ -41,6 +58,18 @@ globalThis.fetch = async (url, opts = {}) => {
   if (u.startsWith('https://api.alternative.me/fng/')) return res({ data: Array.from({ length: 900 }, (_, i) => ({ value: String(20 + (i % 60)), timestamp: String(Math.floor((now - i * DAY) / 1000)) })) });
   if (u.startsWith('https://api.llama.fi/overview/fees')) return res(llamaOverview);
   if (u.startsWith('https://api.llama.fi/summary/fees/')) { const slug = decodeURIComponent(u.split('/summary/fees/')[1].split('?')[0]); if (slug === 'papertrade') return res({ name: 'Papertrade', gecko_id: null }); const g = { hyperliquid: ['Hyperliquid', 'HYPE', 'hyperliquid'], tron: ['Tron', 'TRX', 'tron'] }[slug] || [slug, slug.toUpperCase().replace('-', ''), slug]; return res({ name: g[0], displayName: g[0], symbol: g[1], gecko_id: g[2], logo: 'https://icons.test/' + slug, category: 'Dexs', methodology: slug === 'tron' ? 'Burned TRX fees' : undefined, total24h: null, totalDataChart: Array.from({ length: 220 }, (_, i) => [Math.floor((now - (220 - i) * DAY) / 1000), 1000 + i]) }); }
+  if (u.startsWith('https://api.coingecko.com/api/v3/coins/markets') && u.includes('order=market_cap_desc') && !u.includes('ids=')) return res(TK_MARKETS(Number(u.match(/[?&]page=(\d+)/)[1])));
+  if (u.startsWith('https://api.coingecko.com/api/v3/coins/list?include_platform=true')) return res(TK_LIST);
+  if (u.startsWith('https://coins.llama.fi/prices/current/')) {
+    const keys = u.split('/prices/current/')[1].split('?')[0].split(',');
+    // USDC na BSC fica sem decimais no DefiLlama (o robô lê no contrato); "semdec" não tem em lugar nenhum
+    return res({ coins: Object.fromEntries(keys.filter((k) => !/8ac76a51|0x1111|^bsc:0x0000/i.test(k)).map((k) => [k, { decimals: /usd|dac17|TR7N|EQCx|Es9v|a0b8|8335/i.test(k) ? 6 : 18, symbol: 'X', price: 1, confidence: 0.99 }])) });
+  }
+  if (u.includes('publicnode.com') && opts.method === 'POST') {
+    const b = JSON.parse(opts.body); const data = b.params[0].data; const n = Number(BigInt('0x' + data.slice(10 + 64, 10 + 128)));
+    if (/^0x82ad56cb/.test(data) && /1111111111111111111111111111111111111111/.test(data)) return res({ jsonrpc: '2.0', id: 1, error: { message: 'execution reverted' } });
+    return res({ jsonrpc: '2.0', id: 1, result: tkMcResult(n, 18) });
+  }
   if (u.startsWith('https://api.coingecko.com/api/v3/coins/markets') && u.includes('ids=')) { const ids = decodeURIComponent(u.split('ids=')[1].split('&')[0]).split(','); return res(ids.map((id, i) => ({ id, symbol: id.slice(0, 4), market_cap: 1e9 * (i + 1), fully_diluted_valuation: 2e9 * (i + 1), current_price: 10 + i, price_change_percentage_24h: 1.5, image: 'https://img.test/' + id, market_cap_rank: i + 1 }))); }
   if (u.includes('bitinfocharts.com/top-100-richest-bitcoin-addresses')) return res(bitinfoHtml);
   if (GEO_HOSTS.test(u)) return res(geoRss(new URL(u).host));
@@ -106,6 +135,16 @@ ok(bb.list.find((x) => x.sym === 'TRX').type === 'burn', 'recompra: queima ident
 const wh = read('whales');
 ok(wh.top.length === 60 && wh.top[0].label === 'Exchange-0' && wh.top[0].bal === 250000 && wh.dist.length === 8 && wh.dist[1].addrPct === 1.5, 'baleias: maiores endereços e faixas de saldo');
 ok(st.sources.lab.ok && st.sources.buybacks.ok && st.sources.whales.ok, 'status registra lab, recompra e baleias');
+const tk = read('tokens');
+const tkEth = Object.fromEntries((tk.chains.eth || []).map(([a, d, id]) => [a, [d, id]]));
+ok(tkEth['0xdac17f958d2ee523a2206206994597c13d831ec7'] && tkEth['0xdac17f958d2ee523a2206206994597c13d831ec7'][0] === 6 && tkEth['0xdac17f958d2ee523a2206206994597c13d831ec7'][1] === 'tether', 'tokens: contrato em minúsculas, decimais e id da moeda');
+ok(!tkEth['0x2222222222222222222222222222222222222222'], 'tokens: moeda fora das maiores não entra');
+ok(!tkEth['0x1111111111111111111111111111111111111111'], 'tokens: sem decimais conhecidos fica de fora (nunca chuta)');
+ok((tk.chains.bsc || []).some(([a, d]) => a === '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d' && d === 18) && (tk.chains.bsc || []).length > 300, 'tokens: decimais que faltam no DefiLlama lidos no contrato (Multicall3)');
+ok((tk.chains.trx || []).some(([a]) => a === 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t') && (tk.chains.sol || []).some(([a]) => a === 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'), 'tokens: Tron e Solana com o endereço original (maiúsculas importam)');
+ok((tk.chains.ton || []).some(([a]) => a === '0:b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe'), 'tokens: TON convertido para o formato bruto (0:…)');
+ok(tk.coins.tether && tk.coins.tether[0] === 'TETH' && tk.coins.bitcoin && /^1\/small\/bitcoin\.png/.test(tk.coins.bitcoin[3]) && !tk.chains['unknown-chain'], 'tokens: nomes, logo (caminho curto) e redes desconhecidas ignoradas');
+ok(st.sources.tokens && st.sources.tokens.ok && st.sources.tokens.n === tk.n, 'status registra a lista de tokens');
 ok(st.sources.db && st.sources.db.ok && pings.length === 1 && pings[0].method === 'POST' && /^sb_publishable_/.test(pings[0].key), 'banco mantido ativo (ping com a chave publicável da configuração)');
 // 2ª execução: banco pausado não derruba o robô
 pingFails = true;

@@ -254,7 +254,7 @@ export async function buybacks(ctx) {
     const pts = (d.totalDataChart || []).filter((x) => Array.isArray(x) && Number.isFinite(x[1])).map(([t, v]) => [Number(t) * (Number(t) < 1e12 ? 1000 : 1), v]).slice(-200);
     if (!pts.length) return;
     const c0 = Math.floor(pts[0][0] / DAY) * DAY; const cv = [];
-    for (const [t, v] of pts) { const k = Math.round((t - c0) / DAY); if (k >= 0 && k < 400) cv[k] = Math.round(v); }
+    for (const [t, v] of pts) { const k = Math.floor(t / DAY) - c0 / DAY; if (k >= 0 && k < 400) cv[k] = Math.round(v); } // dia UTC de cada ponto (nunca arredonda para o dia seguinte)
     for (let k = 0; k < cv.length; k++) if (cv[k] === undefined) cv[k] = null;
     const meth = methodText(d.methodology) || g.method || ((d.childProtocols || []).map((c) => methodText(c.methodology)).find(Boolean) || '');
     const num = (v, f) => (Number.isFinite(v) ? v : f);

@@ -10,6 +10,7 @@
 //   lab.json       histórico diário on-chain do BTC (Bitcoin Lab e On-chain)
 //   buybacks.json  recompra, queima e repasse aos detentores por token
 //   whales.json    100 maiores endereços de BTC e distribuição por faixa
+//   tokens.json    contratos e decimais dos tokens reconhecidos por rede (Wallet Watch; renova a cada ~20 h)
 //   (news.json também traz cats.geo: geopolítica por conflito, 7 dias)
 // E mantém o banco (Supabase grátis) ativo: o plano grátis pausa o projeto após ~7 dias sem consultas.
 // Regra de ouro: NUNCA quebrar o site. Se uma fonte falhar, o arquivo anterior é mantido
@@ -19,6 +20,7 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { geoNews, lab, buybacks, whales } from './robo/extras.mjs';
+import { tokens } from './robo/tokens.mjs';
 
 const OUT = process.argv[2] || '_data';
 const REPO = process.env.GITHUB_REPOSITORY || 'iptvquantic/Claude_crypto_hub7.0';
@@ -235,7 +237,7 @@ let worldDebug = '';
 const CTX = { get, raw, pool, previous, save, parseRss, strip, GN, GNE };
 const t0 = Date.now();
 const prevMarkets = await previous('markets');
-for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', () => markets(prevMarkets)], ['lab', () => lab(CTX)], ['buybacks', () => buybacks(CTX)], ['whales', () => whales(CTX)]]) {
+for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', () => markets(prevMarkets)], ['lab', () => lab(CTX)], ['buybacks', () => buybacks(CTX)], ['whales', () => whales(CTX)], ['tokens', () => tokens(CTX)]]) {
   try { const r = await fn(); status[name] = { ok: true, ...r }; console.log('✓', name, JSON.stringify(r)); }
   catch (e) {
     status[name] = { ok: false, err: String(e.message || e).slice(0, 160) };
