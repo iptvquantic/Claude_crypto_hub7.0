@@ -14,7 +14,7 @@ const BASE = process.argv.includes('--root') ? '' : 'beta/';
 const SHOTS = process.argv.includes('--shots');
 const TYPES = { '.html': 'text/html', '.js': 'application/javascript', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' };
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
-const PAGES = ['dash', 'chart', 'top100', 'markets', 'onchain', 'lab', 'tokenomics', 'etf', 'whales', 'macro', 'agenda', 'poly', 'news', 'geo', 'vault', 'plans', 'settings'];
+const PAGES = ['dash', 'chart', 'top100', 'markets', 'onchain', 'lab', 'tokenomics', 'buybacks', 'etf', 'whales', 'macro', 'agenda', 'poly', 'news', 'geo', 'vault', 'plans', 'settings'];
 const fails = [];
 const ok = (cond, msg) => { if (!cond) { fails.push(msg); console.log('  ✗ ' + msg); } else console.log('  ✓ ' + msg); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -112,6 +112,15 @@ console.log('\n[1] Visitante · computador · todas as páginas');
   await goPage(page, 'whales', 3000);
   ok(await page.$$eval('#wh-dist .wh-tier', (a) => a.length === 6).catch(() => false), 'Baleias: 6 faixas por tamanho de carteira');
   ok(await page.$$eval('#wh-top tbody tr', (a) => a.length >= 20).catch(() => false), 'Baleias: 100 maiores endereços');
+  // Burn, Baby, Burn: tabela por token, filtros e detalhe
+  await goPage(page, 'buybacks', 3000);
+  ok(await page.$$eval('#bb-tb tbody tr.click', (a) => a.length >= 8).catch(() => false), 'Burn, Baby, Burn: tabela de recompra e queima por token');
+  ok(await page.$eval('#sb .sb-i[data-page=buybacks] .lbl', (e) => e.textContent === 'Burn, Baby, Burn').catch(() => false), 'Burn, Baby, Burn: item no menu');
+  await page.click('#bb-tbl .seg button[data-v="30d"]'); await sleep(400);
+  ok(await page.$eval('#bb-sum', (e) => /em 30 dias/.test(e.innerText)).catch(() => false), 'Burn, Baby, Burn: troca de período');
+  await page.click('#bb-tb tbody tr.click'); await sleep(1500);
+  ok(await page.$('#bb-mchart canvas') !== null, 'Burn, Baby, Burn: detalhe com gráfico diário');
+  await page.keyboard.press('Escape'); await sleep(300);
   // troca de idioma e tema
   await page.evaluate(() => setLang('en')); await sleep(800);
   ok((await page.$eval('#sb .sb-i[data-page=markets] .lbl', (e) => e.textContent)) === 'Indices & FX', 'idioma EN troca o menu');
@@ -129,7 +138,7 @@ console.log('\n[2] Visitante · celular (390×844)');
 {
   const { browser, page, errors } = await open({ width: 390, height: 844, mobile: true });
   await sleep(3500);
-  for (const id of ['dash', 'top100', 'macro', 'agenda', 'news', 'vault', 'plans', 'onchain', 'whales', 'markets', 'poly', 'chart']) {
+  for (const id of ['dash', 'top100', 'macro', 'agenda', 'news', 'vault', 'plans', 'onchain', 'whales', 'buybacks', 'markets', 'poly', 'chart']) {
     await goPage(page, id, 1800);
     const r = await inspect(page);
     ok(!r.overflow, `${id}: sem rolagem lateral ${r.wide.join(' ')}`);

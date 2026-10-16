@@ -98,7 +98,7 @@ const bb = read('buybacks');
 ok(bb.list.length >= 8 && bb.list[0].d30 >= bb.list[1].d30 && bb.list.every((x) => x.cg), 'recompra: ranking por 30 dias, só tokens com id no CoinGecko');
 ok(!bb.list.some((x) => /papertrade/i.test(x.n)), 'recompra: protocolo sem token fica de fora');
 const hype = bb.list.find((x) => x.sym === 'HYPE');
-ok(hype && hype.type === 'buyback' && hype.parts.length === 2 && hype.mcap > 0 && hype.chart.length === 200, 'recompra: versões somadas por token, tipo, valor de mercado e gráfico');
+ok(hype && hype.type === 'buyback-burn' && hype.parts.length === 2 && hype.mcap > 0 && hype.chart.length === 200, 'recompra: versões somadas por token, tipo (Assistance Fund = recompra e queima), valor de mercado e gráfico');
 ok(bb.list.find((x) => x.sym === 'TRX').type === 'burn', 'recompra: queima identificada pela metodologia');
 const wh = read('whales');
 ok(wh.top.length === 60 && wh.top[0].label === 'Exchange-0' && wh.top[0].bal === 250000 && wh.dist.length === 8 && wh.dist[1].addrPct === 1.5, 'baleias: maiores endereços e faixas de saldo');

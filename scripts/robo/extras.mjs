@@ -201,9 +201,12 @@ export async function lab(ctx) {
 // ---------------------------------------------------------------------
 function holdersType(text) {
   const t = String(text || '');
+  // Hyperliquid: desde a votação dos validadores (17–24/12/2025) o HYPE do Assistance Fund (e o que entra nele) conta como queimado
+  if (/assistance fund/i.test(t)) return 'buyback-burn';
   // "buyback", "bought back", "repurchase", "buying STONK", "used to buy ORCA", "Assistance Fund"...
   const bb = /buy[\s-]?backs?|bought back|repurchas|assistance fund|token buy|\bbuy(?:s|ing)?\b(?:\s+back)?\s+(?:the\s+)?\$?[a-z]{2,12}\b/i.test(t) && !/\bbuy(?:s|ing)?\s+(?:liquidity|lp|insurance|bonds?)\b/i.test(t);
-  const burn = /burn/i.test(t);
+  // queima que já acabou ("used to be burnt before …") não conta
+  const burn = /burn/i.test(t) && !/used to be burn|no longer burn|stopped burn|burns? ended/i.test(t);
   return bb && burn ? 'buyback-burn' : bb ? 'buyback' : burn ? 'burn' : 'share';
 }
 function methodText(m) {
@@ -213,7 +216,8 @@ function methodText(m) {
 }
 export async function buybacks(ctx) {
   const prev = await ctx.previous('buybacks');
-  if (prev && Array.isArray(prev.list) && prev.list.length && Date.now() - Date.parse(prev.generatedAt) < 3 * 3600e3) { ctx.save('buybacks', prev); return { n: prev.list.length, cached: true }; }
+  const VER = 2; // mudou o formato ou a classificação: refaz na hora
+  if (prev && prev.v === VER && Array.isArray(prev.list) && prev.list.length && Date.now() - Date.parse(prev.generatedAt) < 3 * 3600e3) { ctx.save('buybacks', prev); return { n: prev.list.length, cached: true }; }
   const ov = await ctx.get('https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true&dataType=dailyHoldersRevenue', { as: 'json', timeout: 90000 });
   const groups = new Map();
   for (const p of (ov && ov.protocols) || []) {
@@ -260,7 +264,7 @@ export async function buybacks(ctx) {
     list.forEach((x) => { const m = by[x.cg]; if (m) { x.mcap = m.market_cap || null; x.fdv = m.fully_diluted_valuation || null; x.price = m.current_price; x.chg = m.price_change_percentage_24h; x.img = m.image; x.rank = m.market_cap_rank; if (!x.sym) x.sym = String(m.symbol || '').toUpperCase(); } });
   } catch (e) { console.warn('  buybacks: CoinGecko falhou', e.message); }
   list.sort((a, b) => b.d30 - a.d30);
-  ctx.save('buybacks', { generatedAt: iso(Date.now()), src: 'DefiLlama (holders revenue)', list });
+  ctx.save('buybacks', { v: VER, generatedAt: iso(Date.now()), src: 'DefiLlama (holders revenue)', list });
   return { n: list.length };
 }
 

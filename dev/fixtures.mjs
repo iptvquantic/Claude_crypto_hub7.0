@@ -113,6 +113,16 @@ function pipeline(name) {
   const gen = new Date(NOW() - 12 * 60e3).toISOString();
   const real = realPipeline(name, gen); if (real) return real;
   if (name === 'lab') return labFixture(gen);
+  if (name === 'buybacks') {
+    const day0 = Math.floor(NOW() / DAY) * DAY - DAY; // último dia completo (UTC); o de hoje vem pela metade
+    const T = [['hyperliquid', 'Hyperliquid', 'HYPE', 'buyback-burn', 3.4e6, 18e9, 77e9, 38], ['pump-fun', 'Pump', 'PUMP', 'buyback-burn', 9e5, 2.1e9, 3.7e9, 0.005], ['tron', 'Tron', 'TRX', 'burn', 1e6, 31e9, 31e9, 0.3], ['uniswap', 'Uniswap', 'UNI', 'buyback-burn', 3e5, 4.6e9, 6.5e9, 7.5], ['ethereum', 'Ethereum', 'ETH', 'burn', 1e5, 3e11, 3e11, 3100], ['sky', 'Sky', 'SKY', 'buyback', 1.8e5, 1.6e9, 1.7e9, 0.07], ['chainlink', 'Chainlink', 'LINK', 'buyback', 0, 9.5e9, 16e9, 16], ['solana', 'Solana', 'SOL', 'burn', 1.1e5, 6.2e10, 7e10, 145], ['raydium', 'Raydium', 'RAY', 'buyback', 6e4, 4.9e8, 1e9, 1.9], ['aerodrome-finance', 'Aerodrome', 'AERO', 'share', 3e5, 9.3e8, 1.5e9, 0.9], ['pons', 'Pons', 'PONS', 'buyback-burn', 3.5e4, 2.3e8, 2.3e8, 0.3], ['stonk-3', 'StonkFun', 'STONK', 'buyback', 5e4, 9e7, 9e7, 0.12]];
+    const list = T.map(([cg, n, sym, type, d, mcap, fdv, price], k) => {
+      const chart = Array.from({ length: 201 }, (_, i) => [day0 - (199 - i) * DAY, Math.round(d * (0.7 + 0.6 * Math.abs(Math.sin(i / 9 + k))) * (i === 200 ? 0.3 : 1))]).filter(([t]) => k !== 11 || t <= day0 - DAY);
+      const sumN = (m) => chart.slice(-m - 1, -1).reduce((a, [, v]) => a + v, 0);
+      return { id: cg, n, sym, cg, logo: `https://assets.test/logo/${cg}.png`, cat: 'Dexs', chains: ['Ethereum'], d1: sumN(1), d7: sumN(7), d30: sumN(30), p30: sumN(30) * 0.9, y1: sumN(30) * 12, all: sumN(30) * 30, type, method: type === 'burn' ? 'Amount of fees were burned.' : 'Fees used to buy back tokens.', parts: [n], chart, mcap, fdv, price, chg: 1.2, img: `https://assets.test/logo/${cg}.png`, rank: k + 1 };
+    });
+    return { v: 2, generatedAt: gen, src: 'DefiLlama (holders revenue)', list };
+  }
   if (name === 'whales') {
     const lab = ['Binance-coldwallet', 'Binance-coldwallet', 'Robinhood-coldwallet', 'Bitfinex-coldwallet', 'Tether', 'Bitfinex-Hack-Recovery', '', 'MtGox-hack', '', 'Mr.100'];
     const top = Array.from({ length: 100 }, (_, i) => ({ r: i + 1, a: `bc1qteste${String(i).padStart(3, '0')}xyzxyzxyzxyzxyz${i}`, label: lab[i] || (i % 7 === 0 ? 'OKEx' : ''), bal: Math.round(250000 / (1 + i * 0.35)), pct: +(1.24 / (1 + i * 0.35)).toFixed(4), firstIn: '2018-10-18 12:59:18 UTC', lastIn: new Date(NOW() - (i % 9 + 1) * DAY).toISOString().slice(0, 19).replace('T', ' ') + ' UTC', ins: 500 + i, firstOut: i % 3 ? '2019-01-01 00:00:00 UTC' : '', lastOut: i % 3 ? new Date(NOW() - (i * 41 % 1900) * DAY).toISOString().slice(0, 19).replace('T', ' ') + ' UTC' : '', outs: i % 3 ? 40 + i : 0 }));
