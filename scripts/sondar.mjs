@@ -31,11 +31,11 @@ for (const p of list) {
   const t0 = Date.now();
   const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), p.timeout || 25000);
   try {
-    const r = await fetch(p.url, { method: p.method || 'GET', signal: ctl.signal, headers: { 'user-agent': UA, origin: ORIGIN, accept: p.accept || '*/*', ...(p.headers || {}) }, body: p.body ? JSON.stringify(p.body) : undefined });
+    const r = await fetch(p.url, { method: p.method || 'GET', signal: ctl.signal, headers: { 'user-agent': UA, origin: ORIGIN, accept: p.accept || '*/*', ...(p.headers || {}) }, body: p.rawBody != null ? p.rawBody : p.body ? JSON.stringify(p.body) : undefined });
     const text = await r.text();
     if (p.save) writeFileSync(join(OUT, p.save), text);
     const res = { status: r.status, ms: Date.now() - t0, type: r.headers.get('content-type'), acao: r.headers.get('access-control-allow-origin'), len: text.length };
-    for (const h of ['x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset', 'retry-after', 'cache-control', 'last-modified']) { const v = r.headers.get(h); if (v) res[h] = v; }
+    for (const h of ['access-control-allow-headers', 'access-control-allow-methods', 'x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset', 'retry-after', 'cache-control', 'last-modified']) { const v = r.headers.get(h); if (v) res[h] = v; }
     let j = null; try { j = JSON.parse(text); } catch { /* não é JSON */ }
     if (j !== null) {
       if (p.pick === 'cm-catalog') {
