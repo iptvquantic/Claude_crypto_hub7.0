@@ -85,8 +85,34 @@ function pmEvents(tag) {
   return tag === 'sports' ? [] : base;
 }
 // ---------- robô (ramo data) ----------
+// histórico diário sintético do Bitcoin Lab (forma parecida com a real, números de teste)
+function labFixture(gen) {
+  const t0 = Date.UTC(2010, 6, 18); const n = Math.floor((NOW() - t0) / DAY) + 1;
+  const arr = (f, from = 0, lag = 1) => Array.from({ length: n }, (_, i) => (i >= from && i <= n - 1 - lag ? +f(i).toPrecision(6) : null));
+  const pr = (i) => Math.max(0.06, 81500 * Math.pow((i + 1) / n, 3.4) * (1 + 0.32 * Math.sin(i / 260)));
+  const mv = (i) => 1.55 + 0.75 * Math.sin(i / 230 + 0.6);
+  const sup = (i) => Math.min(20.1e6, 3.3e6 + i * 4200);
+  const cyc = (i, a, b) => a + b * Math.sin(i / 190);
+  const bdFrom = n - 1462;
+  const iso = (i) => new Date(t0 + i * DAY).toISOString().slice(0, 10);
+  return {
+    generatedAt: gen, t0: '2010-07-18', n,
+    cm: { price: arr(pr), mvrv: arr(mv, 0, 2), mcap: arr((i) => pr(i) * sup(i), 0, 2), iss: arr((i) => pr(i) * 900 * (1 + 0.1 * Math.sin(i / 50)), 0, 2), hash: arr((i) => 1e9 * Math.pow((i + 1) / n, 2) * (1 + 0.05 * Math.sin(i / 37))), addr: arr((i) => 650000 * (1 + 0.2 * Math.sin(i / 90))), bal: arr((i) => 5.5e7 * (i + 1) / n), supply: arr(sup, 0, 2), exch: arr((i) => 2.7e6 + 3e5 * Math.sin(i / 400), 280, 2), inflow: arr((i) => 26000 + 3000 * Math.sin(i / 11), 280, 2), outflow: arr((i) => 26200 + 3000 * Math.cos(i / 13), 280, 2), fees: arr((i) => 3 + 2 * Math.sin(i / 70) + 2.2), tx: arr((i) => 700000 * (1 + 0.15 * Math.sin(i / 60))) },
+    cmAt: gen,
+    bd: { cvdd: arr((i) => pr(i) / 5, bdFrom, 2), sthRealizedPrice: arr((i) => pr(i) * 0.92, bdFrom, 7), lthRealizedPrice: arr((i) => pr(i) * 0.6, bdFrom, 7), aviv: arr((i) => cyc(i, 1.1, 0.4), bdFrom, 7), lthSopr: arr((i) => cyc(i, 1.6, 0.9), bdFrom, 7), sthSopr: arr((i) => cyc(i, 1.0, 0.03), bdFrom, 7), sthMvrv: arr((i) => cyc(i, 1.05, 0.2), bdFrom, 7), lthMvrv: arr((i) => cyc(i, 1.8, 0.8), bdFrom, 7), sopr: arr((i) => cyc(i, 1.0, 0.02), bdFrom, 7), reserveRisk: arr((i) => cyc(i, 0.0012, 0.0006), bdFrom, 1), trueMarketMean: arr((i) => pr(i) * 0.95, bdFrom, 7), terminalPrice: arr((i) => pr(i) * 1.25, bdFrom, 1) },
+    bdLast: { cvdd: iso(n - 3), sthRealizedPrice: iso(n - 8), lthRealizedPrice: iso(n - 8), aviv: iso(n - 8), lthSopr: iso(n - 8), sthSopr: iso(n - 8), sthMvrv: iso(n - 8), lthMvrv: iso(n - 8), sopr: iso(n - 8), reserveRisk: iso(n - 2), trueMarketMean: iso(n - 8), terminalPrice: iso(n - 2) },
+    fng: arr((i) => Math.round(50 + 30 * Math.sin(i / 40)), 2755, 0), fngAt: gen,
+  };
+}
+// NX_DATA=<pasta com os .json do robô>: usa os arquivos reais (só para conferir o visual com dados de verdade)
+function realPipeline(name, gen) {
+  if (!process.env.NX_DATA) return null;
+  try { const j = JSON.parse(readFileSync(join(process.env.NX_DATA, name + '.json'), 'utf8')); j.generatedAt = gen; return j; } catch { return null; }
+}
 function pipeline(name) {
   const gen = new Date(NOW() - 12 * 60e3).toISOString();
+  const real = realPipeline(name, gen); if (real) return real;
+  if (name === 'lab') return labFixture(gen);
   if (name === 'news') {
     const cat = (c) => Array.from({ length: 12 }, (_, i) => ({ t: `Manchete ${c} ${i + 1}: mercado reage a dados`, u: `https://news.test/${c}/${i}`, d: NOW() - (i * 37 + 3) * 60e3, x: 'Resumo curto.', img: i === 0 ? 'https://assets.test/img/lead.png' : '', src: pick(['InfoMoney', 'Livecoins', 'g1', 'BBC News Brasil']), lang: i % 5 === 4 ? 'en' : 'pt' }));
     return { generatedAt: gen, cats: { cripto: cat('cripto'), economia: cat('economia'), tech: cat('tech'), mundo: cat('mundo').map((n, i) => ({ ...n, t: i % 2 ? 'Rússia e Ucrânia: novo cessar-fogo em discussão' : 'Israel amplia operação em Gaza' })) } };

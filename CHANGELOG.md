@@ -8,6 +8,15 @@
 - **Robô de dados:** histórico on-chain do BTC, recompra e queima por token, 100 maiores endereços de BTC e geopolítica de 7 dias (acumula entre execuções, só veículos reconhecidos, acentos corrigidos); segunda grade de horários para cobrir quando o GitHub pula execuções.
 - **Banco:** permissões extras aplicadas (visitante sem login só chama o sinal de vida).
 - **Suporte pelo WhatsApp (22) 99105-3813** (o mesmo do Meu Caixa): em "Esqueci a senha" (com mensagem pronta), em Configurações › Sobre, nos Termos e na Política de privacidade.
+- **Bitcoin Lab (PRO) refeito:**
+  - **Sinais do ciclo:** 11 sinais de fundo (acumulação) e 10 de topo (distribuição) lidos agora — MVRV, STH/LTH MVRV, Mayer Multiple, 200W SMA, média de 2 anos, Puell, LTH-SOPR, AVIV, Hash Ribbons, Fear & Greed, MVRV Z-Score, Pi Cycle, Terminal Price — cada um com limiar, estado (ativo, extremo, perto, inativo), preço-gatilho, fonte e data. Resumo "X/11" com o território (baixo risco, acumulação, aquecido, risco alto) e a posição no ciclo.
+  - **Gráfico novo:** lista de 40 indicadores ao lado do gráfico, com busca pelo nome e categorias (médias, valor on-chain, detentores, mineração, rede e corretoras, sentimento); cada indicador mostra o valor de hoje e a leitura. Os de preço viram linhas sobre o preço; os demais abrem painéis embaixo, sincronizados (até 4).
+  - **Modo "Níveis de sinal":** linhas tracejadas nos preços que ativariam cada sinal de fundo ou de topo, com a tabela de distâncias.
+  - **Controle do gráfico:** arrastar, roda do mouse/pinça para zoom, botões de aproximar/afastar/voltar, períodos 6M a "Tudo" (desde 2010), escala log, alça para mudar a altura e tela cheia (Esc sai).
+  - **Janela de cada indicador:** o que é, como ler, fonte e data, sinais ligados e tabela de máximos e mínimos por ciclo de halving.
+  - **Nomes como o mercado usa** (Realized Price, MVRV Z-Score, Mayer Multiple, 200W SMA, Pi Cycle Top, NUPL, SOPR, Puell Multiple, Hash Ribbons…), com a explicação em português.
+  - Dados: histórico diário do robô (Coin Metrics desde 2010, BGeometrics e alternative.me); se o robô atrasar, a Coin Metrics é lida direto.
+- **Robô:** endereços com saldo (Coin Metrics) e histórico da BGeometrics que cresce a cada dia (o plano grátis só entrega 4 anos).
 
 ## 3.0.1 — 15/10/2026
 - **Banco de dados sempre ativo:** o plano grátis do Supabase pausa o projeto depois de ~7 dias sem uso (login e Vault parariam). O robô de dados agora faz uma consulta mínima a cada execução e, como reforço, cada navegador que abre o site faz no máximo uma por dia (anônima, sem dado pessoal; política de privacidade atualizada). O Painel do administrador mostra se o banco respondeu, com o caminho para reativar caso ele pause.

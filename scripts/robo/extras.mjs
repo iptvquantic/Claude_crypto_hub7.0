@@ -125,7 +125,7 @@ export async function geoNews(ctx) {
 // ---------------------------------------------------------------------
 // BITCOIN LAB — histórico diário alinhado por dia (t0 + i dias)
 // ---------------------------------------------------------------------
-const CM_MAP = { PriceUSD: ['price', r6], CapMVRVCur: ['mvrv', r5], CapMrktCurUSD: ['mcap', r5], IssTotUSD: ['iss', r5], HashRate: ['hash', r5], AdrActCnt: ['addr', rint], SplyCur: ['supply', rint], SplyExNtv: ['exch', rint], FlowInExNtv: ['inflow', r5], FlowOutExNtv: ['outflow', r5], FeeTotNtv: ['fees', r5], TxCnt: ['tx', rint] };
+const CM_MAP = { PriceUSD: ['price', r6], CapMVRVCur: ['mvrv', r5], CapMrktCurUSD: ['mcap', r5], IssTotUSD: ['iss', r5], HashRate: ['hash', r5], AdrActCnt: ['addr', rint], AdrBalCnt: ['bal', rint], SplyCur: ['supply', rint], SplyExNtv: ['exch', rint], FlowInExNtv: ['inflow', r5], FlowOutExNtv: ['outflow', r5], FeeTotNtv: ['fees', r5], TxCnt: ['tx', rint] };
 // bitcoin-data.com (plano grátis: 10 pedidos por hora e os últimos 7 dias só para assinantes). Rodízio: até 3 por execução.
 export const BD_METRICS = [
   ['cvdd', 'cvdd', r6], ['sth-realized-price', 'sthRealizedPrice', r6], ['lth-realized-price', 'lthRealizedPrice', r6], ['aviv', 'aviv', r5],
@@ -175,8 +175,9 @@ export async function lab(ctx) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const arr = JSON.parse(r.text);
       if (!Array.isArray(arr) || arr.length < 100) throw new Error('formato inesperado');
-      const a = new Array(n).fill(null); let last = null;
-      for (const x of arr) { const t = Date.parse(x.d); const v = Number(x[key]); const i = idxOf(t); if (i >= 0 && i < n && Number.isFinite(v)) { a[i] = rnd(v); last = x.d; } }
+      // o plano grátis só entrega ~4 anos: o que já foi guardado antes da janela continua (o histórico cresce a cada dia)
+      const a = Array.isArray(out.bd[key]) ? out.bd[key].slice() : new Array(n).fill(null); let last = null;
+      for (const x of arr) { const t = Date.parse(x.d); const v = Number(x[key]); const i = idxOf(t); if (i >= 0 && i < n && Number.isFinite(v)) { a[i] = rnd(v); if (!last || x.d > last) last = x.d; } }
       out.bd[key] = a; out.bdAt[name] = iso(now); out.bdLast[key] = last; delete out.bdMiss[name];
     } catch (e) { notes.push(`bd ${name}: ` + String(e.message || e).slice(0, 80)); }
   }

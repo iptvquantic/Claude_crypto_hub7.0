@@ -181,6 +181,26 @@ console.log('\n[3] Conta (teste grátis) · Portfolio Vault');
   ok(supa.db.entries.filter((e) => !e.removed_at).length === 2, 'desfazer restaura o lançamento');
   // exportar CSV não quebra
   await page.evaluate(() => ACT.vaultCsv()); await sleep(300);
+  // Bitcoin Lab (PRO): sinais, gráfico, busca, painel novo e níveis de sinal
+  await goPage(page, 'lab', 4000);
+  ok(await page.$$eval('#lab-sig .lab-card', (a) => a.length >= 10).catch(() => false), 'Lab: painel com 10+ sinais de fundo');
+  ok(await page.$eval('#lab-chart', (e) => !!e.querySelector('canvas')).catch(() => false), 'Lab: gráfico desenhado');
+  ok(await page.$$eval('#lab-list .lab-row', (a) => a.length >= 30).catch(() => false), 'Lab: 30+ indicadores na lista ao lado do gráfico');
+  await page.type('#lab-q', 'sopr'); await sleep(400);
+  ok(await page.$$eval('#lab-list .lab-row', (a) => a.length >= 3 && a.every((r) => /SOPR/i.test(r.innerText))).catch(() => false), 'Lab: busca filtra pelo nome do indicador');
+  await page.click('#lab-list input[data-k="sopr"]'); await sleep(1800);
+  ok(await page.$('#lab-pc-sopr canvas') !== null, 'Lab: marcar um indicador abre o painel embaixo do gráfico');
+  await page.click('.seg[data-seg="labt"] button[data-v="dist"]'); await sleep(500);
+  ok(await page.$$eval('#lab-sig .lab-card.dist', (a) => a.length >= 8).catch(() => false), 'Lab: aba de sinais de topo');
+  await page.click('.seg[data-seg="labm"] button[data-v="lv"]'); await sleep(1500);
+  ok(await page.$$eval('#lab-lv .lab-lvr', (a) => a.length >= 4).catch(() => false), 'Lab: modo "níveis de sinal" lista os preços-gatilho');
+  await page.click('#lab-fbtn'); await sleep(700);
+  ok(await page.evaluate(() => { const w = document.querySelector('#lab-wrap'); const r = w.getBoundingClientRect(); return w.classList.contains('full') && r.width >= innerWidth - 2 && document.querySelector('#lab-chart').getBoundingClientRect().height > 300; }), 'Lab: tela cheia ocupa a tela');
+  await shot(page, 'v-lab-full', false);
+  await page.keyboard.press('Escape'); await sleep(400);
+  ok(await page.evaluate(() => !document.querySelector('#lab-wrap').classList.contains('full')), 'Lab: Esc sai da tela cheia');
+  const lr = await inspect(page); ok(!lr.bad.length && !lr.overflow, `Lab: sem número quebrado nem rolagem lateral ${lr.bad.join(',')} ${lr.wide.join(' ')}`);
+  await shot(page, 'v-lab');
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
   await browser.close();
 }
