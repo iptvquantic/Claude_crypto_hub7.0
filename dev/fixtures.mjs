@@ -134,7 +134,9 @@ function pipeline(name) {
   }
   if (name === 'news') {
     const cat = (c) => Array.from({ length: 12 }, (_, i) => ({ t: `Manchete ${c} ${i + 1}: mercado reage a dados`, u: `https://news.test/${c}/${i}`, d: NOW() - (i * 37 + 3) * 60e3, x: 'Resumo curto.', img: i === 0 ? 'https://assets.test/img/lead.png' : '', src: pick(['InfoMoney', 'Livecoins', 'g1', 'BBC News Brasil']), lang: i % 5 === 4 ? 'en' : 'pt' }));
-    return { generatedAt: gen, cats: { cripto: cat('cripto'), economia: cat('economia'), tech: cat('tech'), mundo: cat('mundo').map((n, i) => ({ ...n, t: i % 2 ? 'Rússia e Ucrânia: novo cessar-fogo em discussão' : 'Israel amplia operação em Gaza' })) } };
+    const G = [['Irã diz que mina atingiu petroleiro no Estreito de Ormuz', ['oriente', 'rotas'], 1], ['Israel amplia operação militar em Gaza, segundo o exército', ['oriente'], 1], ['Rússia lança ataque com drones contra Kiev durante a madrugada', ['ucrania'], 0], ['Ukraine says it shot down 40 Russian drones overnight', ['ucrania'], 1], ['China realiza exercícios militares perto de Taiwan', ['asia'], 0], ['EUA anunciam novas tarifas sobre aço chinês', ['comercial'], 0], ['Houthis atacam navio no Mar Vermelho', ['oriente', 'rotas'], 0], ['Zelensky e líderes europeus discutem cessar-fogo em Bruxelas', ['ucrania'], 0]];
+    const geo = Array.from({ length: 64 }, (_, i) => { const [t, tp, att] = G[i % G.length]; return { t: `${t} (${i + 1})`, u: `https://news.test/geo/${i}`, d: NOW() - (i * 151 + 7) * 60e3, x: 'Resumo curto.', src: pick(['g1 Mundo', 'Folha Mundo', 'Al Jazeera', 'Kyiv Post', 'BBC News Brasil']), lang: i % 4 === 3 ? 'en' : 'pt', cat: i % 9 === 8 ? 'intl' : 'geo', tp: i % 9 === 8 ? [] : tp, att: att ? true : undefined, kind: 'br', ns: i % 5 === 0 ? 3 : 1 }; });
+    return { generatedAt: gen, geoAt: gen, cats: { cripto: cat('cripto'), economia: cat('economia'), tech: cat('tech'), mundo: cat('mundo').map((n, i) => ({ ...n, t: i % 2 ? 'Rússia e Ucrânia: novo cessar-fogo em discussão' : 'Israel amplia operação em Gaza' })), geo } };
   }
   if (name === 'markets') {
     const q = (n, g, p, fmt = 'pts') => ({ n, g, p, chg: chg(n), t: NOW() - 20 * 60e3, fmt });

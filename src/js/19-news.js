@@ -36,7 +36,7 @@ function registerNewsSources() {
   for (const [cat, def] of Object.entries(NEWS_CATS)) {
     source({
       id: 'news-' + cat, label: L(`Notícias: ${def.pt}`, `News: ${def.en}`), provider: L('fontes de notícia', 'news sources'), every: 5 * 60e3,
-      need: () => (S.page === 'news' && (NEWS.tab === cat || NEWS.tab === 'all')) || (S.page === 'geo' && cat === 'mundo') || (S.page === 'tokenomics' && cat === 'cripto'),
+      need: () => (S.page === 'news' && (NEWS.tab === cat || NEWS.tab === 'all')) || (S.page === 'tokenomics' && cat === 'cripto'),
       run: async () => {
         try {
           const j = await pipelineNews();
@@ -138,41 +138,174 @@ page({
 });
 
 // ---------- GEOPOLÍTICA E CONFLITOS ----------
-const GEO = { tab: 'all' };
-const GEO_TABS = () => [
-  ['all', L('Tudo', 'All'), null],
-  ['ukr', L('Ucrânia e Rússia', 'Ukraine & Russia'), /ucr[aâ]nia|ukrain|r[uú]ssia|russia|putin|zelensk|kiev|kyiv|moscou|moscow|donbas|crimeia|crimea|\botan\b|\bnato\b/i],
-  ['me', L('Oriente Médio', 'Middle East'), /israel|gaza|hamas|hezbollah|\bir[ãa]\b|\biran|teer[ãa]|tehran|l[ií]bano|lebanon|s[ií]ria|syria|i[êe]men|yemen|houthi|cisjord|west bank|oriente m[ée]dio|middle east|palestin/i],
-  ['trade', L('Guerra comercial', 'Trade war'), /tarifa|tariff|guerra comercial|trade war|sanç|sanction|\bomc\b|\bwto\b|protecionis|protectionis|export controls?|controle de exporta/i],
-  ['asia', L('China e Taiwan', 'China & Taiwan'), /taiwan|taip|\bchina\b|chin[eê]s|chinese|pequim|beijing|xi jinping|mar do sul da china|south china sea|coreia do norte|north korea/i],
+// Base: Projeto X (Radar Agora). Geopolítica = guerras, conflitos, Oriente Médio, Rússia–Ucrânia, China,
+// EUA e rotas de energia; Internacional = política e sociedade sem conflito armado. Cada notícia mostra a
+// força da apuração: confirmada por 2+ veículos, 1 veículo (em desenvolvimento) ou versão de uma das partes.
+const GEO = { tab: 'all', ptOnly: LS.get('geo-pt', false), conf: false, open: {}, day: {} };
+const GEO_FRONTS = () => [
+  ['oriente', L('Oriente Médio', 'Middle East'), 'swords', '#ff6b7a'],
+  ['ucrania', L('Rússia e Ucrânia', 'Russia & Ukraine'), 'shield-alert', '#62b4ff'],
+  ['rotas', L('Rotas e energia', 'Routes & energy'), 'ship', '#2dd4bf'],
+  ['asia', L('China e Ásia', 'China & Asia'), 'map-pin', '#f4b43f'],
+  ['comercial', L('Comércio e sanções', 'Trade & sanctions'), 'scale', '#c084fc'],
 ];
-function geoItems() {
-  const items = newsItems('mundo').map((n) => ({ ...n, cat: 'mundo' }));
-  const tab = GEO_TABS().find((t) => t[0] === GEO.tab);
-  return tab && tab[2] ? items.filter((n) => tab[2].test(n.t + ' ' + (n.x || ''))) : items;
+// reserva quando o robô atrasa: as mesmas regras de tema, aplicadas às manchetes de Mundo lidas direto
+const GEO_RE = {
+  oriente: /\b(ir[ãa]|iran(ian)?|teer[ãa]|tehran|israel(ense)?s?|gaza|hamas|hezbollah?|l[íi]bano|lebanon|s[íi]ria|syria|iraque|iraq|i[êe]men|yemen|houthis?|cisjord[âa]nia|west bank|netanyahu|khamenei|oriente m[ée]dio|middle east)\b/i,
+  rotas: /\b(ormuz|hormuz|mar vermelho|red sea|suez|petroleiros?|tankers?|navios?|shipping|opep|opec|brent)\b/i,
+  ucrania: /\b(ucr[âa]nia(nos?)?|ukrain(e|ian)|r[úu]ssia|russia(n)?|kremlin|kiev|kyiv|moscou|moscow|zelensk[iy]|putin|donbas|crimeia|crimea)\b/i,
+  asia: /\b(taiwan|taipei|mar do sul da china|south china sea|pequim|beijing|xi jinping|coreia do norte|north korea|pyongyang|kim jong|filipinas|philippines)\b/i,
+  comercial: /\b(tarifas?|tariffs?|san[çc][õo]es|sanctions?|guerra comercial|trade war|embargos?)\b/i,
+};
+// manchete que atribui a informação a uma das partes ("Irã diz…", "segundo o exército…"); "segundo dia" não conta
+const GEO_ATT = /\b(diz|dizem|afirma|afirmam|alega|alegam|acusa|acusam|nega|negam|amea[çc]a|amea[çc]am|says|said|claims?|alleges?|accuses?|according to|denies|warns?)\b|\bsegundo (o |a |os |as )?(governo|ex[ée]rcito|militares|minist[ée]rio|autoridades|fontes|relatos|testemunhas|ag[êe]ncia|kremlin|casa branca|pent[áa]gono|hamas|hezbollah|houthis|israel|ir[ãa]|r[úu]ssia|ucr[âa]nia|china|eua|otan|onu|imprensa|m[íi]dia)\b/i;
+function registerGeoSource() {
+  source({
+    id: 'geo', label: L('Geopolítica e conflitos', 'Geopolitics & conflicts'), provider: L('robô NEXUS', 'NEXUS bot'), every: 10 * 60e3, persist: false,
+    need: () => S.page === 'geo',
+    run: async () => {
+      try {
+        const j = await getPipeline('news', 12 * 3600e3);
+        if (Array.isArray(j.cats && j.cats.geo) && j.cats.geo.length >= 10) return { items: j.cats.geo, via: 'pipe', gen: Date.parse(j.geoAt || j.generatedAt) };
+      } catch { /* robô fora: lê direto */ }
+      const res = await Promise.allSettled(NEWS_CATS.mundo.feeds.map(([u, name, lang]) => rssItems(u, 20).then((a) => a.map((n) => ({ ...n, src: name, lang })))));
+      const raw = res.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value);
+      if (!raw.length) throw new Error(L('nenhuma fonte respondeu', 'no source responded'));
+      const items = newsClean(raw, 72).map((n) => { const tp = Object.keys(GEO_RE).filter((k) => GEO_RE[k].test(`${n.t} ${n.x || ''}`)); return { ...n, cat: tp.length ? 'geo' : 'intl', tp, att: GEO_ATT.test(n.t) || undefined, ns: 1 }; });
+      return { items, via: 'rss', gen: Date.now() };
+    },
+    validate: (d) => Array.isArray(d.items) && d.items.length > 0,
+    onData: (d) => { SRC.geo.provider = d.via === 'pipe' ? L('robô NEXUS', 'NEXUS bot') : 'RSS'; GEO._g = null; _markDirty('GEO'); },
+  });
 }
+// a mesma história em vários veículos vira uma só, com as outras fontes ligadas a ela
+const geoWords = (t) => new Set(labNorm(t).replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !/^(the|and|for|with|from|after|over|que|para|com|sem|sobre|contra|entre|apos|diz|says|new)$/.test(w)));
+function geoGroups() {
+  const c = CACHE.get('geo'); const all = c && c.v ? c.v.items : [];
+  if (GEO._g && GEO._g.src === all) return GEO._g;
+  const items = all.filter((n) => n && n.t && n.u && isNum(n.d) && Date.now() - n.d < 7.5 * 86400e3).slice().sort((a, b) => b.d - a.d);
+  const W = items.map((n) => geoWords(n.t));
+  const used = new Array(items.length).fill(false); const leads = [];
+  for (let i = 0; i < items.length; i++) {
+    if (used[i]) continue; used[i] = true;
+    const lead = { ...items[i], more: [] };
+    const outlets = new Set([lead.src]);
+    for (let j = i + 1; j < items.length; j++) {
+      if (used[j] || Math.abs(items[i].d - items[j].d) > 36 * 3600e3) continue;
+      let k = 0; for (const w of W[i]) if (W[j].has(w)) k++;
+      if (k / (W[i].size + W[j].size - k || 1) >= 0.42) { used[j] = true; if (!outlets.has(items[j].src)) { outlets.add(items[j].src); lead.more.push(items[j]); } } // mesma história, outro veículo
+    }
+    lead.ns = outlets.size;
+    lead.att = GEO_ATT.test(lead.t) || undefined;
+    lead.tp = [...new Set([...(lead.tp || []), ...lead.more.flatMap((m) => m.tp || [])])];
+    if (lead.cat !== 'geo' && lead.more.some((m) => m.cat === 'geo')) lead.cat = 'geo';
+    lead.stt = lead.att ? 'att' : lead.ns >= 2 ? 'ok' : 'dev';
+    leads.push(lead);
+  }
+  GEO._g = { src: all, leads };
+  return GEO._g;
+}
+function geoVisible() {
+  const { leads } = geoGroups();
+  return leads.filter((n) => (GEO.tab === 'intl' ? n.cat === 'intl' : n.cat === 'geo' && (GEO.tab === 'all' || (n.tp || []).includes(GEO.tab))) && (!GEO.ptOnly || n.lang !== 'en') && (!GEO.conf || n.stt === 'ok'));
+}
+function geoItems() { return geoVisible(); } // usado pelo botão "Traduzir"
+const geoBadge = (n) => (n.stt === 'ok' ? `<span class="geo-st ok" title="${esc(L('A mesma notícia saiu em 2 ou mais veículos reconhecidos.', 'The same story ran in 2 or more recognized outlets.'))}">${ico('circle-check', 13)}${esc(L(`confirmada · ${n.ns} veículos`, `confirmed · ${n.ns} outlets`))}</span>`
+  : n.stt === 'att' ? `<span class="geo-st att" title="${esc(L('A manchete atribui a informação a uma das partes ("diz", "afirma", "acusa"). Trate como versão até haver confirmação independente.', 'The headline attributes the information to one side ("says", "claims", "accuses"). Treat it as a version until independently confirmed.'))}">${ico('circle-alert', 13)}${esc(L('versão de uma das partes', 'one side’s version'))}${n.ns > 1 ? ` · ${n.ns}` : ''}</span>`
+    : `<span class="geo-st dev" title="${esc(L('Por enquanto, só um veículo publicou.', 'So far only one outlet has published.'))}">${ico('hourglass', 13)}${esc(L('em desenvolvimento · 1 veículo', 'developing · 1 outlet'))}</span>`);
 function geoHtml() {
-  return `${pageHead(PAGES.geo, `<button class="btn sm ghost" data-act="newsTr">${ico('languages', 15)}${esc(L('Traduzir as em inglês', 'Translate English ones'))}</button>`)}
-  <div class="row wrap between" style="gap:10px;margin-bottom:12px"><div class="seg-scroll">${seg('geo', GEO_TABS().map(([v, l]) => [v, l]), GEO.tab)}</div>${stamp('news-mundo')}</div>
-  <section class="panel" id="geo-tl"></section>`;
+  const fronts = GEO_FRONTS();
+  return `${pageHead(PAGES.geo, `<button class="btn sm ghost" data-act="newsTr">${ico('languages', 15)}${esc(L('Traduzir as em inglês', 'Translate English ones'))}</button><span class="stamp-wrap">${stamp('geo')}</span>`)}
+  <section class="panel" id="geo-fronts"></section>
+  <div class="geo-bar mt"><div class="seg-scroll">${seg('geo', [['all', L('Todas as frentes', 'All fronts')], ...fronts.map(([k, t]) => [k, t]), ['intl', L('Internacional', 'International')]], GEO.tab)}</div>
+    <div class="row wrap" style="gap:8px 16px"><label class="check small" style="align-items:center"><input type="checkbox" data-chg="geoConf" ${GEO.conf ? 'checked' : ''}>${esc(L('Só confirmadas (2+ veículos)', 'Confirmed only (2+ outlets)'))}</label><label class="check small" style="align-items:center"><input type="checkbox" data-chg="geoPt" ${GEO.ptOnly ? 'checked' : ''}>${esc(L('Só em português', 'Portuguese only'))}</label></div></div>
+  <section class="panel mt" id="geo-tl"></section>
+  <section class="panel mt" id="geo-src"></section>`;
+}
+function drawGeoFronts() {
+  const box = $('#geo-fronts'); if (!box) return;
+  const c = CACHE.get('geo');
+  const head = panelHead('radar', L('Agora em cada frente', 'Now on each front'), { sub: esc(L('Quanto cada conflito está sendo noticiado e a manchete mais recente. Toque para abrir a linha do tempo daquela frente.', 'How much each conflict is being reported and the latest headline. Tap to open that front’s timeline.')) });
+  if (!c) { setHTML(box, head + (HEALTH.geo && HEALTH.geo.ok === false ? emptyBox('wifi-off', L('Notícias indisponíveis agora', 'News unavailable'), esc(L('Tentando de novo automaticamente.', 'Retrying automatically.'))) : `<div class="geo-fronts">${'<div class="skel" style="height:150px"></div>'.repeat(5)}</div>`)); return; }
+  const { leads } = geoGroups(); const now = Date.now();
+  const stats = GEO_FRONTS().map(([k, t, ic, col]) => {
+    const list = leads.filter((n) => n.cat === 'geo' && (n.tp || []).includes(k));
+    const d24 = list.filter((n) => now - n.d < 86400e3);
+    const top = list.filter((n) => now - n.d < 48 * 3600e3).slice().sort((a, b) => b.ns - a.ns || b.d - a.d)[0];
+    return { k, t, ic, col, n24: d24.length, n7: list.length, last: list[0], top };
+  });
+  const mx = Math.max(1, ...stats.map((s) => s.n24));
+  setHTML(box, head + `<div class="geo-fronts">${stats.map((s) => {
+    const lead = s.top && s.top.ns > 1 ? s.top : s.last;
+    return `<button class="geo-front${GEO.tab === s.k ? ' on' : ''}" data-act="geoFront" data-k="${s.k}" style="--c:${s.col}">
+      <span class="h">${ico(s.ic, 17)}<b>${esc(s.t)}</b></span>
+      <span class="m"><b>${s.n24}</b> ${esc(L('nas últimas 24 h', 'in the last 24 h'))} · ${s.n7} ${esc(L('em 7 dias', 'in 7 days'))}</span>
+      <span class="bar"><i style="width:${Math.max(4, s.n24 / mx * 100)}%;background:${s.col}"></i></span>
+      ${lead ? `<span class="t">${esc(NEWS.tr[lead.u] || lead.t)}</span><span class="s">${esc(lead.src)} · ${esc(ago(lead.d))}${lead.ns > 1 ? ` · ${esc(L(`${lead.ns} veículos`, `${lead.ns} outlets`))}` : ''}</span>` : `<span class="s">${esc(L('Sem notícias nos últimos 7 dias.', 'No news in the last 7 days.'))}</span>`}
+    </button>`;
+  }).join('')}</div>`);
+}
+function geoItemHtml(n) {
+  const t = NEWS.tr[n.u] || n.t;
+  const fr = Object.fromEntries(GEO_FRONTS().map(([k, tt, , col]) => [k, [tt, col]]));
+  const open = GEO.open[n.u];
+  return `<div class="geo-i"><span class="tm">${esc(fmtTime(n.d))}</span><div class="grow">
+    <a class="geo-t" href="${esc(safeUrl(n.u))}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>
+    <div class="geo-m">${geoBadge(n)}<span class="src">${esc(n.src)}${n.lang === 'en' && !NEWS.tr[n.u] ? ' · EN' : ''}</span>${(n.tp || []).filter((k) => fr[k]).map((k) => `<span class="geo-tp" style="--c:${fr[k][1]}">${esc(fr[k][0])}</span>`).join('')}${n.more.length ? `<button class="link-btn geo-more" data-act="geoMore" data-u="${esc(n.u)}">${ico(open ? 'chevron-up' : 'chevron-down', 14)}${esc(L(`+${n.more.length} ${n.more.length === 1 ? 'fonte' : 'fontes'}`, `+${n.more.length} ${n.more.length === 1 ? 'source' : 'sources'}`))}</button>` : ''}</div>
+    ${open && n.more.length ? `<div class="geo-alt">${n.more.map((m) => `<a href="${esc(safeUrl(m.u))}" target="_blank" rel="noopener noreferrer"><b>${esc(m.src)}</b> · ${esc(NEWS.tr[m.u] || m.t)} <span class="faint">${esc(fmtTime(m.d))}</span></a>`).join('')}</div>` : ''}
+  </div></div>`;
 }
 function drawGeo() {
+  drawGeoFronts();
   const box = $('#geo-tl'); if (!box) return;
-  const items = geoItems().filter((n) => Date.now() - n.d < 5 * 86400e3);
-  const head = panelHead('earth', L('Linha do tempo', 'Timeline'), { sub: esc(L('Manchetes dos últimos 5 dias, montadas automaticamente por dia. Clique para ler na fonte.', 'Headlines from the last 5 days, grouped by day automatically. Click to read at the source.')) });
-  if (!items.length) { box.innerHTML = head + (CACHE.get('news-mundo') ? emptyBox('earth', L('Nada sobre este tema nos últimos dias', 'Nothing on this topic in recent days'), esc(L('As fontes não trouxeram manchetes com estes termos.', 'Sources had no headlines with these terms.'))) : skel(6, 18)); return; }
+  const fr = GEO_FRONTS().find(([k]) => k === GEO.tab);
+  const title = GEO.tab === 'all' ? L('Linha do tempo de todas as frentes', 'Timeline of all fronts') : GEO.tab === 'intl' ? L('Internacional: política e sociedade', 'International: politics & society') : L(`Linha do tempo: ${fr ? fr[1] : ''}`, `Timeline: ${fr ? fr[1] : ''}`);
+  const head = panelHead('history', title, { sub: esc(L('Os últimos 7 dias, do mais novo para o mais antigo (horário de Brasília). Cada notícia mostra a força da apuração.', 'The last 7 days, newest first (Brasília time). Each story shows how well it is sourced.')) });
+  const c = CACHE.get('geo');
+  if (!c) { setHTML(box, head + skel(8, 18)); return; }
+  const items = geoVisible();
+  if (!items.length) { setHTML(box, head + emptyBox('earth', L('Nada nesta frente com estes filtros', 'Nothing on this front with these filters'), esc(L('Tente "Todas as frentes" ou desmarque os filtros.', 'Try "All fronts" or clear the filters.')))); return; }
   const days = {};
-  items.forEach((n) => { (days[dayKey(n.d)] = days[dayKey(n.d)] || []).push(n); });
-  box.innerHTML = head + `<div class="tl">${Object.keys(days).sort().reverse().map((k) => {
-    const d = days[k][0].d;
-    return `<div class="tl-day"><div class="tl-d">${esc(k === todayISO() ? L('Hoje', 'Today') : fmtDate(d, { weekday: 'long' }))}<small>${esc(fmtDate(d, { day: '2-digit', month: 'long' }))}</small></div><div class="tl-items">${days[k].slice(0, 14).map((n) => `<a class="tl-i" href="${esc(safeUrl(n.u))}" target="_blank" rel="noopener noreferrer"><span class="tm">${esc(fmtTime(n.d))}</span><span>${esc(NEWS.tr[n.u] || n.t)} <span class="src">· ${esc(n.src)}${n.lang === 'en' && !NEWS.tr[n.u] ? ' (EN)' : ''}</span></span></a>`).join('')}</div></div>`;
-  }).join('')}</div>` + note(L('Fontes: BBC News Brasil, g1, CNN Brasil e BBC World. Os temas são separados por palavras-chave nas manchetes.', 'Sources: BBC News Brasil, g1, CNN Brasil and BBC World. Topics are split by keywords in headlines.'));
+  for (const n of items) { const k = new Date(n.d - 3 * 3600e3).toISOString().slice(0, 10); (days[k] = days[k] || []).push(n); }
+  const todayBr = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  const yestBr = new Date(Date.now() - 27 * 3600e3).toISOString().slice(0, 10);
+  const html = Object.keys(days).sort().reverse().map((k) => {
+    const list = days[k]; const d = Date.parse(k + 'T15:00:00Z');
+    const lbl = k === todayBr ? L('Hoje', 'Today') : k === yestBr ? L('Ontem', 'Yesterday') : fmtDate(d, { weekday: 'long', timeZone: 'UTC' });
+    const conf = list.filter((n) => n.stt === 'ok').length;
+    const lim = GEO.day[k] ? list.length : 12;
+    return `<div class="geo-day"><div class="geo-dh"><b>${esc(lbl)}</b><span>${esc(fmtDate(d, { day: '2-digit', month: 'long', timeZone: 'UTC' }))}</span><span class="tiny faint">${esc(L(`${list.length} notícias · ${conf} confirmadas`, `${list.length} stories · ${conf} confirmed`))}</span></div><div class="geo-items">${list.slice(0, lim).map(geoItemHtml).join('')}</div>${list.length > 12 ? `<button class="btn sm ghost geo-dmore" data-act="geoDay" data-k="${k}">${ico(GEO.day[k] ? 'chevron-up' : 'chevron-down', 15)}${esc(GEO.day[k] ? L('Mostrar menos', 'Show less') : L(`Ver todas as ${list.length} deste dia`, `See all ${list.length} from this day`))}</button>` : ''}</div>`;
+  }).join('');
+  const via = c.v.via === 'rss' ? `<div class="callout warn" style="margin-bottom:12px">${ico('triangle-alert', 18)}<span>${esc(L('O robô de notícias está atrasado: mostrando só as manchetes de Mundo lidas direto das fontes (últimos 3 dias).', 'The news robot is delayed: showing only World headlines read directly from sources (last 3 days).'))}</span></div>` : '';
+  setHTML(box, head + via + `<div class="geo-tl">${html}</div>`);
+  drawGeoSrc();
+}
+function drawGeoSrc() {
+  const box = $('#geo-src'); if (!box || box.dataset.done === S.lang) return; box.dataset.done = S.lang;
+  const grp = [
+    [L('Brasil', 'Brazil'), 'g1 Mundo · Folha · Estadão · BBC News Brasil · DW Brasil · Metrópoles · CNN Brasil · Poder360 · Valor · UOL · R7'],
+    [L('Agências e internacionais', 'Agencies & international'), 'Reuters · AP · AFP · Al Jazeera · Al Arabiya · The Guardian · BBC World · The New York Times · Financial Times · Euronews · Kyiv Post · Gulf News'],
+    [L('Rotas marítimas e energia', 'Shipping routes & energy'), 'gCaptain · The Maritime Executive · Seatrade Maritime'],
+  ];
+  setHTML(box, panelHead('shield-check', L('Fontes e regras', 'Sources & rules')) + `<div class="geo-srcs">${grp.map(([t, l]) => `<div><b>${esc(t)}</b><p>${esc(l)}</p></div>`).join('')}</div>
+    <ul class="geo-rules">
+      <li>${geoBadge({ stt: 'ok', ns: 2 })} ${esc(L('a mesma notícia saiu em 2 ou mais veículos reconhecidos.', 'the same story ran in 2 or more recognized outlets.'))}</li>
+      <li>${geoBadge({ stt: 'dev', ns: 1 })} ${esc(L('por enquanto só um veículo publicou; pode mudar.', 'only one outlet so far; it may change.'))}</li>
+      <li>${geoBadge({ stt: 'att', ns: 1 })} ${esc(L('a manchete atribui a informação a uma das partes ("Irã diz…", "Rússia afirma…"). Em guerra, as partes têm interesse: vale como versão, não como fato confirmado.', 'the headline attributes the information to one side ("Iran says…", "Russia claims…"). In war, the sides have interests: it is a version, not a confirmed fact.'))}</li>
+      <li>${esc(L('Só entram veículos reconhecidos (perfis anônimos de "última hora" ficam de fora). Notícias pelo Google Notícias só valem quando o veículo está na lista.', 'Only recognized outlets are used (anonymous "breaking" accounts are left out). Google News items only count when the outlet is on the list.'))}</li>
+    </ul>`);
 }
 ACT.seg_geo = (v) => { GEO.tab = v; drawGeo(); };
+ACT.geoFront = (el) => { GEO.tab = el.dataset.k; $$('.seg[data-seg="geo"] button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.v === GEO.tab))); drawGeo(); const t = $('#geo-tl'); if (t && t.scrollIntoView) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+ACT.geoConf = (el) => { GEO.conf = el.checked; drawGeo(); };
+ACT.geoPt = (el) => { GEO.ptOnly = el.checked; LS.set('geo-pt', GEO.ptOnly); drawGeo(); };
+ACT.geoMore = (el) => { const u = el.dataset.u; GEO.open[u] = !GEO.open[u]; drawGeo(); };
+ACT.geoDay = (el) => { const k = el.dataset.k; GEO.day[k] = !GEO.day[k]; drawGeo(); };
+onPrice((set) => { if (S.page === 'geo' && (set.has('GEO') || set.has('NEWS'))) drawGeo(); });
 page({
   id: 'geo', group: 'noticias', icon: 'earth', pt: 'Geopolítica e conflitos', en: 'Geopolitics & conflicts',
-  sub: 'O que está acontecendo no mundo, dia a dia, separado por conflito. Atualiza sozinho.',
-  subEn: 'What is happening in the world, day by day, by conflict. Refreshes itself.',
-  init(el) { el.innerHTML = geoHtml(); drawGeo(); ensureNews('mundo'); },
+  sub: 'Guerras, conflitos e rotas de energia, dia a dia e por frente, com a força de cada notícia: quantos veículos confirmam e o que é só versão de uma das partes. Atualiza sozinho.',
+  subEn: 'Wars, conflicts and energy routes, day by day and by front, with how well each story is sourced: how many outlets confirm it and what is only one side’s version. Refreshes itself.',
+  init(el) { el.innerHTML = geoHtml(); drawGeo(); },
   show() { drawGeo(); },
 });

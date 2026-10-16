@@ -33,7 +33,8 @@ const POLITICS = /\b(presidente|president|governo|government|elei[çc][ãa]o|ele
 // veículos aceitos quando a notícia vem pelo Google Notícias (os demais são descartados: sem fonte reconhecida)
 const GN_OK = /^(g1|globo|o globo|folha|estad[ãa]o|uol|cnn|valor|infomoney|exame|veja|bbc|deutsche welle|dw\b|reuters|ap news|associated press|afp|bloomberg|cnbc|times brasil|poder360|metr[óo]poles|r7|terra|gazeta do povo|correio braziliense|ag[êe]ncia brasil|jovem pan|sbt news|band|rfi|euronews|al jazeera|the guardian|the new york times|new york times|wall street journal|the wall street journal|financial times|the washington post|washington post|politico|axios|france 24|sky news|abc news|nbc news|cbs news|npr|the economist|times of israel|haaretz|kyiv independent|kyiv post|the moscow times|south china morning post|nikkei|the japan times|yonhap|al arabiya|gulf news|arab news|the times of india|xinhua|anadolu|ansa|efe|lusa|carta capital|istoé|isto[ée] dinheiro|o tempo|zero hora|gzh|o povo|nexo|piau[íi]|brasil de fato|agência pública)/i;
 const JUNK_TITLE = /(breaking updates from|top stories and breaking|news today\s*-|^live:? *$|newsletter|podcast\b|quiz\b|crossword|palavras cruzadas)/i;
-const ATTRIB = /\b(diz|dizem|afirma|afirmam|alega|alegam|acusa|acusam|segundo|nega|negam|amea[çc]a|says|said|claims?|alleges?|accuses?|according to|denies|warns?)\b/i;
+// manchete que atribui a informação a uma das partes ("Irã diz…", "segundo o exército…"); "segundo dia" não conta
+const ATTRIB = /\b(diz|dizem|afirma|afirmam|alega|alegam|acusa|acusam|nega|negam|amea[çc]a|amea[çc]am|says|said|claims?|alleges?|accuses?|according to|denies|warns?)\b|\bsegundo (o |a |os |as )?(governo|ex[ée]rcito|militares|minist[ée]rio|autoridades|fontes|relatos|testemunhas|ag[êe]ncia|kremlin|casa branca|pent[áa]gono|hamas|hezbollah|houthis|israel|ir[ãa]|r[úu]ssia|ucr[âa]nia|china|eua|otan|onu|imprensa|m[íi]dia)\b/i;
 const STOP = new Set('a o os as de da do das dos e em no na nos nas um uma para por com sem que se ao à é foi diz após sobre contra entre the of to in on at for and is are was with by from after over as its it be has have new says'.split(' '));
 const words = (t) => new Set(String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w)));
 function jaccard(a, b) { let i = 0; for (const w of a) if (b.has(w)) i++; return i / (a.size + b.size - i || 1); }
@@ -216,12 +217,13 @@ function methodText(m) {
 }
 export async function buybacks(ctx) {
   const prev = await ctx.previous('buybacks');
-  const VER = 2; // mudou o formato ou a classificação: refaz na hora
+  const VER = 3; // mudou o formato ou a classificação: refaz na hora
   if (prev && prev.v === VER && Array.isArray(prev.list) && prev.list.length && Date.now() - Date.parse(prev.generatedAt) < 3 * 3600e3) { ctx.save('buybacks', prev); return { n: prev.list.length, cached: true }; }
   const ov = await ctx.get('https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true&dataType=dailyHoldersRevenue', { as: 'json', timeout: 90000 });
+  // todos os protocolos com recompra, queima ou repasse nos últimos 60 dias (os novos entram sozinhos)
   const groups = new Map();
   for (const p of (ov && ov.protocols) || []) {
-    if (!(p.total30d > 0 || p.total7d > 0)) continue;
+    if (!(p.total30d > 0 || p.total7d > 0 || p.total24h > 0 || p.total60dto30d > 0)) continue;
     const key = p.parentProtocol || ('p#' + (p.defillamaId || p.slug));
     let g = groups.get(key);
     if (!g) { g = { key, slug: p.parentProtocol ? p.parentProtocol.replace(/^parent#/, '') : p.slug, n: p.parentProtocol ? null : (p.displayName || p.name), logo: p.logo, cat: p.category, chains: new Set(), d1: 0, d7: 0, d30: 0, p30: 0, y1: 0, all: 0, parts: [], method: '' }; groups.set(key, g); }
@@ -230,9 +232,9 @@ export async function buybacks(ctx) {
     g.parts.push({ n: p.displayName || p.name, d30: p.total30d || 0 });
     if (!g.method) g.method = methodText(p.methodology);
   }
-  const top = [...groups.values()].filter((g) => g.d30 >= 5000).sort((a, b) => b.d30 - a.d30).slice(0, 50);
+  const top = [...groups.values()].sort((a, b) => (b.d30 + b.p30) - (a.d30 + a.p30)).slice(0, 400);
   const sum = (slug) => ctx.get(`https://api.llama.fi/summary/fees/${encodeURIComponent(slug)}?dataType=dailyHoldersRevenue&excludeTotalDataChartBreakdown=true`, { as: 'json', timeout: 40000 });
-  const det = await ctx.pool(top, 4, (g) => sum(g.slug));
+  const det = await ctx.pool(top, 6, (g) => sum(g.slug));
   // alguns "pais" da DefiLlama têm outro nome no resumo (maker → sky, astherus → aster): tenta o apelido e a 1ª palavra do produto
   const ALIAS = { maker: 'sky', astherus: 'aster' };
   for (let i = 0; i < top.length; i++) {
@@ -242,30 +244,39 @@ export async function buybacks(ctx) {
       try { const d = await sum(alt); if (d && d.gecko_id) { det[i] = d; g.slug = alt; break; } } catch { /* tenta o próximo */ }
     }
   }
-  const list = [];
+  const prevBy = new Map(((prev && prev.list) || []).filter((x) => x.cv).map((x) => [x.id, x]));
+  const list = []; let kept = 0;
   top.forEach((g, i) => {
     const d = det[i] && !det[i].err ? det[i] : null;
-    const gecko = d && d.gecko_id; if (!gecko) return; // sem token negociável no CoinGecko: fica de fora
-    const chart = (d.totalDataChart || []).filter((x) => Array.isArray(x) && Number.isFinite(x[1])).slice(-200).map(([t, v]) => [Number(t) * (Number(t) < 1e12 ? 1000 : 1), Math.round(v)]);
+    if (!d) { const old = prevBy.get(g.slug); if (old) { list.push(old); kept++; } return; } // falhou agora: fica o último dado, com a data dele
+    const gecko = d.gecko_id; if (!gecko) return; // sem token negociável no CoinGecko: fica de fora
+    // série diária compacta: c0 = 1º dia (UTC) e cv = valores dia a dia (até 200 dias)
+    const pts = (d.totalDataChart || []).filter((x) => Array.isArray(x) && Number.isFinite(x[1])).map(([t, v]) => [Number(t) * (Number(t) < 1e12 ? 1000 : 1), v]).slice(-200);
+    if (!pts.length) return;
+    const c0 = Math.floor(pts[0][0] / DAY) * DAY; const cv = [];
+    for (const [t, v] of pts) { const k = Math.round((t - c0) / DAY); if (k >= 0 && k < 400) cv[k] = Math.round(v); }
+    for (let k = 0; k < cv.length; k++) if (cv[k] === undefined) cv[k] = null;
     const meth = methodText(d.methodology) || g.method || ((d.childProtocols || []).map((c) => methodText(c.methodology)).find(Boolean) || '');
     const num = (v, f) => (Number.isFinite(v) ? v : f);
     list.push({
       id: g.slug, n: d.displayName || d.name || g.n || g.slug, sym: d.symbol ? String(d.symbol).toUpperCase() : '', cg: gecko, logo: d.logo || g.logo, cat: d.category || g.cat,
       chains: [...g.chains].slice(0, 4), d1: num(d.total24h, g.d1), d7: num(d.total7d, g.d7), d30: num(d.total30d, g.d30), p30: num(d.total60dto30d, g.p30), y1: num(d.total1y, g.y1), all: num(d.totalAllTime, g.all),
-      type: holdersType(meth), method: String(meth).replace(/\s+/g, ' ').slice(0, 240), parts: g.parts.sort((a, b) => b.d30 - a.d30).slice(0, 6).map((x) => x.n), chart,
+      type: holdersType(meth), method: String(meth).replace(/\s+/g, ' ').slice(0, 240), parts: g.parts.sort((a, b) => b.d30 - a.d30).slice(0, 6).map((x) => x.n), c0, cv,
     });
   });
   if (list.length < 8) throw new Error(`só ${list.length} tokens com dados`);
-  // preço e valor de mercado (CoinGecko) para o "rendimento" da recompra
+  // preço e valor de mercado (CoinGecko), em lotes, para o "rendimento" da recompra
   try {
-    const ids = [...new Set(list.map((x) => x.cg))].join(',');
-    const mk = await ctx.get(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${encodeURIComponent(ids)}&per_page=250&page=1`, { as: 'json', timeout: 30000 });
-    const by = Object.fromEntries((Array.isArray(mk) ? mk : []).map((m) => [m.id, m]));
+    const ids = [...new Set(list.map((x) => x.cg))]; const by = {};
+    for (let k = 0; k < ids.length; k += 150) {
+      const mk = await ctx.get(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${encodeURIComponent(ids.slice(k, k + 150).join(','))}&per_page=250&page=1`, { as: 'json', timeout: 30000 });
+      (Array.isArray(mk) ? mk : []).forEach((m) => { by[m.id] = m; });
+    }
     list.forEach((x) => { const m = by[x.cg]; if (m) { x.mcap = m.market_cap || null; x.fdv = m.fully_diluted_valuation || null; x.price = m.current_price; x.chg = m.price_change_percentage_24h; x.img = m.image; x.rank = m.market_cap_rank; if (!x.sym) x.sym = String(m.symbol || '').toUpperCase(); } });
   } catch (e) { console.warn('  buybacks: CoinGecko falhou', e.message); }
   list.sort((a, b) => b.d30 - a.d30);
   ctx.save('buybacks', { v: VER, generatedAt: iso(Date.now()), src: 'DefiLlama (holders revenue)', list });
-  return { n: list.length };
+  return { n: list.length, groups: top.length, ...(kept ? { kept } : {}) };
 }
 
 // ---------------------------------------------------------------------

@@ -4,7 +4,7 @@
 // volta para o token: recompra e queima, só queima, recompra e guarda ou
 // repasse aos detentores. Fonte: DefiLlama ("holders revenue"), pelo robô.
 // =====================================================================
-const BB = { per: '1d', filt: 'bb', sort: 'usd', dir: -1, q: '' };
+const BB = { per: '1d', filt: 'bb', sort: 'usd', dir: -1, q: '', all: false };
 const BB_PER = { '1d': 1, '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
 const BB_MECH = () => ({
   'buyback-burn': { t: L('Recompra → queima', 'Buyback → burn'), c: '#ff8a4c', ic: 'flame' },
@@ -29,11 +29,13 @@ function bbData() {
   if (BB.D && BB.D._j === j) return BB.D;
   const DAY = 86400e3;
   // último dia completo (UTC): a data final mais comum entre os tokens (as fontes da DefiLlama chegam em dias diferentes)
-  const lastOf = (ch) => (ch && ch.length ? ch[ch.length - 1][0] : null);
+  // série diária de cada protocolo: formato compacto (c0 + cv) ou o antigo [[ms, valor], ...]
+  const pts = (x) => (Array.isArray(x.cv) && isNum(x.c0) ? x.cv.map((v, k) => [x.c0 + k * DAY, v]).filter((p) => isNum(p[1])) : Array.isArray(x.chart) ? x.chart : []);
+  const lastOf = (x) => { const a = pts(x); return a.length ? a[a.length - 1][0] : null; };
   // a DefiLlama já manda o dia de hoje (UTC) pela metade: o último dia completo é o anterior ao da geração do arquivo
   const genDay = Math.floor(Date.parse(j.generatedAt) / DAY) * DAY;
   const refMax = isNum(genDay) ? genDay - DAY : Infinity;
-  const cnt = {}; for (const x of j.list) { let l = lastOf(x.chart); if (l > refMax) l = refMax; if (l) cnt[l] = (cnt[l] || 0) + 1; }
+  const cnt = {}; for (const x of j.list) { let l = lastOf(x); if (l > refMax) l = refMax; if (l) cnt[l] = (cnt[l] || 0) + 1; }
   const ref = Number(Object.entries(cnt).sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0]);
   if (!isNum(ref)) return null;
   const N = 200; const t0 = ref - (N - 1) * DAY;
@@ -44,13 +46,17 @@ function bbData() {
     if (!t) { t = { k, cg: x.cg, sym: x.sym || '', n: x.n, img: x.img || x.logo, price: x.price, mcap: x.mcap, fdv: x.fdv, chg: x.chg, rank: x.rank, src: [], end: null }; by.set(k, t); }
     // série diária densa até o dia de referência; antes do 1º dado = sem dado (null), não zero
     const arr = new Array(N).fill(null); let first = null, last = null;
-    for (const [ms, v] of x.chart || []) { const i = Math.round((ms - t0) / DAY); if (i < 0 || i >= N || !isNum(v)) continue; arr[i] = v; if (first === null || i < first) first = i; if (last === null || i > last) last = i; }
+    const P = pts(x);
+    for (const [ms, v] of P) { const i = Math.round((ms - t0) / DAY); if (i < 0 || i >= N || !isNum(v)) continue; arr[i] = v; if (first === null || i < first) first = i; if (last === null || i > last) last = i; }
+    // "novo": a fonte só tem dados deste protocolo há menos de 30 dias
+    const born = P.length ? P[0][0] : null; if (isNum(born) && (t.born === undefined || born < t.born)) t.born = born;
     if (first !== null) for (let i = first; i <= last; i++) if (arr[i] === null) arr[i] = 0;
     t.src.push({ id: x.id, n: x.n, type: x.type || 'share', method: x.method || '', parts: x.parts || [], arr, last, y1: x.y1, all: x.all, d30: x.d30 });
     if (last !== null && (t.end === null || last > t.end)) t.end = last;
     if ((x.d30 || 0) > (t._big || 0)) { t._big = x.d30 || 0; t.n = x.n; }
   }
   const toks = [...by.values()].filter((t) => t.end !== null);
+  for (const t of toks) t.isNew = isNum(t.born) && ref - t.born < 30 * DAY;
   // nome do token: o do produto principal sem o sufixo de versão/mercado
   for (const t of toks) t.n = String(t.n || t.sym).replace(/\s+(V\d+(\.\d+)?|Perps|Spot( Orderbook)?|AMM|Lending|L1|Aggregator|Staking|Protocol|Exchange)$/i, '') || t.sym;
   BB.D = { _j: j, toks, ref, t0, N, gen: j.generatedAt };
@@ -146,12 +152,13 @@ function bbDrawTbl() {
   const rows = bbRows(D);
   const multi = BB.per !== '1d';
   const th = (k, t, cls = 'r') => `<th class="${cls} sortable" data-act="bbSort" data-k="${k}" aria-sort="${BB.sort === k ? (BB.dir < 0 ? 'descending' : 'ascending') : 'none'}">${esc(t)}${BB.sort === k ? (BB.dir < 0 ? ' ▼' : ' ▲') : ''}</th>`;
-  const body = rows.map((r, i) => {
+  const total = rows.length; const shown = BB.all || BB.q ? rows : rows.slice(0, 40);
+  const body = shown.map((r, i) => {
     const t = r.t; const noFlow = !(r.sum > 0);
     const col = (BB_MECH()[r.mechs[0]] || BB_MECH().share).c;
     return `<tr class="click" data-act="bbOpen" data-k="${esc(t.k)}" tabindex="0">
       <td class="r rank">${i + 1}</td>
-      <td><div class="coin">${coinLogo({ b: t.sym, logo: t.img, cg: t.cg }, 28)}<div><div class="nm">${esc(t.sym || t.n)}${noFlow ? ` <span class="bb-nf">${esc(L('sem fluxo', 'no flow'))}</span>` : ''}</div><div class="sy">${esc(t.n)}${isNum(r.stale) ? ` · <span class="warn-t">${esc(L(`dado até ${bbDayTxt(D, r.stale)}`, `data to ${bbDayTxt(D, r.stale)}`))}</span>` : ''}</div></div></div></td>
+      <td><div class="coin">${coinLogo({ b: t.sym, logo: t.img, cg: t.cg }, 28)}<div><div class="nm">${esc(t.sym || t.n)}${t.isNew ? ` <span class="bb-new" title="${esc(L('Entrou na fonte há menos de 30 dias', 'Added to the source less than 30 days ago'))}">${esc(L('novo', 'new'))}</span>` : ''}${noFlow ? ` <span class="bb-nf">${esc(L('sem fluxo', 'no flow'))}</span>` : ''}</div><div class="sy">${esc(t.n)}${isNum(r.stale) ? ` · <span class="warn-t">${esc(L(`dado até ${bbDayTxt(D, r.stale)}`, `data to ${bbDayTxt(D, r.stale)}`))}</span>` : ''}</div></div></div></td>
       <td><div class="bb-mechs">${r.mechs.map(bbPill).join('')}</div></td>
       <td class="r">${isNum(r.tokens) ? `<b class="num">≈ ${esc(fmtNum(r.tokens, 0, r.tokens < 10 ? 2 : 0))}</b>${multi && isNum(r.tokDay) ? `<div class="tiny faint">≈ ${esc(fmtNum(r.tokDay, 0, r.tokDay < 10 ? 2 : 0))}/${esc(L('dia', 'day'))}</div>` : `<div class="tiny faint">${esc(t.sym)}</div>`}` : '—'}</td>
       <td class="r"><b class="num">${isNum(r.sum) ? esc(usd(r.sum, [0, 0])) : '—'}</b>${multi && isNum(r.perDay) ? `<div class="tiny faint">${esc(usd(r.perDay, [0, 0]))}/${esc(L('dia', 'day'))}</div>` : ''}${isNum(r.chg) ? `<div class="tiny ${tone(r.chg)}">${esc(fmtPct(r.chg, 0))} ${esc(L('vs antes', 'vs prior'))}</div>` : ''}</td>
@@ -161,6 +168,7 @@ function bbDrawTbl() {
     </tr>`;
   }).join('');
   setHTML(box, `<div class="tbl-wrap"><table class="tbl bb-t"><thead><tr><th class="r">#</th><th>${esc(L('Ativo', 'Asset'))}</th><th>${esc(L('Mecanismo', 'Mechanism'))}</th>${th('tok', L('Tokens', 'Tokens'))}${th('usd', L('Valor (US$)', 'Value (US$)'))}${th('mcap', L('% do valor de mercado', '% of market cap'))}<th class="r sortable hide-m" data-act="bbSort" data-k="fdv">${esc(L('% do FDV', '% of FDV'))}${BB.sort === 'fdv' ? (BB.dir < 0 ? ' ▼' : ' ▲') : ''}</th><th class="hide-m">${esc(L('90 dias', '90 days'))}</th></tr></thead><tbody>${body || `<tr><td colspan="8" class="center faint">${esc(L('Nenhum token neste filtro.', 'No token in this filter.'))}</td></tr>`}</tbody></table></div>
+    ${total > shown.length || BB.all ? `<div class="row wrap between" style="padding:10px 18px 0;gap:8px"><button class="btn sm" data-act="bbAll">${ico(BB.all ? 'chevron-up' : 'chevron-down', 15)}${esc(BB.all ? L('Mostrar só os 40 maiores', 'Show only the top 40') : L(`Mostrar todos (${total})`, `Show all (${total})`))}</button><span class="tiny faint">${esc(L(`${total} tokens neste filtro · os que entram na fonte aparecem sozinhos`, `${total} tokens in this filter · new ones appear automatically`))}</span></div>` : `<p class="tiny faint" style="padding:10px 18px 0">${esc(L(`${total} tokens neste filtro · os que entram na fonte aparecem sozinhos`, `${total} tokens in this filter · new ones appear automatically`))}</p>`}
     <div style="padding:8px 18px 16px">${note(esc(L('Toque em um token para ver o gráfico diário e os detalhes. "Tokens" ≈ valor ÷ preço de hoje (a quantidade exata depende do preço de cada compra). "% do valor de mercado por ano" = média diária do período × 365 ÷ valor de mercado — como um "dividend yield" do token. FDV = valor com todas as moedas que ainda serão emitidas.', 'Tap a token for its daily chart and details. "Tokens" ≈ value ÷ today’s price (the exact amount depends on each purchase price). "% of market cap per year" = period daily average × 365 ÷ market cap — like a token "dividend yield". FDV = value including all tokens still to be issued.')))}</div>`);
 }
 function bbBarsPanel(box, title, num_, rows, val, fmt, sub) {
@@ -245,6 +253,7 @@ async function bbChart(t, D) {
 ACT.seg_bbp = (v) => { BB.per = v; LS.set('bb', { per: BB.per, filt: BB.filt }); bbDraw(); };
 ACT.bbFilt = (el) => { BB.filt = el.dataset.k; $$('#bb-tbl .bb-filt .lab-cat').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === BB.filt))); LS.set('bb', { per: BB.per, filt: BB.filt }); bbDraw(); };
 ACT.bbQ = (el) => { BB.q = el.value; bbDrawTbl(); };
+ACT.bbAll = () => { BB.all = !BB.all; bbDrawTbl(); };
 ACT.bbSort = (el) => { const k = el.dataset.k; if (BB.sort === k) BB.dir = -BB.dir; else { BB.sort = k; BB.dir = -1; } bbDrawTbl(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches && e.target.matches('tr[data-act="bbOpen"]')) ACT.bbOpen(e.target); });
 onPrice((set) => {

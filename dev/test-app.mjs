@@ -121,6 +121,13 @@ console.log('\n[1] Visitante · computador · todas as páginas');
   await page.click('#bb-tb tbody tr.click'); await sleep(1500);
   ok(await page.$('#bb-mchart canvas') !== null, 'Burn, Baby, Burn: detalhe com gráfico diário');
   await page.keyboard.press('Escape'); await sleep(300);
+  // Geopolítica: frentes, linha do tempo de 7 dias com a força de cada notícia
+  await goPage(page, 'geo', 2500);
+  ok(await page.$$eval('#geo-fronts .geo-front', (a) => a.length === 5).catch(() => false), 'Geopolítica: 5 frentes (Oriente Médio, Rússia e Ucrânia, rotas, Ásia, comércio)');
+  ok(await page.$$eval('#geo-tl .geo-day', (a) => a.length >= 4).catch(() => false), 'Geopolítica: linha do tempo com os dias anteriores (não só hoje)');
+  ok(await page.$$eval('#geo-tl .geo-st', (a) => a.some((x) => x.classList.contains('ok')) && a.some((x) => x.classList.contains('att'))).catch(() => false), 'Geopolítica: selos "confirmada" e "versão de uma das partes"');
+  await page.click('.geo-front[data-k="ucrania"]'); await sleep(500);
+  ok(await page.$$eval('#geo-tl .geo-i', (a) => a.length > 0 && a.every((x) => /Rússia e Ucrânia/.test(x.innerText))).catch(() => false), 'Geopolítica: frente filtra a linha do tempo');
   // troca de idioma e tema
   await page.evaluate(() => setLang('en')); await sleep(800);
   ok((await page.$eval('#sb .sb-i[data-page=markets] .lbl', (e) => e.textContent)) === 'Indices & FX', 'idioma EN troca o menu');
@@ -138,7 +145,7 @@ console.log('\n[2] Visitante · celular (390×844)');
 {
   const { browser, page, errors } = await open({ width: 390, height: 844, mobile: true });
   await sleep(3500);
-  for (const id of ['dash', 'top100', 'macro', 'agenda', 'news', 'vault', 'plans', 'onchain', 'whales', 'buybacks', 'markets', 'poly', 'chart']) {
+  for (const id of ['dash', 'top100', 'macro', 'agenda', 'news', 'geo', 'vault', 'plans', 'onchain', 'whales', 'buybacks', 'markets', 'poly', 'chart']) {
     await goPage(page, id, 1800);
     const r = await inspect(page);
     ok(!r.overflow, `${id}: sem rolagem lateral ${r.wide.join(' ')}`);
