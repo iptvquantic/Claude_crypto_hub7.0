@@ -18,7 +18,7 @@ const pageTitle = (p) => L(p.pt, p.en);
 
 // ---------- menu lateral ----------
 // cor de cada item do menu (ícone em "azulejo" colorido; o item atual fica preenchido)
-const PAGE_COLOR = { dash: '#8e98ff', chart: '#4fc3f7', top100: '#f4b43f', markets: '#31d67f', onchain: '#f7931a', lab: '#b18cff', tokenomics: '#ff7ab8', buybacks: '#ff8a4c', etf: '#5aa8ff', whales: '#2ed3c6', macro: '#ffcb5c', agenda: '#9be15d', poly: '#7c9cff', news: '#ff6b7a', geo: '#ff9248', vault: '#34d399', plans: '#f4b43f', app: '#4fc3f7', settings: '#a3acc2', admin: '#ff6b7a' };
+const PAGE_COLOR = { dash: '#8e98ff', chart: '#4fc3f7', top100: '#f4b43f', markets: '#31d67f', onchain: '#f7931a', lab: '#b18cff', tokenomics: '#ff7ab8', buybacks: '#ff8a4c', etf: '#5aa8ff', whales: '#2ed3c6', macro: '#ffcb5c', agenda: '#9be15d', poly: '#7c9cff', news: '#ff6b7a', geo: '#ff9248', wallets: '#e879f9', vault: '#34d399', plans: '#f4b43f', app: '#4fc3f7', settings: '#a3acc2', admin: '#ff6b7a' };
 const GROUP_COLOR = { mercado: '#8e98ff', analise: '#f7931a', macro: '#ffcb5c', noticias: '#ff6b7a', conta: '#34d399' };
 function buildSidebar() {
   const sb = $('#sb'); if (!sb) return;

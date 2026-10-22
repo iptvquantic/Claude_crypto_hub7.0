@@ -2,6 +2,8 @@
 // SÓ PARA TESTE: nenhum destes números aparece no site publicado.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { walletRespond, TOKENS_FIXTURE } from './wallet-fixtures.mjs';
+export { WT } from './wallet-fixtures.mjs';
 
 const DEV = new URL('.', import.meta.url).pathname;
 const DAY = 86400e3;
@@ -113,6 +115,7 @@ function pipeline(name) {
   const gen = new Date(NOW() - 12 * 60e3).toISOString();
   const real = realPipeline(name, gen); if (real) return real;
   if (name === 'lab') return labFixture(gen);
+  if (name === 'tokens') return TOKENS_FIXTURE();
   if (name === 'buybacks') {
     const day0 = Math.floor(NOW() / DAY) * DAY - DAY; // último dia completo (UTC); o de hoje vem pela metade
     const T = [['hyperliquid', 'Hyperliquid', 'HYPE', 'buyback-burn', 3.4e6, 18e9, 77e9, 38], ['pump-fun', 'Pump', 'PUMP', 'buyback-burn', 9e5, 2.1e9, 3.7e9, 0.005], ['tron', 'Tron', 'TRX', 'burn', 1e6, 31e9, 31e9, 0.3], ['uniswap', 'Uniswap', 'UNI', 'buyback-burn', 3e5, 4.6e9, 6.5e9, 7.5], ['ethereum', 'Ethereum', 'ETH', 'burn', 1e5, 3e11, 3e11, 3100], ['sky', 'Sky', 'SKY', 'buyback', 1.8e5, 1.6e9, 1.7e9, 0.07], ['chainlink', 'Chainlink', 'LINK', 'buyback', 0, 9.5e9, 16e9, 16], ['solana', 'Solana', 'SOL', 'burn', 1.1e5, 6.2e10, 7e10, 145], ['raydium', 'Raydium', 'RAY', 'buyback', 6e4, 4.9e8, 1e9, 1.9], ['aerodrome-finance', 'Aerodrome', 'AERO', 'share', 3e5, 9.3e8, 1.5e9, 0.9], ['pons', 'Pons', 'PONS', 'buyback-burn', 3.5e4, 2.3e8, 2.3e8, 0.3], ['stonk-3', 'StonkFun', 'STONK', 'buyback', 5e4, 9e7, 9e7, 0.12]];
@@ -201,6 +204,7 @@ export function makeSupabase({ plan = 'trial', admin = false } = {}) {
 // ---------- roteador geral ----------
 export function respond(url, method = 'GET', body = '', opts = {}) {
   const u = new URL(url); const h = u.host; const p = u.pathname; const q = u.searchParams;
+  const wr = walletRespond(url, method, body); if (wr) return wr; // Wallet Watch
   if (h === 'fonts.googleapis.com') {
     const f = (n) => readFileSync(join(DEV, 'node_modules/@fontsource-variable/archivo/files', n)).toString('base64');
     return text("@font-face{font-family:'Archivo';font-style:normal;font-weight:100 900;font-stretch:62% 125%;src:url(https://fonts.gstatic.com/s/archivo/v1/test.woff2) format('woff2')}", 200, 'text/css');

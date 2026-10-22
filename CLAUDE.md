@@ -27,8 +27,14 @@ Responda ao dono em português do Brasil, direto. Ele não programa: entregue pr
 - `scripts/atualizar-dados.mjs` publica `news.json`, `calendar.json`, `markets.json`, `status.json` no ramo órfão `data` (force-push). O site lê por `raw.githubusercontent.com`; se o arquivo estiver velho, busca direto. Também mantém o banco ativo (ping) — falha no ping nunca derruba a execução.
 - Teste sem internet: `node dev/test-robot.mjs`.
 
+## Wallet Watch (grátis)
+- `19b-wallets-core.js`: bloco puro entre `==WWC-START==`/`==WWC-END==` (hashes, base58/bech32, secp256k1 só público, BIP32 xpub, EIP-55, ENS, TON e `wwDetect`, que BLOQUEIA frase-semente/chave privada) testado no Node por `dev/test-wallets.mjs`; depois dele, os leitores de cada rede (`WW_READERS`) e os preços.
+- `19c-wallets.js`: estado (`nx3:ww`, `ww-read`, `ww-ev`, `ww-hist` — só no navegador, nunca no servidor), tela e fontes `ww-tok`/`ww-bal`/`ww-px` (só com a página aberta).
+- Tokens EVM/Solana/Tron/TON só entram se estiverem no `tokens.json` do robô (ou verificados pela Jupiter/TonAPI): nada de token desconhecido (spam) na tela.
+- Fontes simuladas para teste em `dev/wallet-fixtures.mjs` (endereços de teste em `WT`).
+
 ## Antes de publicar
-`node dev/build.mjs --beta && node dev/test-app.mjs && node dev/test-robot.mjs`, conferir `/beta/` no navegador real, então `node dev/build.mjs` (raiz).
+`node dev/build.mjs --beta && node dev/test-app.mjs && node dev/test-robot.mjs && node dev/test-wallets.mjs`, conferir `/beta/` no navegador real, então `node dev/build.mjs` (raiz).
 Mexeu em CSS do menu ou em cores? `node dev/check-menu.mjs` (menu cabe sem rolar em 5 tamanhos de tela) e `node dev/shot-theme.mjs light` (capturas em `dev/out/`). Contraste mínimo: 4,5:1 em todos os temas.
 
 ## Documentos do projeto

@@ -5,7 +5,7 @@
 // com fonte e data de conferência) ou AUSENTE ("—"). Nada de constante disfarçada de dado.
 // =====================================================================
 const NX = {
-  version: '3.2.0',
+  version: '3.3.0',
   build: '__BUILD__',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',

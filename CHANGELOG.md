@@ -1,5 +1,17 @@
 # Mudanças
 
+## 3.3.0 — 22/10/2026 (beta)
+- **Novo: Wallet Watch (grátis, menu Sua conta) — acompanhe qualquer carteira só pelo endereço público.** Cole o endereço e a rede é reconhecida sozinha:
+  - **Bitcoin:** endereço (legado, SegWit, Taproot) ou a **xpub/ypub/zpub** da Ledger, Trezor, Electrum, Sparrow — os endereços da conta são derivados aqui no navegador (recebimento e troco, até 20 seguidos sem uso) e, na "xpub" genérica, o tipo usado é descoberto sozinho.
+  - **Ethereum e 18 redes compatíveis** (BNB Chain, Base, Arbitrum, Optimism, Polygon, Avalanche, HyperEVM, Linea, zkSync, Scroll, Unichain, Sonic, Berachain, Gnosis, Mantle, Celo, Cronos, Blast) com moeda nativa e tokens reconhecidos; **Hyperliquid** (saldo à vista, conta de perpétuos e HYPE em stake); nomes **.eth** (ENS).
+  - **Solana** (SOL e tokens SPL), **Tron** (TRX, TRX em stake e USDT), **TON** (TON e jettons verificados), **Litecoin**, **Dogecoin** e **XRP**.
+  - **Segurança:** só leitura (sem conectar carteira nem assinar nada). Frase-semente, chave privada (hex, WIF, xprv, Solana) ou arquivo de chave colados são **bloqueados e apagados na hora**, sem salvar nem enviar. Tokens desconhecidos (golpes de "airdrop") são ignorados: só entram moedas da lista das ~1.500 maiores e tokens verificados pela Jupiter/TonAPI. A lista de endereços fica **só no seu navegador**; o saldo é lido direto nas fontes públicas de cada rede.
+  - **Vários portfólios** (Principal, Ledger, Família…), total em R$ ou US$, variação de 24 h, composição (Bitcoin, Ethereum, dólar digital, outras), alocação por ativo e por rede, ativos somados de todas as carteiras (com o detalhe de onde cada um está), cartões das carteiras com fonte e hora da leitura, movimentos (BTC, LTC, DOGE e mudanças de saldo detectadas nas demais redes), evolução registrada pelo navegador, modo privado (esconder valores), baixar e importar a lista. Se uma fonte falha, fica a última leitura com o horário.
+  - Atualiza sozinho a cada 5 min com a página aberta; preços das principais moedas em tempo real (Binance), os demais pela DefiLlama/CoinGecko, Jupiter, TonAPI e Hyperliquid.
+- **Robô:** lista de tokens reconhecidos por rede (`tokens.json`: ~2.500 contratos das 1.500 maiores moedas, com casas decimais), renovada a cada ~20 h; série diária da recompra pelo dia UTC de cada ponto.
+- **Termos e Política de privacidade** atualizados (Wallet Watch); **página de apresentação** com o Wallet Watch e o Burn, Baby, Burn.
+- "Restaurar preferências" (Configurações) não apaga as carteiras do Wallet Watch.
+
 ## 3.2.0 — 22/10/2026 (correções pedidas pelo dono)
 - **Portfolio Vault — preço médio e vendas corrigidos na origem:** o campo numérico do navegador lia "1.432,17" como 1,43217 (o ponto virava vírgula e o resto era cortado) e a roda do mouse mudava o valor sem você perceber. Agora os campos aceitam o jeito brasileiro e o americano ("1.432,17", "1432,17", "1,432.17", "0,005"), mostram embaixo como o número foi entendido e avisam quando "1.432" pode ser ambíguo.
 - **Formulário de aporte à prova de perda:** clicar fora, apertar Esc ou Enter (ao escolher a corretora na lista) não fecha nem salva mais; trocar de moeda e cancelar volta com tudo preenchido; se a janela fechar pelo X, "Registrar aporte" reabre com o rascunho. Novo campo **preço por unidade** (preencha ele ou o total; o outro é calculado).

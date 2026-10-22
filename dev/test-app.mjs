@@ -5,7 +5,9 @@
 import puppeteer from 'puppeteer-core';
 import { readFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
 import { join, extname } from 'node:path';
-import { respond, makeSupabase } from './fixtures.mjs';
+import { respond, makeSupabase, WT } from './fixtures.mjs';
+import { writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const SITE = 'https://iptvquantic.github.io/Claude_crypto_hub7.0/';
@@ -14,7 +16,7 @@ const BASE = process.argv.includes('--root') ? '' : 'beta/';
 const SHOTS = process.argv.includes('--shots');
 const TYPES = { '.html': 'text/html', '.js': 'application/javascript', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' };
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
-const PAGES = ['dash', 'chart', 'top100', 'markets', 'onchain', 'lab', 'tokenomics', 'buybacks', 'etf', 'whales', 'macro', 'agenda', 'poly', 'news', 'geo', 'vault', 'plans', 'settings'];
+const PAGES = ['dash', 'chart', 'top100', 'markets', 'onchain', 'lab', 'tokenomics', 'buybacks', 'etf', 'whales', 'macro', 'agenda', 'poly', 'news', 'geo', 'wallets', 'vault', 'plans', 'settings'];
 const fails = [];
 const ok = (cond, msg) => { if (!cond) { fails.push(msg); console.log('  ✗ ' + msg); } else console.log('  ✓ ' + msg); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -210,7 +212,7 @@ console.log('\n[2] Visitante · celular (390×844)');
 {
   const { browser, page, errors } = await open({ width: 390, height: 844, mobile: true });
   await sleep(3500);
-  for (const id of ['dash', 'top100', 'macro', 'agenda', 'news', 'geo', 'vault', 'plans', 'onchain', 'whales', 'buybacks', 'markets', 'poly', 'chart']) {
+  for (const id of ['dash', 'top100', 'macro', 'agenda', 'news', 'geo', 'wallets', 'vault', 'plans', 'onchain', 'whales', 'buybacks', 'markets', 'poly', 'chart']) {
     await goPage(page, id, 1800);
     const r = await inspect(page);
     ok(!r.overflow, `${id}: sem rolagem lateral ${r.wide.join(' ')}`);
@@ -394,6 +396,95 @@ console.log('\n[7] App instalável (PWA)');
     await page.close();
   }
   await browser.close(); srv.close();
+}
+// ---------- 8. Wallet Watch: endereços públicos de todas as redes, segredos bloqueados ----------
+console.log('\n[8] Wallet Watch (grátis, sem conta)');
+{
+  const { browser, page, errors, unhandled } = await open({ hash: '#/wallets' });
+  await sleep(2500);
+  ok(await page.$eval('#sb .sb-i[data-page=wallets] .lbl', (e) => e.textContent === 'Wallet Watch').catch(() => false) && await page.$('#sb .sb-i[data-page=wallets] .tag') === null, 'Wallet Watch no menu, sem selo PRO');
+  ok(await page.$('#ww-addr') !== null && await page.$('.ww-empty') !== null, 'tela inicial com o campo de endereço');
+  const paste = (v) => page.evaluate((x) => { const i = document.querySelector('#ww-addr'); i.value = x; i.dispatchEvent(new Event('input', { bubbles: true })); }, v);
+  const SECRETS = { seed: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about', priv: '4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318', wif: 'KwdMAjGmerYanjeui5SHS7JkmpZvVipYvB2LJGU1ZxJwYvP98617', xprv: 'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi' };
+  for (const [k, v] of Object.entries(SECRETS)) {
+    await paste(v); await sleep(150);
+    const r = await page.evaluate(() => ({ val: document.querySelector('#ww-addr').value, alert: !!document.querySelector('.ww-secret'), btn: document.querySelector('#ww-add-btn').disabled }));
+    ok(r.val === '' && r.alert && r.btn, `segredo colado (${k}): campo apagado na hora, aviso e botão travado`);
+  }
+  ok(await page.evaluate((list) => { const all = JSON.stringify(localStorage) + JSON.stringify(sessionStorage); return !list.some((x) => all.includes(x.slice(0, 20))); }, Object.values(SECRETS)), 'nenhum segredo guardado no navegador');
+  await page.type('#ww-addr', SECRETS.seed); await sleep(150);
+  ok(await page.$eval('.ww-secret', () => true).catch(() => false), 'frase-semente digitada palavra por palavra também é bloqueada');
+  const addW = async (addr, label) => {
+    await page.evaluate(() => { const s = document.querySelector('#ww-add'); if (s && !s.classList.contains('open')) document.querySelector('[data-act="wwAddToggle"]').click(); });
+    await sleep(120); await paste(addr);
+    await page.evaluate((l) => { const i = document.querySelector('#ww-label'); i.value = l || ''; }, label);
+    await page.evaluate(() => document.querySelector('#ww-add-btn').click());
+    await page.waitForFunction(() => WW.busy.size === 0 && WW.d.w.length && WW.r[WW.d.w[WW.d.w.length - 1].id], { timeout: 15000 }).catch(() => {});
+    await sleep(300);
+  };
+  await addW(WT.btc, 'Cold BTC');
+  ok(await page.$eval('.ww-card', (c) => /Cold BTC/.test(c.innerText) && /mempool\.space/.test(c.innerText)).catch(() => false), 'BTC: carteira adicionada com a fonte da leitura');
+  ok(await page.$eval('#ww-total .ww-big', (e) => /R\$/.test(e.textContent)).catch(() => false), 'total do portfólio em R$');
+  await addW(WT.evm, 'MetaMask');
+  const evm = await page.evaluate(() => { const A = wwAssets(WW.d.w.filter((w) => w.kind === 'evm')); const g = (k) => A.find((a) => a.k === k); return { usdt: g('cg:tether') && g('cg:tether').q, link: g('cg:chainlink') && g('cg:chainlink').q, eth: g('cg:ethereum') && [g('cg:ethereum').q, [...g('cg:ethereum').nets]], hype: g('cg:hyperliquid') && [g('cg:hyperliquid').q, g('cg:hyperliquid').parts.some((p) => p.x === 'stake')], perp: g('hl:perp') && g('hl:perp').v, purr: g('hl:PURR') && g('hl:PURR').v }; });
+  ok(Math.abs(evm.usdt - 1234.56) < 1e-6 && evm.link === 10, `EVM: tokens reconhecidos lidos pelo Multicall (USDT ${evm.usdt}, LINK ${evm.link})`);
+  ok(evm.eth && Math.abs(evm.eth[0] - 1.7) < 1e-9 && evm.eth[1].includes('eth') && evm.eth[1].includes('base'), 'EVM: ETH somado da Ethereum e da Base');
+  ok(evm.hype && Math.abs(evm.hype[0] - 20) < 1e-9 && evm.hype[1] && Math.abs(evm.perp - 1000.25) < 1e-6 && Math.abs(evm.purr - 200) < 1e-6, 'Hyperliquid: HYPE (HyperEVM + à vista + stake), conta de perpétuos e token à vista com preço da Hyperliquid');
+  await addW(WT.zpub, 'Ledger');
+  await addW(WT.xpub86, 'Trezor');
+  const btc = await page.evaluate(() => wwAssets(WW.d.w).find((a) => a.k === 'cg:bitcoin').q);
+  ok(Math.abs(btc - 1.325) < 1e-9, `xpub/zpub: endereços derivados, limite de 20 sem uso e tipo descoberto sozinho (BTC total ${btc})`);
+  ok(await page.evaluate(() => { const w = WW.d.w.find((x) => x.label === 'Trezor'); const r = WW.r[w.id]; return r.x.types.join() === 'Taproot' && r.x.used === 1; }), 'xpub "genérica" (Ledger/Trezor): só o tipo com uso é somado (Taproot)');
+  for (const [a, l] of [[WT.sol, 'Phantom'], [WT.trx, 'Tron'], [WT.ton, 'TON'], [WT.ltc, 'LTC'], [WT.doge, 'DOGE'], [WT.xrp, 'XRP'], [WT.ens, '']]) await addW(a, l);
+  const st = await page.evaluate(() => ({ n: WW.d.w.length, errs: WW.d.w.filter((w) => !WW.r[w.id] || WW.r[w.id].err || !WW.r[w.id].ok).map((w) => w.label + ':' + (WW.r[w.id] && WW.r[w.id].err)), hid: WW.d.w.reduce((s2, w) => s2 + (WW.r[w.id].hid || 0), 0), ens: WW.d.w.find((w) => w.ens), sol: wwAssets(WW.d.w.filter((w) => w.kind === 'sol')).map((a) => a.s).sort().join(','), trx: wwAssets(WW.d.w.filter((w) => w.kind === 'trx')).map((a) => `${a.s}:${a.q}`).sort().join(','), ton: wwAssets(WW.d.w.filter((w) => w.kind === 'ton')).map((a) => `${a.s}:${a.q}`).sort().join(',') }));
+  ok(st.n === 11 && !st.errs.length, `11 carteiras de 9 redes lidas sem erro ${st.errs.join(' | ')}`);
+  ok(st.hid === 3 && /Golpe|GOLPE/.test(await page.$eval('#pg-wallets', (e) => e.innerText).catch(() => 'GOLPE')) === false, 'tokens desconhecidos (spam) ignorados e sem o nome deles na tela');
+  ok(st.sol === 'JUP,SOL,USDC' && st.trx === 'TRX:250,USDT:250' && st.ton === 'TON:5,USDT:75', `Solana (Jupiter verificado), Tron (TRX + stake + USDT) e TON (jetton verificado) ${st.sol} ${st.trx} ${st.ton}`);
+  ok(st.ens && st.ens.ens === 'teste.eth' && st.ens.addr === WT.ensAddr, 'nome ENS convertido no endereço');
+  ok(await page.$$eval('#ww-act .li', (a) => a.length >= 4).catch(() => false), 'movimentos de BTC, LTC e DOGE listados');
+  const dup = await page.evaluate(() => WW.d.w.length); await addW(WT.btc.toLowerCase() === WT.btc ? WT.btc : WT.btc, 'Repetida');
+  ok(await page.evaluate((n) => WW.d.w.length === n, dup), 'endereço repetido não entra duas vezes');
+  // portfólios
+  await page.evaluate(() => document.querySelector('[data-act="wwPfNew"]').click()); await sleep(300);
+  await page.evaluate(() => { document.querySelector('#ww-nm').value = 'Ledger'; document.querySelector('#scrim [data-k=yes]').click(); }); await sleep(400);
+  await page.evaluate(() => { const w = WW.d.w.find((x) => x.label === 'Ledger'); const p = WW.d.pf.find((x) => x.n === 'Ledger'); w.pf = p.id; wwSave(); wwDraw(); });
+  await page.evaluate(() => { const p = WW.d.pf.find((x) => x.n === 'Ledger'); document.querySelector(`.ww-pf[data-id="${p.id}"]`).click(); }); await sleep(500);
+  ok(await page.evaluate(() => wwWallets().length === 1 && /Ledger/.test(document.querySelector('#ww-total .panel-t').textContent)), 'novo portfólio com a carteira movida');
+  await page.evaluate(() => document.querySelector('.ww-pf[data-id="all"]').click()); await sleep(400);
+  // modo privado e dólar
+  await page.evaluate(() => document.querySelector('[data-act="wwHide"]').click()); await sleep(400);
+  ok(await page.$eval('#ww-total .ww-big', (e) => /•/.test(e.textContent)).catch(() => false) && await page.$$eval('#ww-assets tr[data-k] td:nth-child(4)', (a) => a.every((t) => /•|—/.test(t.textContent))).catch(() => false), 'esconder valores mascara total e valores');
+  await page.evaluate(() => document.querySelector('[data-act="wwHide"]').click()); await sleep(300);
+  await page.click('.seg[data-seg="wwcur"] button[data-v="USD"]'); await sleep(400);
+  ok(await page.$eval('#ww-total .ww-big', (e) => /US\$/.test(e.textContent)).catch(() => false), 'total em US$');
+  await page.click('.seg[data-seg="wwcur"] button[data-v="BRL"]'); await sleep(300);
+  // detalhe do ativo
+  await page.evaluate(() => document.querySelector('#ww-assets tr[data-k="cg:tether"]').click()); await sleep(400);
+  ok(await page.$eval('#scrim', (e) => /Tron/.test(e.innerText) && /TON/.test(e.innerText) && /Ethereum/.test(e.innerText)).catch(() => false), 'detalhe do ativo mostra cada carteira e rede');
+  await page.keyboard.press('Escape'); await sleep(200);
+  const r1 = await inspect(page); ok(!r1.bad.length && !r1.overflow, `Wallet Watch sem número quebrado nem rolagem lateral ${r1.bad.join(',')} ${r1.wide.join(' ')}`);
+  await shot(page, 'w-wallets');
+  // exportar (sem saldos) e importar (recusa arquivo com segredo)
+  const exp = await page.evaluate(() => { let out = ''; const orig = downloadFile; downloadFile = (n, t) => { out = t; }; ACT.wwExport(); downloadFile = orig; return out; });
+  const ej = JSON.parse(exp || '{}');
+  ok(ej.carteiras && ej.carteiras.length === 11 && !/saldo|balance|"q"|uiAmount/i.test(exp), 'exportar baixa só os endereços (sem saldos)');
+  const bad = join(tmpdir(), 'ww-bad.json'); writeFileSync(bad, JSON.stringify({ carteiras: [{ endereco: SECRETS.priv }, { endereco: WT.btc }] }));
+  const [fc] = await Promise.all([page.waitForFileChooser(), page.evaluate(() => ACT.wwImport())]); await fc.accept([bad]); await sleep(800);
+  ok(await page.evaluate(() => WW.d.w.length === 11) && await page.$eval('#toasts', (e) => /segredo|chave privada|frase-semente/i.test(e.innerText)).catch(() => false), 'importar arquivo com chave privada: nada é importado');
+  // recarregar: lista e últimas leituras continuam (com o horário)
+  await page.reload({ waitUntil: 'domcontentloaded' }); await sleep(2500);
+  ok(await page.evaluate(() => WW.d.w.length === 11 && document.querySelectorAll('.ww-card').length === 11 && /R\$/.test(document.querySelector('#ww-total .ww-big').textContent)), 'depois de recarregar, carteiras e saldos continuam');
+  ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
+  const wwUnh = unhandled.filter((u) => /mempool|blockchain\.info|publicnode|hyperliquid|jup\.ag|trongrid|tonapi|toncenter|xrpl|litecoinspace|blockcypher|llama\.fi/.test(u));
+  ok(!wwUnh.length, `todas as fontes do Wallet Watch simuladas ${wwUnh.slice(0, 4).join(' | ')}`);
+  // celular
+  await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true }); await sleep(800);
+  const rm = await inspect(page); ok(!rm.overflow, `Wallet Watch no celular sem rolagem lateral ${rm.wide.join(' ')}`);
+  await shot(page, 'w-wallets-m');
+  // apagar tudo
+  await page.evaluate(() => { ACT.wwWipe(); }); await sleep(300); await page.evaluate(() => document.querySelector('#scrim [data-k=yes]').click()); await sleep(500);
+  ok(await page.evaluate(() => !WW.d.w.length && !localStorage.getItem('nx3:ww-read') && !!document.querySelector('.ww-empty')), 'apagar tudo limpa a lista e as leituras');
+  await browser.close();
 }
 console.log(`\n${fails.length ? '✗ ' + fails.length + ' falha(s)' : '✓ tudo certo'}`);
 process.exit(fails.length ? 1 : 0);

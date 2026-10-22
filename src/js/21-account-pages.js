@@ -128,13 +128,13 @@ function drawStHealth() {
 }
 function drawStStore() {
   let bytes = 0, n = 0; LS.keys().forEach((k) => { try { bytes += (localStorage.getItem(k) || '').length * 2; n++; } catch { /* */ } });
-  setHTML('#st-store', panelHead('database', L('Dados neste navegador', 'Data in this browser')) + `<p class="small muted" style="line-height:1.6">${esc(L(`O NEXUS guarda ${n} itens (${fmtNum(bytes / 1024, 0, 1)} KB) neste navegador: preferências, cards do painel e cópias recentes dos dados para abrir rápido. Seus aportes ficam na sua conta, não aqui.`, `NEXUS stores ${n} items (${fmtNum(bytes / 1024, 0, 1)} KB) in this browser: preferences, dashboard cards and recent data copies for fast loading. Your entries live in your account, not here.`))}</p>
+  setHTML('#st-store', panelHead('database', L('Dados neste navegador', 'Data in this browser')) + `<p class="small muted" style="line-height:1.6">${esc(L(`O NEXUS guarda ${n} itens (${fmtNum(bytes / 1024, 0, 1)} KB) neste navegador: preferências, cards do painel, a lista de endereços do Wallet Watch e cópias recentes dos dados para abrir rápido. Seus aportes do Vault ficam na sua conta, não aqui.`, `NEXUS stores ${n} items (${fmtNum(bytes / 1024, 0, 1)} KB) in this browser: preferences, dashboard cards and recent data copies for fast loading. Your entries live in your account, not here.`))}</p>
     <div class="row wrap mt" style="gap:8px"><button class="btn sm" data-act="stClearCache">${ico('refresh-cw', 15)}${esc(L('Limpar cópias de dados', 'Clear data copies'))}</button><button class="btn sm ghost" data-act="stReset">${ico('undo-2', 15)}${esc(L('Restaurar preferências', 'Reset preferences'))}</button></div>`);
 }
 ACT.stClearCache = () => { LS.keys().filter((k) => k.startsWith(LS.pre + 'c:')).forEach((k) => { try { localStorage.removeItem(k); } catch { /* */ } }); Object.keys(CACHE.mem).forEach((k) => delete CACHE.mem[k]); refreshAll(); drawStStore(); toast(L('Cópias apagadas. Lendo tudo de novo nas fontes…', 'Copies cleared. Reading everything again…'), { type: 'ok' }); };
 ACT.stReset = async () => {
-  if (!(await confirmBox(L('Voltar tema, idioma, cards do painel e filtros ao padrão? Sua conta e seus aportes não são afetados.', 'Reset theme, language, dashboard cards and filters? Your account and entries are not affected.'), { ok: L('Restaurar', 'Reset') }))) return;
-  const keep = new Set([LS.pre + 'ai-key']);
+  if (!(await confirmBox(L('Voltar tema, idioma, cards do painel e filtros ao padrão? Sua conta, seus aportes e suas carteiras do Wallet Watch não são afetados.', 'Reset theme, language, dashboard cards and filters? Your account, entries and Wallet Watch wallets are not affected.'), { ok: L('Restaurar', 'Reset') }))) return;
+  const keep = new Set(['ai-key', 'ww', 'ww-read', 'ww-ev', 'ww-hist'].map((k) => LS.pre + k));
   LS.keys().forEach((k) => { if (!keep.has(k)) { try { localStorage.removeItem(k); } catch { /* */ } } });
   location.reload();
 };
