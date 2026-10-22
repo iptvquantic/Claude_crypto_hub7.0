@@ -157,9 +157,10 @@ function registerWhaleSources() {
     });
   }
   source({
-    id: 'whales', label: L('Maiores endereços de BTC', 'Largest BTC addresses'), provider: 'BitInfoCharts', every: 60 * 60e3, persist: false,
+    id: 'whales', label: L('Maiores endereços de BTC', 'Largest BTC addresses'), provider: 'BitInfoCharts', every: 60 * 60e3, persist: false, kind: 'daily',
     need: () => S.page === 'whales' && WH.asset === 'bitcoin',
-    run: async () => getPipeline('whales', 30 * 3600e3),
+    // a BitInfoCharts às vezes bloqueia o robô: vale a última lista lida (até 21 dias), sempre com a data dela
+    run: async () => getPipeline('whales', 21 * 86400e3),
     validate: (d) => Array.isArray(d.top) && d.top.length > 50 && Array.isArray(d.dist) && d.dist.length > 5,
     onData: (d) => { if (HEALTH.whales) HEALTH.whales.dataTs = Date.parse(d.generatedAt); _markDirty('WHALES'); },
   });
@@ -221,7 +222,8 @@ function drawWhSum() {
   const exchSum = exch.reduce((s, x) => s + (x.bal || 0), 0);
   const tre = CACHE.get('tre-bitcoin'); const coTot = tre && num(tre.v.total_holdings);
   const pct = (v) => (isNum(v) && supply ? fmtPct(v / supply * 100, 1, false) : '—');
-  setHTML(box, head + `<div class="wh-kpis">
+  const gen = Date.parse(W.generatedAt); const old = isNum(gen) && Date.now() - gen > 36 * 3600e3;
+  setHTML(box, head + (old ? `<div class="callout warn" style="margin-bottom:12px">${ico('history', 18)}<span>${esc(L(`Lista de ${fmtDateTime(gen)}: a BitInfoCharts está bloqueando a leitura automática agora. Mostramos a última lista lida, com a data; o robô tenta de novo a cada execução.`, `List from ${fmtDateTime(gen)}: BitInfoCharts is blocking automatic reads right now. Showing the last list read, with its date; the bot retries every run.`))} ${extLink('https://bitinfocharts.com/pt/top-100-richest-bitcoin-addresses.html', L('Ver agora na fonte', 'See it now at the source'))}</span></div>` : '') + `<div class="wh-kpis">
     ${kpiBox(L('Baleias (1.000 BTC ou mais)', 'Whales (1,000+ BTC)'), esc(fmtNum(bigAddr, 0, 0)) + ` <small class="faint">${esc(L('endereços', 'addresses'))}</small>`, `${esc(L('guardam', 'hold'))} <b>${esc(fmtNum(bigCoins, 0, 0))} BTC</b> · ${esc(pct(bigCoins))} ${esc(L('da oferta', 'of supply'))}`)}
     ${kpiBox(L('100 maiores endereços', 'Top 100 addresses'), esc(fmtNum(topSum, 0, 0)) + ' BTC', `${esc(pct(topSum))} ${esc(L('da oferta', 'of supply'))}${live ? ` · ${esc(fmtCompact(topSum * live))}` : ''}`)}
     ${kpiBox(L('Corretoras no top 100', 'Exchanges in the top 100'), esc(fmtNum(exch.length, 0, 0)) + ` <small class="faint">${esc(L('endereços', 'addresses'))}</small>`, `${esc(fmtNum(exchSum, 0, 0))} BTC · ${esc(pct(exchSum))} ${esc(L('da oferta', 'of supply'))}`)}

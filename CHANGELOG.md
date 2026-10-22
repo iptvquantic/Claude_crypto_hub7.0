@@ -11,6 +11,8 @@
 - **Robô:** lista de tokens reconhecidos por rede (`tokens.json`: ~2.500 contratos das 1.500 maiores moedas, com casas decimais), renovada a cada ~20 h; série diária da recompra pelo dia UTC de cada ponto.
 - **Termos e Política de privacidade** atualizados (Wallet Watch); **página de apresentação** com o Wallet Watch e o Burn, Baby, Burn.
 - "Restaurar preferências" (Configurações) não apaga as carteiras do Wallet Watch.
+- **Robô — patrimônio dos ETFs voltou:** a página do companiesmarketcap passou a mostrar o "$" separado do número e a leitura vinha vazia; agora usa o valor exato da tabela (conferido com as listas reais: 32 ETFs de bitcoin, 17 de ether, 99 de cripto).
+- **Baleias:** quando a BitInfoCharts bloqueia o robô (proteção contra robôs), a página mostra a última lista lida com a data dela e o aviso, em vez de sumir.
 
 ## 3.2.0 — 22/10/2026 (correções pedidas pelo dono)
 - **Portfolio Vault — preço médio e vendas corrigidos na origem:** o campo numérico do navegador lia "1.432,17" como 1,43217 (o ponto virava vírgula e o resto era cortado) e a roda do mouse mudava o valor sem você perceber. Agora os campos aceitam o jeito brasileiro e o americano ("1.432,17", "1432,17", "1,432.17", "0,005"), mostram embaixo como o número foi entendido e avisam quando "1.432" pode ser ambíguo.

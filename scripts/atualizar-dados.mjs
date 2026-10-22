@@ -263,13 +263,20 @@ function parseAssetsHtml(html, minCap = 1e9) {
     const name = strip((r.match(/class="company-name"[^>]*>([\s\S]*?)<\/div>/i) || [])[1]);
     const code = strip(((r.match(/class="company-code"[^>]*>([\s\S]*?)<\/div>/i) || [])[1] || '').replace(/<span[^>]*rank[^>]*>[\s\S]*?<\/span>/i, ''));
     const sorts = [...r.matchAll(/data-sort="(-?[\d.]+)"/g)].map((m) => Number(m[1]));
-    const tds = [...r.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => strip(m[1]));
+    const cells = [...r.matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/gi)].map((m) => ({ ds: Number((m[1].match(/data-sort="(-?[\d.]+)"/) || [])[1]), t: strip(m[2]) }));
+    const tds = cells.map((c) => c.t);
     const money = (t) => { const m = String(t).replace(/,/g, '').match(/\$\s?(-?[\d.]+)\s*([TBMK])?/i); if (!m) return null; const k = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 }[(m[2] || '').toUpperCase()] || 1; return Number(m[1]) * k; };
-    const capTxt = tds.find((t) => /\$[\d.,]+\s*[TBM]\b/.test(t)); const priceTxt = tds.find((t) => t !== capTxt && /^\$[\d.,]+$/.test(t));
+    // valor de mercado: a célula "$ 68.54 B" (o "$" vem num <span> à parte); o número exato fica em data-sort
+    const capCell = cells.find((c) => /\$\s?[\d.,]+\s*[TBM]\b/.test(c.t));
+    const capTxt = capCell ? capCell.t : undefined; const priceTxt = tds.find((t) => t !== capTxt && /^\$\s?[\d.,]+$/.test(t));
     const pctTxt = tds.find((t) => /^-?[\d.]+%$/.test(t));
     const rank = sorts.length ? sorts[0] : null;
     const country = tds.length ? tds[tds.length - 1].replace(/[^\p{L}\s.]/gu, '').trim() : '';
-    return { rank, n: name, s: code, mcap: money(capTxt), p: money(priceTxt), chg: pctTxt ? Number(pctTxt.replace('%', '')) : null, country };
+    const exact = capCell && Number.isFinite(capCell.ds) && capCell.ds > 0 ? capCell.ds : null;
+    const approx = money(capTxt);
+    // usa o data-sort só quando confere com o texto (±5%): protege contra mudança de layout
+    const mcap = exact && approx && Math.abs(exact / approx - 1) < 0.05 ? exact : approx;
+    return { rank, n: name, s: code, mcap, p: money(priceTxt), chg: pctTxt ? Number(pctTxt.replace('%', '')) : null, country };
   }).filter((x) => x.n && Number.isFinite(x.mcap) && x.mcap > minCap);
 }
 async function worldRanking() {

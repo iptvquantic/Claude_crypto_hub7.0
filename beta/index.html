@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-XoZ3dRj1lc96ype8k3WZtUuIYXBWMUoDCVqvkL01VWE=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+x+X35Hyc5CQsAIpgrmyr7k4Ygbd/fDqXFYRMx03tUE=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -1759,7 +1759,7 @@ button.oc-cube:focus-visible { outline: 2px solid var(--accent); outline-offset:
 // =====================================================================
 const NX = {
   version: '3.3.0',
-  build: '20261022-1047-d8efaeb-beta',
+  build: '20261022-1053-bde6380-beta',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',
@@ -6387,9 +6387,10 @@ function registerWhaleSources() {
     });
   }
   source({
-    id: 'whales', label: L('Maiores endereços de BTC', 'Largest BTC addresses'), provider: 'BitInfoCharts', every: 60 * 60e3, persist: false,
+    id: 'whales', label: L('Maiores endereços de BTC', 'Largest BTC addresses'), provider: 'BitInfoCharts', every: 60 * 60e3, persist: false, kind: 'daily',
     need: () => S.page === 'whales' && WH.asset === 'bitcoin',
-    run: async () => getPipeline('whales', 30 * 3600e3),
+    // a BitInfoCharts às vezes bloqueia o robô: vale a última lista lida (até 21 dias), sempre com a data dela
+    run: async () => getPipeline('whales', 21 * 86400e3),
     validate: (d) => Array.isArray(d.top) && d.top.length > 50 && Array.isArray(d.dist) && d.dist.length > 5,
     onData: (d) => { if (HEALTH.whales) HEALTH.whales.dataTs = Date.parse(d.generatedAt); _markDirty('WHALES'); },
   });
@@ -6451,7 +6452,8 @@ function drawWhSum() {
   const exchSum = exch.reduce((s, x) => s + (x.bal || 0), 0);
   const tre = CACHE.get('tre-bitcoin'); const coTot = tre && num(tre.v.total_holdings);
   const pct = (v) => (isNum(v) && supply ? fmtPct(v / supply * 100, 1, false) : '—');
-  setHTML(box, head + `<div class="wh-kpis">
+  const gen = Date.parse(W.generatedAt); const old = isNum(gen) && Date.now() - gen > 36 * 3600e3;
+  setHTML(box, head + (old ? `<div class="callout warn" style="margin-bottom:12px">${ico('history', 18)}<span>${esc(L(`Lista de ${fmtDateTime(gen)}: a BitInfoCharts está bloqueando a leitura automática agora. Mostramos a última lista lida, com a data; o robô tenta de novo a cada execução.`, `List from ${fmtDateTime(gen)}: BitInfoCharts is blocking automatic reads right now. Showing the last list read, with its date; the bot retries every run.`))} ${extLink('https://bitinfocharts.com/pt/top-100-richest-bitcoin-addresses.html', L('Ver agora na fonte', 'See it now at the source'))}</span></div>` : '') + `<div class="wh-kpis">
     ${kpiBox(L('Baleias (1.000 BTC ou mais)', 'Whales (1,000+ BTC)'), esc(fmtNum(bigAddr, 0, 0)) + ` <small class="faint">${esc(L('endereços', 'addresses'))}</small>`, `${esc(L('guardam', 'hold'))} <b>${esc(fmtNum(bigCoins, 0, 0))} BTC</b> · ${esc(pct(bigCoins))} ${esc(L('da oferta', 'of supply'))}`)}
     ${kpiBox(L('100 maiores endereços', 'Top 100 addresses'), esc(fmtNum(topSum, 0, 0)) + ' BTC', `${esc(pct(topSum))} ${esc(L('da oferta', 'of supply'))}${live ? ` · ${esc(fmtCompact(topSum * live))}` : ''}`)}
     ${kpiBox(L('Corretoras no top 100', 'Exchanges in the top 100'), esc(fmtNum(exch.length, 0, 0)) + ` <small class="faint">${esc(L('endereços', 'addresses'))}</small>`, `${esc(fmtNum(exchSum, 0, 0))} BTC · ${esc(pct(exchSum))} ${esc(L('da oferta', 'of supply'))}`)}
@@ -8398,7 +8400,7 @@ function wwDrawAssets() {
   const hid = ws.reduce((s, w) => s + ((WW.r[w.id] && WW.r[w.id].hid) || 0), 0);
   const row = (a) => {
     const pts = a.perp;
-    return `<tr class="click" data-act="wwAsset" data-k="${esc(a.k)}" tabindex="0" aria-label="${esc(a.s + ' ' + a.n)}"><td><div class="coin">${wwLogo(a, 30)}<div class="mn"><div class="nm">${esc(a.s)} <span class="sy">${esc(a.n)}</span></div>${wwNetChips(a.nets)}</div></div></td>
+    return `<tr class="click" data-act="wwAsset" data-k="${esc(a.k)}" tabindex="0" aria-label="${esc(a.s + ' ' + a.n)}"><td><div class="coin">${wwLogo(a, 30)}<div class="mn"><div class="nm no-audit">${esc(a.s)} <span class="sy">${esc(a.n)}</span></div>${wwNetChips(a.nets)}</div></div></td>
       <td class="r">${pts ? '<span class="faint">—</span>' : isNum(a.p) ? `${esc(wwPriceTxt(a.p))}<div class="tiny">${chg(a.chg, 2, 'sm')}</div>` : `<span class="faint" title="${esc(L('Sem preço em nenhuma fonte agora: fica fora do total.', 'No price from any source now: not in total.'))}">${esc(L('sem preço', 'no price'))}</span>`}</td>
       <td class="r num">${pts ? '—' : esc(wwM(fmtQty(a.q)))}</td>
       <td class="r num">${isNum(a.v) ? esc(wwMoney(a.v)) : '—'}</td>
@@ -8417,7 +8419,7 @@ ACT.wwAsset = (el) => {
   const parts = a.parts.slice().sort((p, q) => q.q - p.q);
   const xl = { stake: L('em stake', 'staked'), perp: L('perpétuos', 'perps') };
   openModal({
-    title: `${a.s} · ${a.n}`, wide: true,
+    title: `${a.s} · ${a.n}`, wide: true, label: a.s,
     body: `<div class="row wrap" style="gap:18px;margin-bottom:12px"><div class="coin">${wwLogo(a, 40)}<div><div class="nm" style="font-size:18px">${a.perp ? esc(wwMoney(a.v)) : esc(wwM(fmtQty(a.q)))} ${a.perp ? '' : esc(a.s)}</div><div class="sy">${isNum(a.v) && !a.perp ? esc(wwMoney(a.v)) : ''}</div></div></div>
       ${a.pr ? `<div class="small muted">${esc(L('Preço', 'Price'))}: <b>${esc(wwPriceTxt(a.p))}</b> ${chg(a.chg, 2, 'sm')}<br><span class="tiny faint">${esc(a.pr.src || '')}${a.pr.ts ? ' · ' + esc(fmtDateTime(a.pr.ts)) : ''}</span></div>` : `<div class="small faint">${esc(L('Sem preço agora (não entra no total).', 'No price now (not in total).'))}</div>`}</div>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>${esc(L('Carteira', 'Wallet'))}</th><th>${esc(L('Rede', 'Network'))}</th><th class="r">${esc(L('Quantidade', 'Quantity'))}</th><th class="r">${esc(L('Valor', 'Value'))}</th></tr></thead><tbody>${parts.map((p) => `<tr><td><b>${esc(p.w.label)}</b><div class="tiny faint mono">${esc(wwShort(p.w.addr))}</div></td><td><span class="ww-nc" style="--c:${esc(wwNetColor(p.net))}">${esc(wwNetName(p.net))}</span>${p.x ? ` <span class="badge">${esc(xl[p.x] || p.x)}</span>` : ''}${p.st ? ` <span class="badge warn" title="${esc(L('A rede não respondeu na última leitura: este é o saldo lido antes.', 'Network did not respond: showing the previous reading.'))}">${esc(L('leitura de ', 'read at ') + fmtTime(p.st))}</span>` : ''}</td><td class="r num">${a.perp ? '—' : esc(wwM(fmtQty(p.q)))}</td><td class="r">${isNum(a.p) ? esc(wwMoney(p.q * a.p)) : '—'}</td></tr>`).join('')}</tbody></table></div>

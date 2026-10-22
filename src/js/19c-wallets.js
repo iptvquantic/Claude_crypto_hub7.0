@@ -418,7 +418,7 @@ function wwDrawAssets() {
   const hid = ws.reduce((s, w) => s + ((WW.r[w.id] && WW.r[w.id].hid) || 0), 0);
   const row = (a) => {
     const pts = a.perp;
-    return `<tr class="click" data-act="wwAsset" data-k="${esc(a.k)}" tabindex="0" aria-label="${esc(a.s + ' ' + a.n)}"><td><div class="coin">${wwLogo(a, 30)}<div class="mn"><div class="nm">${esc(a.s)} <span class="sy">${esc(a.n)}</span></div>${wwNetChips(a.nets)}</div></div></td>
+    return `<tr class="click" data-act="wwAsset" data-k="${esc(a.k)}" tabindex="0" aria-label="${esc(a.s + ' ' + a.n)}"><td><div class="coin">${wwLogo(a, 30)}<div class="mn"><div class="nm no-audit">${esc(a.s)} <span class="sy">${esc(a.n)}</span></div>${wwNetChips(a.nets)}</div></div></td>
       <td class="r">${pts ? '<span class="faint">—</span>' : isNum(a.p) ? `${esc(wwPriceTxt(a.p))}<div class="tiny">${chg(a.chg, 2, 'sm')}</div>` : `<span class="faint" title="${esc(L('Sem preço em nenhuma fonte agora: fica fora do total.', 'No price from any source now: not in total.'))}">${esc(L('sem preço', 'no price'))}</span>`}</td>
       <td class="r num">${pts ? '—' : esc(wwM(fmtQty(a.q)))}</td>
       <td class="r num">${isNum(a.v) ? esc(wwMoney(a.v)) : '—'}</td>
@@ -437,7 +437,7 @@ ACT.wwAsset = (el) => {
   const parts = a.parts.slice().sort((p, q) => q.q - p.q);
   const xl = { stake: L('em stake', 'staked'), perp: L('perpétuos', 'perps') };
   openModal({
-    title: `${a.s} · ${a.n}`, wide: true,
+    title: `${a.s} · ${a.n}`, wide: true, label: a.s,
     body: `<div class="row wrap" style="gap:18px;margin-bottom:12px"><div class="coin">${wwLogo(a, 40)}<div><div class="nm" style="font-size:18px">${a.perp ? esc(wwMoney(a.v)) : esc(wwM(fmtQty(a.q)))} ${a.perp ? '' : esc(a.s)}</div><div class="sy">${isNum(a.v) && !a.perp ? esc(wwMoney(a.v)) : ''}</div></div></div>
       ${a.pr ? `<div class="small muted">${esc(L('Preço', 'Price'))}: <b>${esc(wwPriceTxt(a.p))}</b> ${chg(a.chg, 2, 'sm')}<br><span class="tiny faint">${esc(a.pr.src || '')}${a.pr.ts ? ' · ' + esc(fmtDateTime(a.pr.ts)) : ''}</span></div>` : `<div class="small faint">${esc(L('Sem preço agora (não entra no total).', 'No price now (not in total).'))}</div>`}</div>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>${esc(L('Carteira', 'Wallet'))}</th><th>${esc(L('Rede', 'Network'))}</th><th class="r">${esc(L('Quantidade', 'Quantity'))}</th><th class="r">${esc(L('Valor', 'Value'))}</th></tr></thead><tbody>${parts.map((p) => `<tr><td><b>${esc(p.w.label)}</b><div class="tiny faint mono">${esc(wwShort(p.w.addr))}</div></td><td><span class="ww-nc" style="--c:${esc(wwNetColor(p.net))}">${esc(wwNetName(p.net))}</span>${p.x ? ` <span class="badge">${esc(xl[p.x] || p.x)}</span>` : ''}${p.st ? ` <span class="badge warn" title="${esc(L('A rede não respondeu na última leitura: este é o saldo lido antes.', 'Network did not respond: showing the previous reading.'))}">${esc(L('leitura de ', 'read at ') + fmtTime(p.st))}</span>` : ''}</td><td class="r num">${a.perp ? '—' : esc(wwM(fmtQty(p.q)))}</td><td class="r">${isNum(a.p) ? esc(wwMoney(p.q * a.p)) : '—'}</td></tr>`).join('')}</tbody></table></div>
