@@ -1683,3 +1683,14 @@ button.oc-cube:focus-visible { outline: 2px solid var(--accent); outline-offset:
   .ww-pfbar { margin-bottom: 12px; }
   .ww-net { grid-template-columns: minmax(84px, 110px) minmax(0, 1fr) 48px; }
 }
+
+/* ---------- Administrador: agendador do robô ---------- */
+.adm-robot { border-top: 1px solid var(--line); padding-top: 14px; }
+.adm-h { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 750; margin: 0 0 10px; }
+.adm-h .ico { color: var(--accent); }
+.adm-steps { margin: 10px 0 0 20px; padding: 0; display: grid; gap: 7px; font-size: 14px; line-height: 1.55; color: var(--text-2); }
+.adm-steps li::marker { color: var(--accent); font-weight: 800; }
+.adm-tok .inp-group { margin-top: 6px; max-width: 640px; }
+.adm-tok .inp-group .inp { min-width: 0; flex: 1; }
+.adm-how { margin-top: 12px; }
+@media (max-width: 640px) { .adm-tok .inp-group { flex-wrap: wrap; } .adm-tok .inp-group .btn { width: 100%; } }

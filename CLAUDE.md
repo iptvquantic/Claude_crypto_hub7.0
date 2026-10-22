@@ -22,10 +22,12 @@ Responda ao dono em português do Brasil, direto. Ele não programa: entregue pr
 - Plano e validade só mudam no servidor (`admin_set_plan`). Admin = e-mail na tabela privada `app_admins`.
 - Plano grátis: o Supabase pausa o projeto após ~7 dias sem consultas e não oferece download de backup. O robô chama `rpc/ping` a cada execução para manter o projeto ativo (status `db` no painel do admin).
 - Migrações novas: aplicar e registrar em `dev/supabase/` e rodar `bash dev/supabase/test-db.sh`. `migrations/02_permissoes.sql` tem REVOKE: o dono aplica pelo SQL Editor.
+- Agendador do robô: `migrations/03_agendador_robo.sql` (pg_cron nos minutos 2/22/42 → `private.robo_disparar()` → workflow_dispatch no GitHub com o segredo `github_dispatch_token` do Vault). O dono cola o token no Painel do administrador (RPCs `admin_robot_status/_set_token/_dispatch_now`); o token nunca volta para a tela. Em 22/10 a aplicação pelo conector foi cancelada duas vezes: o painel mostra como instalar pelo SQL Editor.
 
 ## Robô de dados
 - `scripts/atualizar-dados.mjs` publica `news.json`, `calendar.json`, `markets.json`, `status.json` no ramo órfão `data` (force-push). O site lê por `raw.githubusercontent.com`; se o arquivo estiver velho, busca direto. Também mantém o banco ativo (ping) — falha no ping nunca derruba a execução.
-- Teste sem internet: `node dev/test-robot.mjs`.
+- Teste sem internet: `node dev/test-robot.mjs` (3 execuções: normal, banco pausado e "20 min depois", com os arquivos anteriores).
+- O que muda devagar não é lido a cada execução (`freshAt`): companiesmarketcap no máximo a cada 1–2 h, recompras 3 h, baleias 6 h, tokens 20 h. Cotações sempre.
 
 ## Wallet Watch (grátis)
 - `19b-wallets-core.js`: bloco puro entre `==WWC-START==`/`==WWC-END==` (hashes, base58/bech32, secp256k1 só público, BIP32 xpub, EIP-55, ENS, TON e `wwDetect`, que BLOQUEIA frase-semente/chave privada) testado no Node por `dev/test-wallets.mjs`; depois dele, os leitores de cada rede (`WW_READERS`) e os preços.

@@ -280,15 +280,31 @@ function downloadFile(name, text, type = 'application/json') {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
+// Lê TODAS as linhas de uma consulta, de 1000 em 1000. O servidor (PostgREST) entrega no máximo
+// 1000 linhas por pedido; sem paginar, quem tivesse mais lançamentos veria só parte deles.
+// `make(primeira)` monta a consulta (com ordem estável: a última coluna da ordem deve ser única, ex.: id).
+async function sbAll(make, size = 1000) {
+  const out = []; let total = null;
+  for (let from = 0, i = 0; i < 1000; i++) {
+    const { data, error, count } = await make(i === 0).range(from, from + size - 1);
+    if (error) throw error;
+    const rows = data || [];
+    if (i === 0 && Number.isFinite(count)) total = count;
+    out.push(...rows); from += rows.length;
+    if (!rows.length || (total !== null ? out.length >= total : rows.length < size)) break;
+  }
+  return out;
+}
+const vaultQuery = (sb) => (first) => sb.from('vault_entries').select('*', first ? { count: 'exact' } : undefined)
+  .order('date', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true });
 ACT.exportMyData = async (el) => {
   el.classList.add('busy');
   try {
     const sb = await sbClient();
-    const [{ data: entries, error: e1 }, { data: claims }] = await Promise.all([
-      sb.from('vault_entries').select('*').order('date', { ascending: true }),
+    const [entries, { data: claims }] = await Promise.all([
+      sbAll(vaultQuery(sb)),
       sb.from('payment_claims').select('plan,note,status,created_at,resolved_at'),
     ]);
-    if (e1) throw e1;
     const out = { app: 'NEXUS HUB', version: NX.version, exportedAt: new Date().toISOString(), profile: ACCOUNT.profile, vault_entries: entries || [], payment_claims: claims || [] };
     downloadFile(`nexus-hub-meus-dados-${todayISO()}.json`, JSON.stringify(out, null, 2));
     toast(L('Arquivo com seus dados baixado.', 'Your data file was downloaded.'), { type: 'ok' });

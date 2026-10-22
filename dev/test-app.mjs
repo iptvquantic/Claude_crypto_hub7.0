@@ -354,6 +354,18 @@ console.log('\n[5] Administrador');
   await goPage(page, 'admin', 2500);
   ok(await page.$eval('#pg-admin', (e) => /pagou@teste\.com/.test(e.innerText)).catch(() => false), 'pedidos e usuários aparecem');
   ok(await page.$eval('#pg-admin', (e) => /Banco de dados ativo/.test(e.innerText) && /Resume project/.test(e.innerText) && /Agenda econômica/.test(e.innerText)).catch(() => false), 'status do robô com nomes claros e aviso de banco pausado');
+  // agendador do robô: sem token → passo a passo; token salvo vai só para o banco e não volta para a tela
+  ok(await page.$eval('#pg-admin .adm-robot', (e) => /não configurado/.test(e.innerText) && /Only select repositories/.test(e.innerText) && !!e.querySelector('a[href="https://github.com/settings/personal-access-tokens/new"]')).catch(() => false), 'agendador: sem token mostra o passo a passo do GitHub');
+  const TOK = 'github_pat_11TESTE' + 'x'.repeat(70);
+  await page.type('#adm-tok', 'minha senha'); await page.click('[data-act=admTokSave]'); await sleep(400);
+  ok(!supa.db.robotTokenValue && /não parece um token/.test(await page.$eval('#toasts', (e) => e.innerText).catch(() => '')), 'agendador: texto que não é token é recusado antes de sair do navegador');
+  await page.$eval('#adm-tok', (i) => { i.value = ''; }); await page.type('#adm-tok', TOK); await page.click('[data-act=admTokSave]'); await sleep(900);
+  ok(supa.db.robotTokenValue === TOK && await page.$eval('#pg-admin', (e) => /salvo/.test(e.querySelector('.adm-robot').innerText)).catch(() => false), 'agendador: token salvo no banco');
+  ok(await page.evaluate((t) => !document.documentElement.outerHTML.includes(t) && ![...document.querySelectorAll('input')].some((i) => i.value.includes(t)) && !JSON.stringify(localStorage).includes(t), TOK), 'agendador: o token não fica na tela, nos campos nem no navegador');
+  await page.click('[data-act=admDispatch]'); await sleep(7000);
+  ok(await page.$eval('#pg-admin .adm-robot', (e) => /GitHub aceitou/.test(e.innerText)).catch(() => false), 'agendador: "Testar agora" mostra a resposta do GitHub');
+  supa.db.robotMissing = true; await page.click('[data-act=admReload]'); await sleep(1500);
+  ok(await page.$eval('#pg-admin .adm-robot', (e) => /Ainda não instalado/.test(e.innerText) && /03_agendador_robo\.sql/.test(e.innerText) && /SQL Editor/.test(e.innerText)).catch(() => false), 'agendador: sem a função no banco, explica como instalar');
   await shot(page, 'a-admin');
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
   await browser.close();

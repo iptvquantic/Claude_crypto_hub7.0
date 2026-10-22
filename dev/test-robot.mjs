@@ -45,10 +45,12 @@ function tkMcResult(n, dec) { // resposta do Multicall3.aggregate3 com n resulta
 }
 let calls = 0;
 let pingFails = false; let pings = [];
+let prevDir = null, cmcCalls = 0; // 3ª execução: arquivos da 1ª servidos como "anteriores" (ramo data)
 const failing = new Set(['https://www.criptofacil.com/feed/', 'https://nfs.faireconomy.media/ff_calendar_nextweek.json']);
 globalThis.fetch = async (url, opts = {}) => {
   calls++;
   const u = String(url);
+  if (u.includes('companiesmarketcap.com')) cmcCalls++;
   const res = (body, ok = true, status = 200, ct = null) => { const txt = typeof body === 'string' ? body : JSON.stringify(body); return { ok, status, headers: { get: (h) => (h.toLowerCase() === 'content-type' ? ct : null) }, text: async () => txt, json: async () => (typeof body === 'string' ? JSON.parse(body) : body), arrayBuffer: async () => (body instanceof Uint8Array ? body : new TextEncoder().encode(txt)).buffer }; };
   if (u.includes('feeds.folha.uol.com.br/mundo')) { const xml = `<?xml version="1.0" encoding="ISO-8859-1"?><rss><channel><title>Folha</title><item><title>Papa faz oração pela paz em Gaza e pede cessar-fogo</title><link>https://folha.test/1</link><pubDate>${new Date(now - 2 * 3600e3).toUTCString()}</pubDate></item></channel></rss>`; return res(Uint8Array.from(xml, (c) => c.charCodeAt(0)), true, 200, 'text/xml; charset=ISO-8859-1'); }
   if (u.includes('.supabase.co/rest/v1/rpc/ping')) { pings.push({ u, method: opts.method, key: (opts.headers || {}).apikey }); return pingFails ? res('paused', false, 540) : res({ ok: true, server_time: new Date().toISOString() }); }
@@ -74,7 +76,10 @@ globalThis.fetch = async (url, opts = {}) => {
   if (u.includes('bitinfocharts.com/top-100-richest-bitcoin-addresses')) return res(bitinfoHtml);
   if (GEO_HOSTS.test(u)) return res(geoRss(new URL(u).host));
   if (u.includes('news.google.com') && /Ormuz|Ir%C3%A3|Ucr%C3%A2nia|Taiwan|tarifas|reuters/.test(u)) return res(geoRss('Google').replace(/<\/title><link>/g, ' - Reuters</title><link>'));
-  if (u.startsWith('https://raw.githubusercontent.com/')) return res('404', false, 404);
+  if (u.startsWith('https://raw.githubusercontent.com/')) {
+    const f = prevDir && join(prevDir, u.split('?')[0].split('/').pop());
+    return f && existsSync(f) ? res(readFileSync(f, 'utf8')) : res('404', false, 404);
+  }
   if (u.includes('news.google.com')) return res(rss('Google', 6, ' - Folha de S.Paulo'));
   if (/feed|rss/.test(u)) return res(rss(new URL(u).host));
   if (u.includes('ff_calendar_thisweek')) return res([{ title: 'CPI y/y', country: 'USD', date: new Date(now + 86400e3).toISOString(), impact: 'High', forecast: '3.1%', previous: '3.0%' }, { title: 'Bank Holiday', country: 'JPY', date: new Date(now).toISOString(), impact: 'Holiday' }]);
@@ -82,6 +87,7 @@ globalThis.fetch = async (url, opts = {}) => {
     const sym = decodeURIComponent(u.split('/chart/')[1].split('?')[0]);
     if (sym === 'NG=F') return res({ chart: { result: null, error: { code: 'Not Found' } } });
     const p = sym === '^TNX' ? 41.2 : sym.endsWith('.SA') ? 88.4 : 100 + sym.length;
+    if (u.includes('range=10y')) { const n = 300; return res({ chart: { result: [{ meta: { regularMarketPrice: p, regularMarketTime: Math.floor(now / 1000) - 600, currency: sym === '^BVSP' ? 'BRL' : 'USD' }, timestamp: Array.from({ length: n }, (_, i) => Math.floor(now / 1000) - (n - 1 - i) * 86400), indicators: { quote: [{ close: Array.from({ length: n }, (_, i) => (i === 7 ? null : p * (0.8 + 0.2 * i / n))) }] } }] } }); }
     return res({ chart: { result: [{ meta: { regularMarketPrice: p, chartPreviousClose: p / 1.2, regularMarketVolume: 12345, regularMarketTime: Math.floor(now / 1000) - 600, currency: 'USD' }, timestamp: [4, 3, 2, 1, 0].map((k) => Math.floor(now / 1000) - k * 86400), indicators: { quote: [{ close: [p / 1.1, p / 1.05, null, p / 1.01, p] }] } }] } });
   }
   if (u.includes('companiesmarketcap.com/assets-by-market-cap')) return res('nope', false, 404);
@@ -151,6 +157,8 @@ ok((tk.chains.trx || []).some(([a]) => a === 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t
 ok((tk.chains.ton || []).some(([a]) => a === '0:b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe'), 'tokens: TON convertido para o formato bruto (0:…)');
 ok(tk.coins.tether && tk.coins.tether[0] === 'TETH' && tk.coins.bitcoin && /^1\/small\/bitcoin\.png/.test(tk.coins.bitcoin[3]) && !tk.chains['unknown-chain'], 'tokens: nomes, logo (caminho curto) e redes desconhecidas ignoradas');
 ok(st.sources.tokens && st.sources.tokens.ok && st.sources.tokens.n === tk.n, 'status registra a lista de tokens');
+const bj = read('bench');
+ok(bj.h['^BVSP'] && bj.h['^GSPC'] && bj.h['^BVSP'].d.length === 299 && bj.h['^BVSP'].d.length === bj.h['^BVSP'].c.length && bj.h['^BVSP'].c.every(Number.isFinite) && st.sources.bench.ok, 'índices para a comparação do Vault: 10 anos de Ibovespa e S&P 500 (dia sem fechamento fica de fora)');
 ok(st.sources.db && st.sources.db.ok && pings.length === 1 && pings[0].method === 'POST' && /^sb_publishable_/.test(pings[0].key), 'banco mantido ativo (ping com a chave publicável da configuração)');
 // 2ª execução: banco pausado não derruba o robô
 pingFails = true;
@@ -159,5 +167,16 @@ process.argv[2] = out2;
 await import(pathToFileURL(new URL('../scripts/atualizar-dados.mjs', import.meta.url).pathname).href + '?run=2');
 const st2 = JSON.parse(readFileSync(join(out2, 'status.json'), 'utf8'));
 ok(st2.sources.db && !st2.sources.db.ok && /pausado/.test(st2.sources.db.err) && st2.sources.news.ok && existsSync(join(out2, 'news.json')), 'banco pausado: avisa no status e o resto continua');
+// 3ª execução, 20 min depois da 1ª (pedida pelo agendador): o que muda devagar não é lido de novo
+pingFails = false; prevDir = out; cmcCalls = 0; process.env.GITHUB_EVENT_NAME = 'workflow_dispatch';
+const out3 = mkdtempSync(join(tmpdir(), 'nx-robot-'));
+process.argv[2] = out3;
+await import(pathToFileURL(new URL('../scripts/atualizar-dados.mjs', import.meta.url).pathname).href + '?run=3');
+const mk3 = JSON.parse(readFileSync(join(out3, 'markets.json'), 'utf8'));
+const st3 = JSON.parse(readFileSync(join(out3, 'status.json'), 'utf8'));
+ok(cmcCalls === 0 && st3.sources.etfAum.cached && st3.sources.world.cached && st3.sources.miners.capsCached && mk3.etfAum.IBIT === mk.etfAum.IBIT && mk3.etfAumAt === mk.etfAumAt && mk3.miners.find((x) => x.s === 'MARA').mcap === 5.2e9 && mk3.world.length === mk.world.length && mk3.minersCapsAt === mk.minersCapsAt, `robô a cada 20 min: patrimônio, valor de mercado e ranking reaproveitados (companiesmarketcap lido ${cmcCalls}×)`);
+ok(mk3.quotes['^GSPC'] && mk3.etfs.IBIT && Date.parse(mk3.generatedAt) > Date.parse(mk.generatedAt) - 1, 'cotações lidas de novo a cada execução');
+ok(st3.sources.bench.cached && JSON.parse(readFileSync(join(out3, 'bench.json'), 'utf8')).generatedAt === bj.generatedAt, 'índices de 10 anos reaproveitados (renovam a cada ~12 h)');
+ok(st.event === 'local' && st3.event === 'workflow_dispatch', 'status registra como a execução começou (agendamento, pedido ou local)');
 console.log(`\n${fails.length ? '✗ ' + fails.length + ' falha(s)' : '✓ robô: tudo certo'} (${calls} pedidos simulados)`);
 process.exit(fails.length ? 1 : 0);

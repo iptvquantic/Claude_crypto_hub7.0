@@ -196,6 +196,13 @@ export function makeSupabase({ plan = 'trial', admin = false } = {}) {
     if (p === '/rest/v1/rpc/admin_overview') return json({ users: 12, pro_active: 3, trial_active: 5, expired: 4, new_7d: 2, claims_pending: 1, entries: 87, server_time: new Date().toISOString() });
     if (p === '/rest/v1/rpc/admin_list_claims') return json([{ id: 'c9', user_id: 'u9', email: 'pagou@teste.com', plan: 'anual', note: 'Maria, pago 15/10', status: 'pending', created_at: new Date().toISOString() }]);
     if (p === '/rest/v1/rpc/admin_list_users') return json([{ id: uid, email, name: 'Dono', plan: 'master', plan_expiry: new Date(NOW() + 999 * DAY).toISOString(), active: true, created_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), entries: 3, pending_claims: 0 }, { id: 'u9', email: 'pagou@teste.com', name: 'Maria', plan: 'trial', plan_expiry: new Date(NOW() - DAY).toISOString(), active: true, created_at: new Date().toISOString(), last_seen_at: null, entries: 0, pending_claims: 1 }]);
+    // agendador do robô (migração 03); db.robotMissing = função ainda não instalada no banco
+    if (p === '/rest/v1/rpc/admin_robot_status') {
+      if (db.robotMissing) return json({ code: 'PGRST202', details: null, hint: null, message: 'Could not find the function public.admin_robot_status without parameters in the schema cache' }, 404);
+      return json({ server_time: new Date().toISOString(), token: db.robotTokenAt ? { set: true, updated_at: db.robotTokenAt } : null, job: { active: true, schedule: '2,22,42 * * * *' }, last: db.robotLast || null, n24h: db.robotLast ? 1 : 0, ok6h: db.robotLast ? 1 : 0, bad6h: 0 });
+    }
+    if (p === '/rest/v1/rpc/admin_robot_set_token') { const { p_token } = JSON.parse(body || '{}'); if (p_token && !/^(github_pat_|ghp_)/.test(p_token)) return json({ ok: false, error: 'formato' }); db.robotTokenValue = p_token || null; db.robotTokenAt = p_token ? new Date().toISOString() : null; return json(p_token ? { ok: true } : { ok: true, removed: true }); }
+    if (p === '/rest/v1/rpc/admin_robot_dispatch_now') { if (!db.robotTokenAt) return json({ ok: false, error: 'sem_token' }); db.robotLast = { at: new Date().toISOString(), origem: 'manual', status: 204, error: null, body: '' }; return json({ ok: true, id: 7 }); }
     if (p.startsWith('/rest/v1/rpc/admin_')) return json({ ok: true });
     return json({ message: 'não simulado: ' + p }, 404);
   };

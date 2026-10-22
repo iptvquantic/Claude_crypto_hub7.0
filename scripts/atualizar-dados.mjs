@@ -12,6 +12,7 @@
 //   buybacks.json  recompra, queima e repasse aos detentores por token
 //   whales.json    100 maiores endereços de BTC e distribuição por faixa
 //   tokens.json    contratos e decimais dos tokens reconhecidos por rede (Wallet Watch; renova a cada ~20 h)
+//   bench.json     10 anos de fechamentos diários do Ibovespa e do S&P 500 (comparação do Vault; renova a cada ~12 h)
 //   (news.json também traz cats.geo: geopolítica por conflito, 7 dias)
 // E mantém o banco (Supabase grátis) ativo: o plano grátis pausa o projeto após ~7 dias sem consultas.
 // Regra de ouro: NUNCA quebrar o site. Se uma fonte falhar, o arquivo anterior é mantido
@@ -206,16 +207,19 @@ async function etfAum() {
   }
   return out;
 }
-async function miners(prev) {
+// a fonte já foi lida há menos de h horas? (patrimônio, valor de mercado e ranking mudam devagar:
+// com o robô rodando a cada 20 min, o companiesmarketcap é lido no máximo a cada 1–2 h)
+const freshAt = (at, h) => !!at && Date.now() - Date.parse(at) < h * 3600e3;
+async function miners(prev, fetchCaps = true) {
   const caps = {};
-  try { for (const r of await cmcCsv()) { const k = String(r.symbol || '').toUpperCase(); if (MINERS.some(([t]) => t === k)) caps[k] = { mcap: Number(r.marketcap), p: Number(r['price (usd)']), n: r.name }; } } catch { /* sem valor de mercado: fica só a cotação */ }
+  if (fetchCaps) { try { for (const r of await cmcCsv()) { const k = String(r.symbol || '').toUpperCase(); if (MINERS.some(([t]) => t === k)) caps[k] = { mcap: Number(r.marketcap), p: Number(r['price (usd)']), n: r.name }; } } catch { /* sem valor de mercado: fica só a cotação */ } }
   const yr = await pool(MINERS, 4, ([s]) => yahoo(s));
   const list = MINERS.map(([s, n], i) => {
     const y = yr[i] && !yr[i].err ? yr[i] : null; const c = caps[s];
     if (!y && !c) { const old = prev && Array.isArray(prev.miners) && prev.miners.find((x) => x.s === s); return old || null; }
     return { s, n, p: y ? y.p : c.p, chg: y ? y.chg : null, t: y ? y.t : null, mcap: c && Number.isFinite(c.mcap) && c.mcap > 0 ? c.mcap : (prev && Array.isArray(prev.miners) && (prev.miners.find((x) => x.s === s) || {}).mcap) || null };
   }).filter(Boolean);
-  return list;
+  return { list, capsN: Object.keys(caps).length };
 }
 async function markets(prev) {
   const quotes = {}; const etfs = {}; const hist = {}; let okQ = 0, okE = 0;
@@ -237,17 +241,20 @@ async function markets(prev) {
   if (oldHist && oldHist.h) for (const [k, v] of Object.entries(oldHist.h)) if (!hist[k]) hist[k] = v;
   if (Object.keys(hist).length) save('etfhist', { generatedAt: new Date().toISOString(), src: 'Yahoo Finance', h: hist });
   let aum = prev && prev.etfAum, aumAt = prev && prev.etfAumAt;
-  try { const a = await etfAum(); if (Object.keys(a).length >= 5) { aum = a; aumAt = new Date().toISOString(); status.etfAum = { ok: true, n: Object.keys(a).length }; } else status.etfAum = { ok: false, err: 'lista vazia' }; } catch (e) { status.etfAum = { ok: false, err: String(e.message || e) }; }
-  let mn = prev && prev.miners, mnAt = prev && prev.minersAt;
-  try { const m = await miners(prev); if (m.length >= 3) { mn = m; mnAt = new Date().toISOString(); status.miners = { ok: true, n: m.length, caps: m.filter((x) => x.mcap).length }; } } catch (e) { status.miners = { ok: false, err: String(e.message || e) }; }
+  if (aum && Object.keys(aum).length >= 5 && freshAt(aumAt, 2)) status.etfAum = { ok: true, n: Object.keys(aum).length, cached: true };
+  else try { const a = await etfAum(); if (Object.keys(a).length >= 5) { aum = a; aumAt = new Date().toISOString(); status.etfAum = { ok: true, n: Object.keys(a).length }; } else status.etfAum = { ok: false, err: 'lista vazia' }; } catch (e) { status.etfAum = { ok: false, err: String(e.message || e) }; }
+  let mn = prev && prev.miners, mnAt = prev && prev.minersAt, capsAt = prev && prev.minersCapsAt;
+  const fetchCaps = !freshAt(capsAt, 2);
+  try { const { list: m, capsN } = await miners(prev, fetchCaps); if (m.length >= 3) { mn = m; mnAt = new Date().toISOString(); if (capsN) capsAt = mnAt; status.miners = { ok: true, n: m.length, caps: m.filter((x) => x.mcap).length, ...(fetchCaps ? {} : { capsCached: true }) }; } } catch (e) { status.miners = { ok: false, err: String(e.message || e) }; }
   status.quotes = { ok: okQ > 0, n: okQ, err: okQ ? undefined : String(qr.find((r) => r && r.err)?.err || '') };
   status.etfs = { ok: okE > 0, n: okE };
-  // ranking mundial
+  // ranking mundial (no máximo a cada 1 h)
   let world = prev && prev.world, worldAt = prev && prev.worldAt, worldSrc = (prev && prev.worldSrc) || 'companiesmarketcap.com';
-  try { const w = await worldRanking(); if (w.length < 20) throw new Error(`só ${w.length} linhas`); world = w; worldAt = new Date().toISOString(); worldSrc = 'companiesmarketcap.com'; status.world = { ok: true, n: w.length, ...(worldDebug ? { debug: worldDebug } : {}) }; }
+  if (Array.isArray(world) && world.length >= 20 && freshAt(worldAt, 1)) status.world = { ok: true, n: world.length, cached: true };
+  else try { const w = await worldRanking(); if (w.length < 20) throw new Error(`só ${w.length} linhas`); world = w; worldAt = new Date().toISOString(); worldSrc = 'companiesmarketcap.com'; status.world = { ok: true, n: w.length, ...(worldDebug ? { debug: worldDebug } : {}) }; }
   catch (e) { status.world = { ok: false, err: String(e.message || e) }; }
   if (!okQ && !okE && !(status.world && status.world.ok)) throw new Error('nenhuma cotação nesta execução');
-  save('markets', { generatedAt: new Date().toISOString(), quotes, etfs, etfAum: aum || null, etfAumAt: aumAt || null, miners: mn || null, minersAt: mnAt || null, world, worldAt, worldSrc });
+  save('markets', { generatedAt: new Date().toISOString(), quotes, etfs, etfAum: aum || null, etfAumAt: aumAt || null, miners: mn || null, minersAt: mnAt || null, minersCapsAt: capsAt || null, world, worldAt, worldSrc });
   return { n: okQ + okE };
 }
 function csvRows(text) {
@@ -298,12 +305,27 @@ async function worldRanking() {
   return list.slice(0, 100);
 }
 let worldDebug = '';
+// Ibovespa e S&P 500: 10 anos de fechamentos diários (o Vault compara a carteira com os mesmos aportes
+// aplicados nesses índices). Muda uma vez por dia: renova a cada ~12 h; índice que falhar mantém o anterior.
+const BENCH = ['^BVSP', '^GSPC'];
+async function bench() {
+  const prev = await previous('bench');
+  if (prev && prev.h && BENCH.every((s) => prev.h[s]) && freshAt(prev.generatedAt, 12)) { save('bench', prev); return { n: BENCH.length, cached: true }; }
+  const h = {}; let fresh = 0;
+  for (const s of BENCH) {
+    try { const r = await yahoo(s, '10y'); if (r.hist && r.hist.length > 200) { h[s] = { d: r.hist.map((x) => x[0]), c: r.hist.map((x) => Math.round(x[1] * 100) / 100) }; fresh++; } } catch { /* fica o anterior */ }
+    if (!h[s] && prev && prev.h && prev.h[s]) h[s] = prev.h[s];
+  }
+  if (!fresh) throw new Error('Yahoo sem histórico dos índices');
+  save('bench', { generatedAt: new Date().toISOString(), src: 'Yahoo Finance', h });
+  return { n: fresh };
+}
 
 // ---------- execução ----------
 const CTX = { get, raw, pool, previous, save, parseRss, strip, GN, GNE };
 const t0 = Date.now();
 const prevMarkets = await previous('markets');
-for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', () => markets(prevMarkets)], ['lab', () => lab(CTX)], ['buybacks', () => buybacks(CTX)], ['whales', () => whales(CTX)], ['tokens', () => tokens(CTX)]]) {
+for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', () => markets(prevMarkets)], ['lab', () => lab(CTX)], ['buybacks', () => buybacks(CTX)], ['whales', () => whales(CTX)], ['tokens', () => tokens(CTX)], ['bench', bench]]) {
   try { const r = await fn(); status[name] = { ok: true, ...r }; console.log('✓', name, JSON.stringify(r)); }
   catch (e) {
     status[name] = { ok: false, err: String(e.message || e).slice(0, 160) };
@@ -314,6 +336,7 @@ for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', ()
 }
 try { const r = await db(); status.db = { ok: true, ...r }; console.log('✓ db', JSON.stringify(r)); }
 catch (e) { status.db = { ok: false, err: String(e.message || e).slice(0, 160) }; console.warn('✗ db', status.db.err); }
-save('status', { generatedAt: new Date().toISOString(), ms: Date.now() - t0, sources: status });
+// como esta execução começou: schedule (agendamento do GitHub), workflow_dispatch (agendador do banco ou botão)
+save('status', { generatedAt: new Date().toISOString(), ms: Date.now() - t0, event: process.env.GITHUB_EVENT_NAME || 'local', sources: status });
 writeFileSync(join(OUT, 'README.md'), '# Dados do NEXUS HUB\n\nRamo gerado automaticamente pelo robô (GitHub Actions). Não edite à mão.\n');
 console.log(`pronto em ${Math.round((Date.now() - t0) / 1000)} s`);

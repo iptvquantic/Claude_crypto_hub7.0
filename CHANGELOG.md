@@ -1,5 +1,10 @@
 # Mudanças
 
+## 3.3.1 — 22/10/2026
+- **Agendador do robô (Painel do administrador):** o GitHub está rodando o robô de dados só de 6 a 8 vezes por dia (deveria ser a cada 20 min), e cotas de ETFs, bolsas e notícias podiam ficar horas paradas. Novo agendador no próprio banco (Supabase pg_cron + pg_net) pede uma execução ao GitHub a cada 20 min com um token que o dono cola no painel — guardado criptografado no Vault do Supabase, nunca mostrado de novo e fora do código do site. O painel mostra se o token está salvo, o agendamento, o último pedido e a resposta do GitHub em português (token vencido, sem permissão, sem acesso ao repositório…), com "Testar agora" e o passo a passo para criar o token. Instalação no banco: `dev/supabase/migrations/03_agendador_robo.sql` (o painel explica como aplicar pelo SQL Editor; sem ela, nada muda).
+- **Robô mais gentil com as fontes:** patrimônio dos ETFs e valor de mercado das mineradoras são lidos no máximo a cada 2 h e o ranking mundial a cada 1 h (as cotações continuam a cada execução); `status.json` registra como a execução começou (agendamento do GitHub ou pedido).
+- **Painel do administrador:** nomes claros para todas as tarefas do robô (patrimônio dos ETFs, mineradoras, Bitcoin Lab, recompra e queima, baleias, tokens do Wallet Watch) e o que foi reaproveitado de uma leitura recente.
+
 ## 3.3.0 — 22/10/2026 (publicada na raiz)
 - **Novo: Wallet Watch (grátis, menu Sua conta) — acompanhe qualquer carteira só pelo endereço público.** Cole o endereço e a rede é reconhecida sozinha:
   - **Bitcoin:** endereço (legado, SegWit, Taproot) ou a **xpub/ypub/zpub** da Ledger, Trezor, Electrum, Sparrow — os endereços da conta são derivados aqui no navegador (recebimento e troco, até 20 seguidos sem uso) e, na "xpub" genérica, o tipo usado é descoberto sozinho.

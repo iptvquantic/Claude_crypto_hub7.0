@@ -156,7 +156,7 @@ page({
 });
 
 // ---------- PAINEL DO ADMINISTRADOR ----------
-const ADM = { q: '', users: [], claims: [], ov: null, err: '', pipe: null };
+const ADM = { q: '', users: [], claims: [], ov: null, err: '', pipe: null, robot: null, robotMissing: false, robotErr: '' };
 async function admLoad() {
   ADM.err = '';
   try {
@@ -165,8 +165,60 @@ async function admLoad() {
     for (const r of [ov, cl, us]) if (r.error) throw r.error;
     ADM.ov = ov.data; ADM.claims = cl.data || []; ADM.users = us.data || [];
   } catch (e) { ADM.err = String(e.message || e); }
+  // agendador do robô (migração 03): sem a função no banco, a tela explica como instalar
+  try {
+    const sb = await sbClient(); const { data, error } = await sb.rpc('admin_robot_status'); if (error) throw error;
+    ADM.robot = data && typeof data === 'object' ? data : {}; ADM.robotMissing = false; ADM.robotErr = '';
+  } catch (e) {
+    const t = `${(e && e.code) || ''} ${(e && e.message) || e}`;
+    ADM.robot = null; ADM.robotMissing = /PGRST202|Could not find the function|schema cache|\b404\b/i.test(t); ADM.robotErr = ADM.robotMissing ? '' : String((e && e.message) || e);
+  }
   try { ADM.pipe = await getPipeline('status', 30 * 86400e3); } catch { ADM.pipe = null; }
   admDraw();
+}
+// resposta do GitHub ao último pedido do agendador, em português
+function admGhMsg(last) {
+  if (!last) return null;
+  const s = num(last.status);
+  if (s >= 200 && s < 300) return ['live', L('GitHub aceitou: robô disparado', 'GitHub accepted: bot started')];
+  if (s === 401) return ['bad', L('token recusado (vencido, apagado ou copiado errado): crie outro', 'token rejected (expired, deleted or mistyped): create a new one')];
+  if (s === 403) return ['bad', L('token sem permissão: precisa de "Actions: Read and write"', 'token lacks permission: needs "Actions: Read and write"')];
+  if (s === 404) return ['bad', L('o token não tem acesso ao repositório Claude_crypto_hub7.0', 'the token has no access to the Claude_crypto_hub7.0 repository')];
+  if (s === 422) return ['bad', L('o GitHub recusou o pedido (o robô ou o ramo main mudou)', 'GitHub refused the request (bot or main branch changed)')];
+  if (s) return ['bad', 'HTTP ' + s];
+  if (last.error) return ['bad', String(last.error).slice(0, 120)];
+  return ['warn', L('aguardando a resposta do GitHub', 'waiting for GitHub’s answer')];
+}
+function admRobotHtml() {
+  const ref = NX.supabaseUrl.split('//')[1].split('.')[0];
+  const head = `<h3 class="adm-h">${ico('clock', 17)}${esc(L('Agendador do robô (a cada 20 min)', 'Bot scheduler (every 20 min)'))}</h3>`;
+  if (ADM.robotMissing) {
+    return `${head}<div class="callout info">${ico('info', 18)}<span>${esc(L('Ainda não instalado no banco. Sem ele, o robô roda só quando o GitHub dispara o agendamento (hoje, de 6 a 8 vezes por dia), e cotas de ETFs, bolsas e notícias podem ficar horas paradas.', 'Not installed in the database yet. Without it the bot runs only when GitHub fires its schedule (6–8 times a day today).'))}</span></div>
+      <ol class="adm-steps"><li>${esc(L('Abra o arquivo de instalação e copie o texto todo (botão "Copy raw file", no alto do arquivo):', 'Open the install file and copy all of it ("Copy raw file" button):'))} ${extLink(NX.repoUrl + '/blob/main/dev/supabase/migrations/03_agendador_robo.sql', '03_agendador_robo.sql')}</li>
+      <li>${esc(L('Abra o SQL Editor do Supabase, cole e clique em Run:', 'Open the Supabase SQL Editor, paste and click Run:'))} ${extLink(`https://supabase.com/dashboard/project/${ref}/sql/new`, L('SQL Editor', 'SQL Editor'))}</li>
+      <li>${esc(L('Volte aqui e clique em Atualizar: aparece o campo para colar o token do GitHub.', 'Come back and click Refresh: the GitHub token field appears.'))}</li></ol>`;
+  }
+  if (!ADM.robot) return ADM.robotErr ? `${head}<div class="callout warn">${ico('triangle-alert', 18)}<span>${esc(ADM.robotErr)}</span></div>` : '';
+  const r = ADM.robot, tokSet = !!(r.token && r.token.set), job = r.job, gh = admGhMsg(r.last);
+  const chip = (cls, t) => `<span class="badge ${cls}">${esc(t)}</span>`;
+  const rows = [
+    [L('Token do GitHub', 'GitHub token'), tokSet ? chip('live', L('salvo', 'saved')) + ` <span class="small faint">${esc(L('em', 'on'))} ${esc(fmtDateTime(r.token.updated_at))}</span>` : chip('warn', L('não configurado', 'not set'))],
+    [L('Agendamento', 'Schedule'), job ? (job.active ? chip('live', L('ligado: minutos 2, 22 e 42 de cada hora', 'on: minutes 2, 22 and 42')) : chip('bad', L('desligado', 'off'))) : chip('warn', r.job_err ? L('sem o pg_cron', 'pg_cron missing') : L('não encontrado', 'not found'))],
+    [L('Último pedido ao GitHub', 'Last request to GitHub'), r.last ? `<span class="small">${esc(fmtDateTime(r.last.at))} (${esc(ago(Date.parse(r.last.at)))}) · ${esc(r.last.origem === 'manual' ? L('teste', 'test') : L('agendador', 'scheduler'))}</span> ${gh ? chip(gh[0], gh[1]) : ''}` : `<span class="small faint">${esc(tokSet ? L('ainda nenhum (o próximo sai em até 20 min)', 'none yet (next within 20 min)') : L('nenhum (falta o token)', 'none (token missing)'))}</span>`],
+    [L('Pedidos', 'Requests'), `<span class="small">${esc(L(`${num(r.n24h) || 0} nas últimas 24 h · aceitos nas últimas 6 h: ${num(r.ok6h) || 0}${num(r.bad6h) ? ` · com erro: ${num(r.bad6h)}` : ''}`, `${num(r.n24h) || 0} in 24 h · accepted in 6 h: ${num(r.ok6h) || 0}`))}</span>`],
+  ];
+  return `${head}<div class="list">${rows.map(([k, v]) => `<div class="li" style="flex-wrap:wrap"><span class="grow t" style="min-width:170px">${esc(k)}</span><span>${v}</span></div>`).join('')}</div>
+    <div class="adm-tok mt"><label class="small b" for="adm-tok">${esc(tokSet ? L('Trocar o token', 'Replace the token') : L('Colar o token do GitHub', 'Paste the GitHub token'))}</label>
+      <div class="inp-group"><input class="inp mono" type="password" id="adm-tok" autocomplete="off" spellcheck="false" placeholder="github_pat_…"><button class="btn pri" data-act="admTokSave">${ico('lock', 16)}${esc(L('Salvar token', 'Save token'))}</button></div>
+      <div class="row wrap" style="gap:8px;margin-top:8px"><button class="btn sm" data-act="admDispatch" ${tokSet ? '' : 'disabled'}>${ico('send', 15)}${esc(L('Testar agora', 'Test now'))}</button>${tokSet ? `<button class="btn sm ghost" data-act="admTokDel">${esc(L('Remover token', 'Remove token'))}</button>` : ''}</div>
+      <p class="tiny faint" style="margin-top:8px;line-height:1.5">${esc(L('O token fica criptografado no Supabase (Vault), não aparece de novo nesta tela e não vai para o código do site. Nunca mande o token por chat ou e-mail. Se ele vazar, apague no GitHub e crie outro.', 'The token is encrypted in Supabase (Vault), never shown again here and never in the site code. Never send it by chat or e-mail.'))}</p></div>
+    <details class="li adm-how" ${tokSet ? '' : 'open'} style="display:block"><summary class="t" style="cursor:pointer">${esc(L('Como criar o token no GitHub (2 minutos)', 'How to create the GitHub token (2 minutes)'))}</summary>
+      <ol class="adm-steps"><li>${esc(L('Entre no GitHub com a conta iptvquantic e abra:', 'Sign in to GitHub as iptvquantic and open:'))} ${extLink('https://github.com/settings/personal-access-tokens/new', L('criar token (fine-grained)', 'create token (fine-grained)'))}</li>
+      <li>${esc(L('Token name: "NEXUS HUB robô". Expiration: "No expiration" (sem validade) — ou a maior data que aparecer.', 'Token name: "NEXUS HUB bot". Expiration: "No expiration" — or the longest available.'))}</li>
+      <li>${esc(L('Repository access: "Only select repositories" e escolha Claude_crypto_hub7.0.', 'Repository access: "Only select repositories" → Claude_crypto_hub7.0.'))}</li>
+      <li>${esc(L('Permissions: adicione "Actions" com acesso "Read and write". Mais nada.', 'Permissions: add "Actions" with "Read and write". Nothing else.'))}</li>
+      <li>${esc(L('Clique em "Generate token" e copie o código (começa com github_pat_).', 'Click "Generate token" and copy it (starts with github_pat_).'))}</li>
+      <li>${esc(L('Cole no campo acima, clique em Salvar token e depois em Testar agora. Em alguns segundos deve aparecer "GitHub aceitou".', 'Paste above, Save, then Test now. "GitHub accepted" should show in a few seconds.'))}</li></ol></details>`;
 }
 function admHtml() { return `${pageHead(PAGES.admin, `<button class="btn sm" data-act="admReload">${ico('refresh-cw', 15)}${esc(L('Atualizar', 'Refresh'))}</button>`)}<div id="adm-body">${skel(6, 20)}</div>`; }
 function admDraw() {
@@ -189,14 +241,45 @@ function admDraw() {
       <button class="menu-i" data-act="admReset" data-u="${esc(u.id)}" data-e="${esc(u.email)}">${ico('key-round', 16)}${esc(L('Gerar senha temporária', 'Generate temporary password'))}</button></div></div>`}</td></tr>`;
   }).join('')}</tbody></table></div></section>
   <section class="panel mt">${panelHead('server', L('Robô de dados (GitHub Actions)', 'Data bot (GitHub Actions)'), { sub: esc(L('Traz o que o navegador não consegue (notícias, agenda global, bolsas e índices) e mantém o banco de dados ativo.', 'Fetches what the browser cannot (news, global calendar, indices) and keeps the database awake.')) })}
-    ${pipe ? `<div class="small muted">${esc(L('Última execução:', 'Last run:'))} <b>${esc(fmtDateTime(Date.parse(pipe.generatedAt)))}</b> (${esc(ago(Date.parse(pipe.generatedAt)))})</div>${pipe.sources && pipe.sources.db && !pipe.sources.db.ok ? `<div class="callout warn mt">${ico('triangle-alert', 18)}<span>${esc(L('Na última execução o robô não conseguiu falar com o banco de dados. Se o Supabase pausou o projeto por falta de uso, abra o painel e clique em "Resume project".', 'On its last run the bot could not reach the database. If Supabase paused the project for inactivity, open the dashboard and click "Resume project".'))} ${extLink('https://supabase.com/dashboard/project/' + NX.supabaseUrl.split('//')[1].split('.')[0], L('Painel do Supabase', 'Supabase dashboard'))}</span></div>` : ''}<div class="list mt">${Object.entries(pipe.sources || {}).map(([k, v]) => `<div class="li"><span class="grow t">${esc(pipeName(k))}</span><span class="small faint">${esc(v.n != null ? v.n + ' ' + L('itens', 'items') : '')}</span><span class="badge ${v.ok ? 'live' : 'bad'}">${esc(v.ok ? 'ok' : (v.err || L('falhou', 'failed')).slice(0, 60))}</span></div>`).join('')}</div>` : `<div class="callout warn">${ico('triangle-alert', 18)}<span>${esc(L('O robô ainda não publicou o arquivo de status. Confira a aba Actions do repositório.', 'The bot has not published its status file yet. Check the repository Actions tab.'))} ${extLink(NX.repoUrl + '/actions', 'GitHub Actions')}</span></div>`}</section>`;
+    ${pipe ? `<div class="small muted">${esc(L('Última execução:', 'Last run:'))} <b>${esc(fmtDateTime(Date.parse(pipe.generatedAt)))}</b> (${esc(ago(Date.parse(pipe.generatedAt)))})${pipe.event ? ` · ${esc(pipeEvent(pipe.event))}` : ''}</div>${pipe.sources && pipe.sources.db && !pipe.sources.db.ok ? `<div class="callout warn mt">${ico('triangle-alert', 18)}<span>${esc(L('Na última execução o robô não conseguiu falar com o banco de dados. Se o Supabase pausou o projeto por falta de uso, abra o painel e clique em "Resume project".', 'On its last run the bot could not reach the database. If Supabase paused the project for inactivity, open the dashboard and click "Resume project".'))} ${extLink('https://supabase.com/dashboard/project/' + NX.supabaseUrl.split('//')[1].split('.')[0], L('Painel do Supabase', 'Supabase dashboard'))}</span></div>` : ''}<div class="list mt">${Object.entries(pipe.sources || {}).map(([k, v]) => `<div class="li"><span class="grow t">${esc(pipeName(k))}</span><span class="small faint">${esc(v.n != null ? v.n + ' ' + L('itens', 'items') : '')}${v.cached || v.kept ? ' · ' + esc(L('lido há pouco, reaproveitado', 'read recently, reused')) : ''}</span><span class="badge ${v.ok ? 'live' : 'bad'}">${esc(v.ok ? 'ok' : (v.err || L('falhou', 'failed')).slice(0, 60))}</span></div>`).join('')}</div>` : `<div class="callout warn">${ico('triangle-alert', 18)}<span>${esc(L('O robô ainda não publicou o arquivo de status. Confira a aba Actions do repositório.', 'The bot has not published its status file yet. Check the repository Actions tab.'))} ${extLink(NX.repoUrl + '/actions', 'GitHub Actions')}</span></div>`}
+    <div class="adm-robot mt">${admRobotHtml()}</div></section>`;
 }
 // nomes das tarefas do robô (status.json) para o painel
 function pipeName(k) {
-  const n = { news: L('Notícias', 'News'), calendar: L('Agenda econômica', 'Economic calendar'), markets: L('Arquivo de mercados', 'Markets file'), quotes: L('Bolsas e índices', 'Stock indices'), etfs: L('Cotas de ETFs', 'ETF quotes'), world: L('Maiores ativos do mundo', 'Largest assets'), db: L('Banco de dados ativo (contas e Vault)', 'Database awake (accounts and Vault)') }[k];
+  const n = { news: L('Notícias', 'News'), calendar: L('Agenda econômica', 'Economic calendar'), markets: L('Arquivo de mercados', 'Markets file'), quotes: L('Bolsas e índices', 'Stock indices'), etfs: L('Cotas de ETFs', 'ETF quotes'), etfAum: L('Patrimônio dos ETFs', 'ETF assets'), miners: L('Mineradoras listadas', 'Listed miners'), world: L('Maiores ativos do mundo', 'Largest assets'), lab: L('Histórico on-chain (Bitcoin Lab)', 'On-chain history (Bitcoin Lab)'), buybacks: L('Recompra e queima', 'Buybacks and burns'), whales: L('Baleias (maiores endereços)', 'Whales (largest addresses)'), tokens: L('Tokens reconhecidos (Wallet Watch)', 'Recognized tokens (Wallet Watch)'), db: L('Banco de dados ativo (contas e Vault)', 'Database awake (accounts and Vault)') }[k];
   return n || k;
 }
+const pipeEvent = (e) => ({ schedule: L('agendamento do GitHub', 'GitHub schedule'), workflow_dispatch: L('pedido (agendador do banco ou botão Run workflow)', 'requested (scheduler or Run workflow)'), push: L('publicação', 'push') }[e] || e);
 ACT.admReload = () => admLoad();
+// agendador do robô: o token vai direto do navegador do dono para o Vault do Supabase (nunca volta para a tela)
+const GH_TOKEN_RE = /^(github_pat_[A-Za-z0-9_]{20,255}|ghp_[A-Za-z0-9]{30,255})$/;
+ACT.admTokSave = async (el) => {
+  const i = $('#adm-tok'); const v = String((i && i.value) || '').trim();
+  if (!GH_TOKEN_RE.test(v)) { toast(L('Isso não parece um token do GitHub (ele começa com github_pat_).', 'That does not look like a GitHub token (starts with github_pat_).'), { type: 'warn', ms: 6000 }); return; }
+  el.classList.add('busy');
+  try {
+    const sb = await sbClient(); const { data, error } = await sb.rpc('admin_robot_set_token', { p_token: v }); if (error) throw error;
+    if (!data || !data.ok) throw new Error(data && data.error === 'formato' ? L('formato de token inválido', 'invalid token format') : L('não foi possível salvar', 'could not save'));
+    if (i) i.value = '';
+    toast(L('Token salvo (criptografado no Supabase). Agora clique em "Testar agora".', 'Token saved (encrypted in Supabase). Now click "Test now".'), { type: 'ok', ms: 6000 });
+    admLoad();
+  } catch (e) { toast(String(e.message || e), { type: 'err', ms: 7000 }); }
+  el.classList.remove('busy');
+};
+ACT.admTokDel = async () => {
+  if (!(await confirmBox(L('Remover o token? O robô volta a rodar só pelo agendamento do GitHub.', 'Remove the token? The bot goes back to GitHub’s schedule only.'), { ok: L('Remover', 'Remove'), danger: true }))) return;
+  admRpc('admin_robot_set_token', { p_token: '' }, L('Token removido.', 'Token removed.'));
+};
+ACT.admDispatch = async (el) => {
+  el.classList.add('busy');
+  try {
+    const sb = await sbClient(); const { data, error } = await sb.rpc('admin_robot_dispatch_now'); if (error) throw error;
+    if (!data || !data.ok) throw new Error(data && data.error === 'aguarde' ? L('Aguarde 1 minuto entre um teste e outro.', 'Wait 1 minute between tests.') : data && data.error === 'sem_token' ? L('Salve o token primeiro.', 'Save the token first.') : L('não foi possível disparar', 'could not start'));
+    toast(L('Pedido enviado ao GitHub. Conferindo a resposta…', 'Request sent to GitHub. Checking the answer…'), { type: 'ok' });
+    setTimeout(() => { if (S.page === 'admin') admLoad(); }, 6000);
+  } catch (e) { toast(String(e.message || e), { type: 'err', ms: 7000 }); }
+  el.classList.remove('busy');
+};
 ACT.admQ = debounce((el) => { ADM.q = el.value.trim(); admLoad(); }, 400);
 async function admRpc(fn, args, okMsg) {
   try { const sb = await sbClient(); const { error } = await sb.rpc(fn, args); if (error) throw error; toast(okMsg, { type: 'ok' }); admLoad(); }

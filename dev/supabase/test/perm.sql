@@ -43,5 +43,30 @@ end $$;
 set role anon;
 select pg_temp.expect_fail($q$select public.my_profile()$q$, 'anon chamar my_profile');
 do $$ begin if not (public.ping()->>'ok')::boolean then raise exception 'ping'; end if; end $$;
+select pg_temp.expect_fail($q$select public.admin_robot_status()$q$, 'anon ver o agendador');
+reset role;
+
+-- agendador do robô (migração 03): só o administrador vê e mexe; o disparo direto não é da API
+create or replace function pg_temp.as_user(uid uuid) returns void language plpgsql as $$
+begin perform set_config('request.jwt.claims', json_build_object('sub', uid)::text, false); end $$;
+do $$ begin
+  if has_function_privilege('anon', 'public.admin_robot_status()', 'execute') then raise exception 'anon não deveria chamar admin_robot_status'; end if;
+  if has_function_privilege('anon', 'public.admin_robot_set_token(text)', 'execute') then raise exception 'anon não deveria chamar admin_robot_set_token'; end if;
+  if not has_function_privilege('authenticated', 'public.admin_robot_status()', 'execute') then raise exception 'authenticated deveria chamar admin_robot_status (a função confere se é admin)'; end if;
+  if has_schema_privilege('authenticated', 'private', 'usage') or has_schema_privilege('anon', 'private', 'usage') then raise exception 'o esquema private não pode ser usado pela API'; end if;
+end $$;
+set role authenticated;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a'); -- Alice: cliente, não é admin
+select pg_temp.expect_fail($q$select public.admin_robot_status()$q$, 'cliente ver o agendador');
+select pg_temp.expect_fail($q$select public.admin_robot_set_token('github_pat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')$q$, 'cliente trocar o token');
+select pg_temp.expect_fail($q$select public.admin_robot_dispatch_now()$q$, 'cliente disparar o robô');
+select pg_temp.expect_fail($q$select private.robo_disparar('teste')$q$, 'cliente chamar o disparo direto');
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000ad'); -- dono (admin)
+do $$ declare r jsonb; begin
+  r := public.admin_robot_status();
+  if r ->> 'server_time' is null then raise exception 'o admin deveria ver o agendador'; end if;
+  r := public.admin_robot_set_token('isso não é um token');
+  if (r ->> 'ok')::boolean or r ->> 'error' <> 'formato' then raise exception 'token em formato errado deveria ser recusado: %', r; end if;
+end $$;
 reset role;
 select 'PERMISSÕES OK' as resultado;
