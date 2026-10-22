@@ -1,6 +1,6 @@
 # Mudanças
 
-## 3.3.0 — 22/10/2026 (beta)
+## 3.3.0 — 22/10/2026 (publicada na raiz)
 - **Novo: Wallet Watch (grátis, menu Sua conta) — acompanhe qualquer carteira só pelo endereço público.** Cole o endereço e a rede é reconhecida sozinha:
   - **Bitcoin:** endereço (legado, SegWit, Taproot) ou a **xpub/ypub/zpub** da Ledger, Trezor, Electrum, Sparrow — os endereços da conta são derivados aqui no navegador (recebimento e troco, até 20 seguidos sem uso) e, na "xpub" genérica, o tipo usado é descoberto sozinho.
   - **Ethereum e 18 redes compatíveis** (BNB Chain, Base, Arbitrum, Optimism, Polygon, Avalanche, HyperEVM, Linea, zkSync, Scroll, Unichain, Sonic, Berachain, Gnosis, Mantle, Celo, Cronos, Blast) com moeda nativa e tokens reconhecidos; **Hyperliquid** (saldo à vista, conta de perpétuos e HYPE em stake); nomes **.eth** (ENS).
@@ -9,7 +9,7 @@
   - **Vários portfólios** (Principal, Ledger, Família…), total em R$ ou US$, variação de 24 h, composição (Bitcoin, Ethereum, dólar digital, outras), alocação por ativo e por rede, ativos somados de todas as carteiras (com o detalhe de onde cada um está), cartões das carteiras com fonte e hora da leitura, movimentos (BTC, LTC, DOGE e mudanças de saldo detectadas nas demais redes), evolução registrada pelo navegador, modo privado (esconder valores), baixar e importar a lista. Se uma fonte falha, fica a última leitura com o horário.
   - Atualiza sozinho a cada 5 min com a página aberta; preços das principais moedas em tempo real (Binance), os demais pela DefiLlama/CoinGecko, Jupiter, TonAPI e Hyperliquid.
 - **Robô:** lista de tokens reconhecidos por rede (`tokens.json`: ~2.500 contratos das 1.500 maiores moedas, com casas decimais), renovada a cada ~20 h; série diária da recompra pelo dia UTC de cada ponto.
-- **Termos e Política de privacidade** atualizados (Wallet Watch); **página de apresentação** com o Wallet Watch e o Burn, Baby, Burn.
+- **Termos e Política de privacidade** atualizados (Wallet Watch; versão de 22/10/2026); **página de apresentação** com o Wallet Watch e o Burn, Baby, Burn.
 - "Restaurar preferências" (Configurações) não apaga as carteiras do Wallet Watch.
 - **Robô — patrimônio dos ETFs voltou:** a página do companiesmarketcap passou a mostrar o "$" separado do número e a leitura vinha vazia; agora usa o valor exato da tabela (conferido com as listas reais: 32 ETFs de bitcoin, 17 de ether, 99 de cripto).
 - **Baleias:** quando a BitInfoCharts bloqueia o robô (proteção contra robôs), a página mostra a última lista lida com a data dela e o aviso, em vez de sumir.
