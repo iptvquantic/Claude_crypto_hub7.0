@@ -6,6 +6,7 @@
 //   calendar.json  calendário econômico global da semana (ForexFactory)
 //   markets.json   bolsas, juros, dólar global, commodities e cotas de ETFs (Yahoo)
 //                  + ranking dos maiores ativos do mundo (companiesmarketcap)
+//   etfhist.json   1 ano de fechamentos diários das cotas dos ETFs (cota de qualquer dia)
 //   status.json    situação de cada fonte nesta execução
 //   lab.json       histórico diário on-chain do BTC (Bitcoin Lab e On-chain)
 //   buybacks.json  recompra, queima e repasse aos detentores por token
@@ -76,9 +77,20 @@ async function db() {
 }
 
 // ---------- RSS ----------
-const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
-const decode = (s) => String(s || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, e) => (e[0] === '#' ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)) : ENT[e.toLowerCase()] ?? m));
-const strip = (s) => decode(s).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+// entidades HTML comuns (latin-1 + tipográficas); o Google Notícias manda a descrição codificada duas vezes
+const ENT = Object.fromEntries('AElig:198,Aacute:193,Acirc:194,Agrave:192,Aring:197,Atilde:195,Auml:196,Ccedil:199,ETH:208,Eacute:201,Ecirc:202,Egrave:200,Euml:203,Iacute:205,Icirc:206,Igrave:204,Iuml:207,Ntilde:209,OElig:338,Oacute:211,Ocirc:212,Ograve:210,Oslash:216,Otilde:213,Ouml:214,Scaron:352,THORN:222,Uacute:218,Ucirc:219,Ugrave:217,Uuml:220,Yacute:221,aacute:225,acirc:226,acute:180,aelig:230,agrave:224,amp:38,aring:229,atilde:227,auml:228,bdquo:8222,brvbar:166,bull:8226,ccedil:231,cedil:184,cent:162,copy:169,curren:164,dagger:8224,deg:176,divide:247,eacute:233,ecirc:234,egrave:232,emsp:8195,ensp:8194,eth:240,euml:235,euro:8364,frac12:189,frac14:188,frac34:190,gt:62,hellip:8230,iacute:237,icirc:238,iexcl:161,igrave:236,iquest:191,iuml:239,laquo:171,ldquo:8220,lrm:8206,lsquo:8216,lt:60,macr:175,mdash:8212,micro:181,middot:183,nbsp:160,ndash:8211,not:172,ntilde:241,oacute:243,ocirc:244,oelig:339,ograve:242,ordf:170,ordm:186,oslash:248,otilde:245,ouml:246,para:182,permil:8240,plusmn:177,pound:163,prime:8242,quot:34,raquo:187,rdquo:8221,reg:174,rlm:8207,rsquo:8217,sbquo:8218,scaron:353,sect:167,shy:173,sup1:185,sup2:178,sup3:179,szlig:223,thinsp:8201,thorn:254,times:215,trade:8482,uacute:250,ucirc:251,ugrave:249,uml:168,uuml:252,yacute:253,yen:165,yuml:255,zwj:8205,zwnj:8204'.split(',').map((x) => { const [k, v] = x.split(':'); return [k, String.fromCodePoint(+v)]; }));
+const decode1 = (s) => String(s || '').replace(/&(#x?[0-9a-f]+|[a-z]+\d*);/gi, (m, e) => { if (e[0] === '#') { const c = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return c > 0 && c < 0x110000 ? String.fromCodePoint(c) : ''; } return ENT[e] ?? ENT[e.toLowerCase()] ?? m; });
+const decode = (s) => { let t = String(s || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1'); for (let i = 0; i < 3 && /&(#x?[0-9a-f]+|[a-z]+\d*);/i.test(t); i++) t = decode1(t); return t; };
+const strip = (s) => decode(decode(s).replace(/<[^>]+>/g, ' ')).replace(/<[^>]+>/g, ' ').replace(/[\u00a0\u2000-\u200b\s]+/g, ' ').trim();
+const normT = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+// resumo útil ou vazio (sem "título + veículo" repetido e sem rodapés automáticos)
+function cleanDesc(d, t, src) {
+  d = String(d || '').replace(/\s*O post .{0,300}? apareceu primeiro em .*$/i, '').replace(/\s*Fonte:\s.*$/i, '').replace(/\s*Veja mais not[íi]cias.*$/i, '').replace(/\s*The post .{0,300}? appeared first on .*$/i, '').replace(/\s*(Leia mais|Continue lendo|Read more)\b.*$/i, '').trim();
+  const nd = normT(d), nt = normT(t), ns = normT(src);
+  if (!nd || nd.length < 25) return '';
+  if (nt && (nd === nt || nd.startsWith(nt) || nt.startsWith(nd))) { const rest = nd.slice(nt.length).trim(); if (!rest || rest === ns || rest.length < 25) return ''; }
+  return d;
+}
 const tag = (x, t) => { const m = x.match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`, 'i')); return m ? m[1] : ''; };
 function parseRss(xml, src, lang) {
   const items = [...xml.matchAll(/<item[\s>][\s\S]*?<\/item>/gi)].map((m) => m[0]);
@@ -88,7 +100,7 @@ function parseRss(xml, src, lang) {
     const img = (x.match(/<media:(?:content|thumbnail)[^>]+url="([^"]+)"/i) || x.match(/<enclosure[^>]+url="([^"]+\.(?:jpe?g|png|webp)[^"]*)"/i) || [])[1] || '';
     let s = src;
     if (src === 'Google Notícias') { const k = t.lastIndexOf(' - '); if (k > 20) { s = t.slice(k + 3).trim(); t = t.slice(0, k).trim(); } }
-    return { t: t.slice(0, 300), u, d, x: strip(tag(x, 'description')).slice(0, 260), img: /^https:\/\//.test(img) ? img : '', src: s.slice(0, 60), lang };
+    return { t: t.slice(0, 300), u, d, x: cleanDesc(strip(tag(x, 'description')), t, s).slice(0, 260), img: /^https:\/\//.test(img) ? img : '', src: s.slice(0, 60), lang };
   }).filter((n) => n.t && /^https?:\/\//.test(n.u) && Number.isFinite(n.d));
 }
 const GN = (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
@@ -155,32 +167,79 @@ const QUOTES = [
   ['DX-Y.NYB', 'Índice do dólar (DXY)', 'rates', 'pts', 'US dollar index (DXY)'], ['^TNX', 'Juros do título de 10 anos dos EUA', 'rates', 'pct', 'US 10-year yield'], ['^FVX', 'Juros do título de 5 anos dos EUA', 'rates', 'pct', 'US 5-year yield'],
   ['BZ=F', 'Petróleo Brent', 'cmd', 'usd', 'Brent crude'], ['CL=F', 'Petróleo WTI', 'cmd', 'usd', 'WTI crude'], ['NG=F', 'Gás natural', 'cmd', 'usd', 'Natural gas'], ['HG=F', 'Cobre', 'cmd', 'usd', 'Copper'],
 ];
-const ETFS = ['IBIT', 'FBTC', 'GBTC', 'BTC', 'ARKB', 'BITB', 'HODL', 'BTCO', 'BTCW', 'EZBC', 'BRRR', 'ETHA', 'FETH', 'ETHE', 'ETH', 'ETHW', 'CETH', 'ETHV', 'QETH', 'EZET', 'HASH11.SA', 'BITH11.SA', 'ETHE11.SA', 'QBTC11.SA', 'QETH11.SA'];
-async function yahoo(sym) {
+// ETFs à vista por moeda (EUA e B3) — lista conferida em out/2026 (sites das gestoras, CoinDesk, TokenPost).
+// Ticker que não existir no Yahoo só fica sem cota ("—" no site); nunca inventa número.
+const ETFS = [
+  'IBIT', 'FBTC', 'GBTC', 'BTC', 'ARKB', 'BITB', 'HODL', 'BTCO', 'BTCW', 'EZBC', 'BRRR',
+  'ETHA', 'FETH', 'ETHE', 'ETH', 'ETHW', 'CETH', 'ETHV', 'QETH', 'EZET',
+  'BSOL', 'GSOL', 'FSOL', 'VSOL', 'TSOL', 'QSOL', 'XRP', 'XRPC', 'XRPZ', 'GXRP', 'TOXR', 'XRPR',
+  'GDOG', 'BWOW', 'TDOG', 'DOJE', 'CLNK', 'GLNK', 'LTCC', 'HBR', 'TDOT', 'NRR', 'BHYP', 'VBNB', 'TRXS', 'ZCSH',
+  'HASH11.SA', 'BITH11.SA', 'ETHE11.SA', 'QBTC11.SA', 'QETH11.SA', 'SOLH11.SA', 'XRPH11.SA', 'QSOL11.SA',
+];
+// mineradoras de bitcoin listadas nos EUA (valor de mercado: planilha pública do companiesmarketcap; cotação: Yahoo)
+const MINERS = [['MARA', 'MARA Holdings'], ['RIOT', 'Riot Platforms'], ['CLSK', 'CleanSpark'], ['CORZ', 'Core Scientific'], ['IREN', 'IREN'], ['CIFR', 'Cipher Mining'], ['HUT', 'Hut 8'], ['WULF', 'TeraWulf'], ['BTDR', 'Bitdeer'], ['BITF', 'Bitfarms'], ['HIVE', 'HIVE Digital'], ['BTBT', 'Bit Digital'], ['CANG', 'Cango'], ['ABTC', 'American Bitcoin']];
+async function yahoo(sym, range = '5d') {
   let lastErr;
   for (const host of ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']) {
     try {
-      const j = await get(`https://${host}/v8/finance/chart/${encodeURIComponent(sym)}?range=5d&interval=1d`, { as: 'json', timeout: 15000 });
+      const j = await get(`https://${host}/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=1d`, { as: 'json', timeout: 15000 });
       const res = j.chart && j.chart.result && j.chart.result[0]; const m = res && res.meta;
       if (!m || !Number.isFinite(m.regularMarketPrice)) throw new Error('sem preço');
-      // variação do DIA: fechamento anterior = penúltimo fechamento diário (chartPreviousClose é de antes dos 5 dias)
-      const closes = ((res.indicators && res.indicators.quote && res.indicators.quote[0] && res.indicators.quote[0].close) || []).filter(Number.isFinite);
+      // variação do DIA: fechamento anterior = penúltimo fechamento diário (chartPreviousClose é de antes do período)
+      const rawC = (res.indicators && res.indicators.quote && res.indicators.quote[0] && res.indicators.quote[0].close) || [];
+      const closes = rawC.filter(Number.isFinite);
       const prev = closes.length >= 2 ? closes[closes.length - 2] : m.previousClose;
-      return { p: m.regularMarketPrice, prev, chg: Number.isFinite(prev) && prev ? (m.regularMarketPrice / prev - 1) * 100 : null, vol: m.regularMarketVolume ?? null, t: (m.regularMarketTime || 0) * 1000, cur: m.currency };
+      const ts = res.timestamp || [];
+      const hist = range === '5d' ? null : ts.map((t, i) => [Math.floor(t / 86400), rawC[i]]).filter(([, c]) => Number.isFinite(c));
+      return { p: m.regularMarketPrice, prev, chg: Number.isFinite(prev) && prev ? (m.regularMarketPrice / prev - 1) * 100 : null, vol: m.regularMarketVolume ?? null, t: (m.regularMarketTime || 0) * 1000, cur: m.currency, hist };
     } catch (e) { lastErr = e; }
   }
   throw lastErr;
 }
+let _cmcCsv = null;
+const cmcCsv = async () => (_cmcCsv || (_cmcCsv = get('https://companiesmarketcap.com/?download=csv', { timeout: 30000 }).then(csvRows)));
+// patrimônio (valor de mercado) dos ETFs de cripto, pelas listas públicas do companiesmarketcap
+async function etfAum() {
+  const out = {};
+  for (const path of ['bitcoin-etfs/largest-bitcoin-etfs-by-marketcap/', 'ethereum-etfs/largest-ethereum-etfs-by-marketcap/', 'cryptocurrency-etfs/largest-crypto-etfs-by-marketcap/']) {
+    try { for (const x of parseAssetsHtml(await get('https://companiesmarketcap.com/' + path), 1e5)) { const k = String(x.s || '').toUpperCase().trim(); if (k && Number.isFinite(x.mcap) && !(k in out)) out[k] = x.mcap; } } catch { /* uma lista a menos */ }
+  }
+  return out;
+}
+async function miners(prev) {
+  const caps = {};
+  try { for (const r of await cmcCsv()) { const k = String(r.symbol || '').toUpperCase(); if (MINERS.some(([t]) => t === k)) caps[k] = { mcap: Number(r.marketcap), p: Number(r['price (usd)']), n: r.name }; } } catch { /* sem valor de mercado: fica só a cotação */ }
+  const yr = await pool(MINERS, 4, ([s]) => yahoo(s));
+  const list = MINERS.map(([s, n], i) => {
+    const y = yr[i] && !yr[i].err ? yr[i] : null; const c = caps[s];
+    if (!y && !c) { const old = prev && Array.isArray(prev.miners) && prev.miners.find((x) => x.s === s); return old || null; }
+    return { s, n, p: y ? y.p : c.p, chg: y ? y.chg : null, t: y ? y.t : null, mcap: c && Number.isFinite(c.mcap) && c.mcap > 0 ? c.mcap : (prev && Array.isArray(prev.miners) && (prev.miners.find((x) => x.s === s) || {}).mcap) || null };
+  }).filter(Boolean);
+  return list;
+}
 async function markets(prev) {
-  const quotes = {}; const etfs = {}; let okQ = 0, okE = 0;
+  const quotes = {}; const etfs = {}; const hist = {}; let okQ = 0, okE = 0;
   const qr = await pool(QUOTES, 4, ([s]) => yahoo(s));
   QUOTES.forEach(([s, n, g, fmt, nEn], i) => {
     const r = qr[i];
     if (r && !r.err) { okQ++; let p = r.p; if (s === '^TNX' || s === '^FVX') { if (p > 20) p /= 10; } quotes[s] = { n, nEn, g, fmt, p, chg: r.chg, t: r.t }; }
     else if (prev && prev.quotes && prev.quotes[s]) quotes[s] = prev.quotes[s]; // mantém o último válido, com o horário dele
   });
-  const er = await pool(ETFS, 4, (s) => yahoo(s));
-  ETFS.forEach((s, i) => { const r = er[i]; if (r && !r.err) { okE++; etfs[s] = { p: r.p, chg: r.chg, vol: r.vol, t: r.t }; } else if (prev && prev.etfs && prev.etfs[s]) etfs[s] = prev.etfs[s]; });
+  // 1 ano de fechamentos diários por ETF (o site mostra a cota de qualquer dia)
+  const er = await pool(ETFS, 4, (s) => yahoo(s, '1y'));
+  ETFS.forEach((s, i) => {
+    const r = er[i];
+    if (r && !r.err) { okE++; etfs[s] = { p: r.p, chg: r.chg, vol: r.vol, t: r.t, cur: r.cur }; if (r.hist && r.hist.length) hist[s] = { d: r.hist.map((x) => x[0]), c: r.hist.map((x) => Math.round(x[1] * 1e4) / 1e4) }; }
+    else if (prev && prev.etfs && prev.etfs[s]) etfs[s] = prev.etfs[s];
+  });
+  // ETF que falhou nesta execução mantém o histórico anterior (não perde 1 ano por um erro)
+  const oldHist = await previous('etfhist');
+  if (oldHist && oldHist.h) for (const [k, v] of Object.entries(oldHist.h)) if (!hist[k]) hist[k] = v;
+  if (Object.keys(hist).length) save('etfhist', { generatedAt: new Date().toISOString(), src: 'Yahoo Finance', h: hist });
+  let aum = prev && prev.etfAum, aumAt = prev && prev.etfAumAt;
+  try { const a = await etfAum(); if (Object.keys(a).length >= 5) { aum = a; aumAt = new Date().toISOString(); status.etfAum = { ok: true, n: Object.keys(a).length }; } else status.etfAum = { ok: false, err: 'lista vazia' }; } catch (e) { status.etfAum = { ok: false, err: String(e.message || e) }; }
+  let mn = prev && prev.miners, mnAt = prev && prev.minersAt;
+  try { const m = await miners(prev); if (m.length >= 3) { mn = m; mnAt = new Date().toISOString(); status.miners = { ok: true, n: m.length, caps: m.filter((x) => x.mcap).length }; } } catch (e) { status.miners = { ok: false, err: String(e.message || e) }; }
   status.quotes = { ok: okQ > 0, n: okQ, err: okQ ? undefined : String(qr.find((r) => r && r.err)?.err || '') };
   status.etfs = { ok: okE > 0, n: okE };
   // ranking mundial
@@ -188,7 +247,7 @@ async function markets(prev) {
   try { const w = await worldRanking(); if (w.length < 20) throw new Error(`só ${w.length} linhas`); world = w; worldAt = new Date().toISOString(); worldSrc = 'companiesmarketcap.com'; status.world = { ok: true, n: w.length, ...(worldDebug ? { debug: worldDebug } : {}) }; }
   catch (e) { status.world = { ok: false, err: String(e.message || e) }; }
   if (!okQ && !okE && !(status.world && status.world.ok)) throw new Error('nenhuma cotação nesta execução');
-  save('markets', { generatedAt: new Date().toISOString(), quotes, etfs, world, worldAt, worldSrc });
+  save('markets', { generatedAt: new Date().toISOString(), quotes, etfs, etfAum: aum || null, etfAumAt: aumAt || null, miners: mn || null, minersAt: mnAt || null, world, worldAt, worldSrc });
   return { n: okQ + okE };
 }
 function csvRows(text) {
@@ -198,7 +257,7 @@ function csvRows(text) {
   return lines.slice(1).map((l) => Object.fromEntries(split(l).map((v, i) => [head[i], v.trim()])));
 }
 // Página "assets by market cap" (ouro, prata, bitcoin e empresas). A tabela traz os números crus em data-sort.
-function parseAssetsHtml(html) {
+function parseAssetsHtml(html, minCap = 1e9) {
   const rows = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map((m) => m[1]).filter((r) => /company-name/.test(r));
   return rows.map((r) => {
     const name = strip((r.match(/class="company-name"[^>]*>([\s\S]*?)<\/div>/i) || [])[1]);
@@ -211,7 +270,7 @@ function parseAssetsHtml(html) {
     const rank = sorts.length ? sorts[0] : null;
     const country = tds.length ? tds[tds.length - 1].replace(/[^\p{L}\s.]/gu, '').trim() : '';
     return { rank, n: name, s: code, mcap: money(capTxt), p: money(priceTxt), chg: pctTxt ? Number(pctTxt.replace('%', '')) : null, country };
-  }).filter((x) => x.n && Number.isFinite(x.mcap) && x.mcap > 1e9);
+  }).filter((x) => x.n && Number.isFinite(x.mcap) && x.mcap > minCap);
 }
 async function worldRanking() {
   const KIND = { gold: 'metal', silver: 'metal', platinum: 'metal', palladium: 'metal', copper: 'metal', bitcoin: 'crypto', ethereum: 'crypto', xrp: 'crypto', tether: 'crypto', bnb: 'crypto', solana: 'crypto' };
@@ -224,7 +283,7 @@ async function worldRanking() {
   } catch (e) { debug = String(e.message || e); }
   if (list.length < 20) {
     // reserva: planilha das empresas (sem metais e cripto)
-    const rows = csvRows(await get('https://companiesmarketcap.com/?download=csv'));
+    const rows = await cmcCsv();
     if (!rows.length || !('marketcap' in rows[0])) throw new Error('formato da planilha mudou; ' + debug.slice(0, 300));
     list = rows.slice(0, 100).map((r, i) => ({ rank: Number(r.rank) || i + 1, n: r.name, s: r.symbol || '', kind: 'stock', mcap: Number(r.marketcap), p: Number(r['price (usd)']), chg: null, country: r.country || '' })).filter((x) => x.n && x.mcap > 0);
     worldDebug = debug.slice(0, 2000);

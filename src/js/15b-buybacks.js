@@ -13,7 +13,7 @@ const BB_MECH = () => ({
   share: { t: L('Repasse aos detentores', 'Paid to holders'), c: '#a78bfa', ic: 'hand-coins' },
 });
 const BB_FILT = () => [['bb', L('Recompra e queima', 'Buybacks & burns')], ['burn', L('Só queima', 'Burns only')], ['held', L('Recompra e guarda', 'Bought & held')], ['share', L('Repasse a stakers', 'Paid to stakers')], ['all', L('Todos', 'All')]];
-const bbMatch = (type, f) => (f === 'all' ? true : f === 'bb' ? type !== 'share' : f === 'burn' ? type === 'burn' || type === 'buyback-burn' : f === 'held' ? type === 'buyback' : type === 'share');
+const bbMatch = (type, f) => (f === 'all' ? true : f === 'bought' ? type === 'buyback' || type === 'buyback-burn' : f === 'bb' ? type !== 'share' : f === 'burn' ? type === 'burn' || type === 'buyback-burn' : f === 'held' ? type === 'buyback' : type === 'share');
 function registerBuybackSources() {
   source({
     id: 'buybacks', label: 'Burn, Baby, Burn', provider: 'DefiLlama', every: 60 * 60e3, persist: false, kind: 'daily',
@@ -114,6 +114,7 @@ function bbHtml() {
   <section class="panel flush mt" id="bb-tbl"><div class="panel-h" style="padding:16px 18px 6px;margin:0"><div class="tt"><h2 class="panel-t"><span class="bb-n">01</span>${esc(L('Quanto chega ao token', 'How much reaches the token'))}</h2><p class="panel-s">${esc(L('Valor que cada protocolo usou para recomprar, queimar ou repassar ao token, e quanto isso representa do valor de mercado e do FDV por ano (no ritmo do período).', 'Value each protocol used to buy back, burn or pass to its token, and what that means as a share of market cap and FDV per year (at the period’s pace).'))}</p></div>${seg('bbp', [['1d', '1D'], ['7d', '7D'], ['30d', '30D'], ['90d', '90D'], ['1y', L('1A', '1Y')]], BB.per)}</div>
     <div class="bb-tools"><div class="bb-filt" role="group" aria-label="${esc(L('Mecanismo', 'Mechanism'))}">${BB_FILT().map(([k, t]) => `<button class="lab-cat" data-act="bbFilt" data-k="${k}" aria-pressed="${BB.filt === k}">${esc(t)}</button>`).join('')}</div><div class="inp-search bb-q">${ico('search', 16)}<input class="inp" type="search" data-inp="bbQ" value="${esc(BB.q)}" placeholder="${esc(L('Buscar token', 'Search token'))}" aria-label="${esc(L('Buscar token', 'Search token'))}"></div></div>
     <div id="bb-tb"></div></section>
+  <div class="grid g-2 mt"><section class="panel" id="bb-burners"></section><section class="panel" id="bb-buyers"></section></div>
   <div class="grid g-2 mt"><section class="panel" id="bb-rank"></section><section class="panel" id="bb-yield"></section></div>
   <section class="panel mt" id="bb-how"></section>`;
 }
@@ -121,7 +122,7 @@ function bbEmpty() {
   const h = HEALTH.buybacks;
   return h && h.ok === false ? emptyBox('wifi-off', L('Dados de recompra indisponíveis agora', 'Buyback data unavailable right now'), esc(L('O arquivo do robô não chegou. Tentando de novo; enquanto isso, veja direto na DefiLlama.', 'The robot file did not arrive. Retrying; meanwhile, see it on DefiLlama.')), extLink('https://defillama.com/holders-revenue', 'DefiLlama')) : skel(5, 22);
 }
-function bbDraw() { bbDrawSum(); bbDrawTbl(); bbDrawRank(); bbDrawYield(); bbDrawHow(); }
+function bbDraw() { bbDrawSum(); bbDrawTbl(); bbDrawTop(); bbDrawRank(); bbDrawYield(); bbDrawHow(); }
 function bbDrawSum() {
   const box = $('#bb-sum'); if (!box) return;
   const D = bbData();
@@ -175,17 +176,32 @@ function bbBarsPanel(box, title, num_, rows, val, fmt, sub) {
   const mx = Math.max(...rows.map(val).filter(isNum), 0) || 1;
   setHTML(box, `<div class="panel-h"><div class="tt"><h2 class="panel-t"><span class="bb-n">${num_}</span>${esc(title)}</h2><p class="panel-s">${esc(sub)}</p></div></div>` + (rows.length ? '' : `<p class="small faint">${esc(L('Nenhum token com fluxo neste período e filtro.', 'No token with flow in this period and filter.'))}</p>`) + `<div class="bb-bars">${rows.map((r) => { const v = val(r); const col = (BB_MECH()[r.mechs[0]] || BB_MECH().share).c; return `<button class="bb-bar" data-act="bbOpen" data-k="${esc(r.t.k)}"><span class="l">${coinLogo({ b: r.t.sym, logo: r.t.img, cg: r.t.cg }, 22)}<b>${esc(r.t.sym || r.t.n)}</b></span><span class="b"><i style="width:${clamp(v / mx * 100, 1.5, 100)}%;background:${col}"></i></span><span class="v">${esc(fmt(v))}</span></button>`; }).join('')}</div>`);
 }
+// quem mais queima e quem mais recompra no período escolhido (independe do filtro da tabela)
+function bbRowsFor(D, f) { const keep = BB.filt, kq = BB.q; BB.filt = f; BB.q = ''; try { return bbRows(D); } finally { BB.filt = keep; BB.q = kq; } }
+function bbDrawTop() {
+  const D = bbData();
+  const per = { '1d': L('no último dia', 'in the last day'), '7d': L('em 7 dias', 'in 7 days'), '30d': L('em 30 dias', 'in 30 days'), '90d': L('em 90 dias', 'in 90 days'), '1y': L('em 1 ano', 'in 1 year') }[BB.per];
+  for (const [id, f, title, n, sub] of [
+    ['#bb-burners', 'burn', L('Quem mais queima', 'Who burns the most'), '02', L(`Valor queimado ${per} (queima direta ou recompra seguida de queima): moedas que somem para sempre.`, `Value burned ${per} (direct burn or buyback then burn): coins gone for good.`)],
+    ['#bb-buyers', 'bought', L('Quem mais recompra', 'Who buys back the most'), '03', L(`Valor usado para recomprar o próprio token ${per} (depois queima ou guarda no caixa).`, `Value used to buy back its own token ${per} (then burned or held).`)],
+  ]) {
+    const box = $(id); if (!box) continue;
+    if (!D) { setHTML(box, bbEmpty()); continue; }
+    const rows = bbRowsFor(D, f).filter((r) => r.sum > 0).sort((a, b) => b.sum - a.sum).slice(0, 10);
+    bbBarsPanel(box, title, n, rows, (r) => r.sum, (v) => fmtCompact(v), sub);
+  }
+}
 function bbDrawRank() {
   const box = $('#bb-rank'); if (!box) return;
   const D = bbData(); if (!D) { setHTML(box, bbEmpty()); return; }
   const rows = bbRows(D).filter((r) => r.sum > 0).sort((a, b) => b.sum - a.sum).slice(0, 12);
-  bbBarsPanel(box, L('Quem mais devolve ao token', 'Who returns the most to its token'), '02', rows, (r) => r.sum, (v) => fmtCompact(v), L('Valor no período escolhido, com a cor do mecanismo.', 'Value in the chosen period, colored by mechanism.'));
+  bbBarsPanel(box, L('Quem mais devolve ao token', 'Who returns the most to its token'), '04', rows, (r) => r.sum, (v) => fmtCompact(v), L('Valor no período escolhido, com a cor do mecanismo.', 'Value in the chosen period, colored by mechanism.'));
 }
 function bbDrawYield() {
   const box = $('#bb-yield'); if (!box) return;
   const D = bbData(); if (!D) { setHTML(box, bbEmpty()); return; }
   const rows = bbRows(D).filter((r) => isNum(r.yMcap) && r.yMcap > 0 && r.mcap >= 50e6).sort((a, b) => b.yMcap - a.yMcap).slice(0, 12);
-  bbBarsPanel(box, L('Maior rendimento para o detentor', 'Highest yield to holders'), '03', rows, (r) => r.yMcap, (v) => `${fmtNum(v, 2, 2)}%/${L('ano', 'yr')}`, L('% do valor de mercado por ano no ritmo do período (só tokens acima de US$ 50 milhões, para não distorcer).', '% of market cap per year at the period’s pace (only tokens above US$ 50 million, to avoid distortion).'));
+  bbBarsPanel(box, L('Maior rendimento para o detentor', 'Highest yield to holders'), '05', rows, (r) => r.yMcap, (v) => `${fmtNum(v, 2, 2)}%/${L('ano', 'yr')}`, L('% do valor de mercado por ano no ritmo do período (só tokens acima de US$ 50 milhões, para não distorcer).', '% of market cap per year at the period’s pace (only tokens above US$ 50 million, to avoid distortion).'));
 }
 function bbDrawHow() {
   const box = $('#bb-how'); if (!box) return;

@@ -23,14 +23,36 @@ function pipelineNews() { // um pedido compartilhado por todas as categorias (va
   _pipeNews = { at: Date.now(), p }; p.catch(() => { _pipeNews = null; });
   return p;
 }
+// resumo útil ou nada: tira entidades (&nbsp;), o "título + nome do veículo" que o Google Notícias repete
+// e os rodapés automáticos ("Fonte: …", "O post … apareceu primeiro em …", "Veja mais notícias…")
+const _normT = (s) => cleanTxt(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+function newsDesc(x, t, src) {
+  let d = cleanTxt(x);
+  if (!d) return '';
+  d = d.replace(/\s*O post .{0,300}? apareceu primeiro em .*$/i, '').replace(/\s*Fonte:\s.*$/i, '').replace(/\s*Veja mais not[íi]cias.*$/i, '').replace(/\s*The post .{0,300}? appeared first on .*$/i, '').replace(/\s*(Leia mais|Continue lendo|Read more)\b.*$/i, '').trim();
+  const nd = _normT(d), nt = _normT(t), ns = _normT(src || '');
+  if (!nd || nd.length < 25) return '';
+  if (nt && (nd === nt || nd.startsWith(nt) || nt.startsWith(nd))) { const rest = nd.slice(nt.length).trim(); if (!rest || rest === ns || rest.length < 25) return ''; }
+  return d;
+}
 function newsClean(items, maxH) {
-  const seen = new Set(), now = Date.now();
-  return items.filter((n) => {
-    if (!n || !n.t || !n.u || !isNum(n.d)) return false;
-    if (n.d > now + 3600e3 || now - n.d > maxH * 3600e3) return false; // nem do futuro nem velha demais
-    const k = n.u.split('?')[0] + '|' + n.t.toLowerCase().slice(0, 60);
-    if (seen.has(k)) return false; seen.add(k); return true;
-  }).sort((a, b) => b.d - a.d).slice(0, 80);
+  const seen = new Set(), now = Date.now(), byT = new Map();
+  const out = [];
+  for (const raw of items) {
+    if (!raw || !raw.t || !raw.u || !isNum(raw.d)) continue;
+    if (raw.d > now + 3600e3 || now - raw.d > maxH * 3600e3) continue; // nem do futuro nem velha demais
+    const t = cleanTxt(raw.t), src = cleanTxt(raw.src || '');
+    if (!t) continue;
+    const n = { ...raw, t, src, x: newsDesc(raw.x, t, src) };
+    const k = n.u.split('?')[0] + '|' + t.toLowerCase().slice(0, 60);
+    if (seen.has(k)) continue; seen.add(k);
+    // a mesma manchete do mesmo veículo (RSS próprio + Google Notícias) aparece uma vez só, com o resumo quando houver
+    const kt = _normT(src) + '|' + _normT(t).slice(0, 80);
+    const prev = byT.get(kt);
+    if (prev) { if (!prev.x && n.x) prev.x = n.x; continue; }
+    byT.set(kt, n); out.push(n);
+  }
+  return out.sort((a, b) => b.d - a.d).slice(0, 80);
 }
 function registerNewsSources() {
   for (const [cat, def] of Object.entries(NEWS_CATS)) {
@@ -166,7 +188,7 @@ function registerGeoSource() {
     run: async () => {
       try {
         const j = await getPipeline('news', 12 * 3600e3);
-        if (Array.isArray(j.cats && j.cats.geo) && j.cats.geo.length >= 10) return { items: j.cats.geo, via: 'pipe', gen: Date.parse(j.geoAt || j.generatedAt) };
+        if (Array.isArray(j.cats && j.cats.geo) && j.cats.geo.length >= 10) return { items: j.cats.geo.filter((n) => n && n.t).map((n) => { const t = cleanTxt(n.t), src = cleanTxt(n.src || ''); return { ...n, t, src, x: newsDesc(n.x, t, src), more: Array.isArray(n.more) ? n.more.map((m) => ({ ...m, t: cleanTxt(m.t), src: cleanTxt(m.src || '') })) : n.more }; }), via: 'pipe', gen: Date.parse(j.geoAt || j.generatedAt) };
       } catch { /* robô fora: lê direto */ }
       const res = await Promise.allSettled(NEWS_CATS.mundo.feeds.map(([u, name, lang]) => rssItems(u, 20).then((a) => a.map((n) => ({ ...n, src: name, lang })))));
       const raw = res.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value);

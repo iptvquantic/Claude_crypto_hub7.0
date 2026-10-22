@@ -15,6 +15,12 @@ const rewardAt = (h) => 50 / 2 ** Math.floor(h / HALVING_EVERY);
 const MP = 'https://mempool.space/api';
 function registerOnchainSources() {
   source({
+    id: 'miners', label: L('Mineradoras na bolsa', 'Listed miners'), provider: L('robô NEXUS (Yahoo + companiesmarketcap)', 'NEXUS bot (Yahoo + companiesmarketcap)'), every: 10 * 60e3, persist: false,
+    need: () => S.page === 'onchain',
+    run: async () => { const j = await getPipeline('markets', 6 * 3600e3); if (!Array.isArray(j.miners) || j.miners.length < 3) throw new Error(L('sem mineradoras', 'no miners')); return { list: j.miners, at: Date.parse(j.minersAt || j.generatedAt) }; },
+    onData: (d) => { HEALTH.miners.dataTs = d.at; _markDirty('MINERS'); },
+  });
+  source({
     id: 'mempool', label: L('Rede Bitcoin', 'Bitcoin network'), provider: 'mempool.space', every: 60e3,
     need: () => ['onchain', 'whales'].includes(S.page),
     run: async () => {
@@ -38,8 +44,8 @@ function registerOnchainSources() {
       if (b.status !== 'fulfilled') throw b.reason;
       const ex = (x) => x.extras || {};
       return {
-        blocks: b.value.slice(0, 8).map((x) => ({ h: x.height, t: x.timestamp * 1000, n: x.tx_count, size: x.size, fee: num(ex(x).medianFee), range: ex(x).feeRange || [], pool: ex(x).pool && ex(x).pool.name, fees: num(ex(x).totalFees), reward: num(ex(x).reward) })),
-        next: nb.status === 'fulfilled' ? nb.value.slice(0, 3).map((x) => ({ n: x.nTx, vsize: x.blockVSize, fee: num(x.medianFee), range: x.feeRange || [], fees: num(x.totalFees) })) : [],
+        blocks: b.value.slice(0, 10).map((x) => ({ id: String(x.id || ''), h: x.height, t: x.timestamp * 1000, n: x.tx_count, size: x.size, w: num(x.weight), fee: num(ex(x).medianFee), avg: num(ex(x).avgFeeRate), range: ex(x).feeRange || [], pool: ex(x).pool && ex(x).pool.name, fees: num(ex(x).totalFees), reward: num(ex(x).reward) })),
+        next: nb.status === 'fulfilled' ? nb.value.slice(0, 4).map((x) => ({ n: x.nTx, vsize: x.blockVSize, size: num(x.blockSize), fee: num(x.medianFee), range: x.feeRange || [], fees: num(x.totalFees) })) : [],
         rw: rw.status === 'fulfilled' ? { reward: num(rw.value.totalReward), fee: num(rw.value.totalFee), tx: num(rw.value.totalTx), from: rw.value.startBlock, to: rw.value.endBlock } : null,
       };
     },
@@ -65,6 +71,7 @@ function onchainHtml() {
   <section class="panel mt" id="oc-thermo"></section>
   <div class="grid oc-g2 mt"><section class="panel" id="oc-ladder"></section><section class="panel" id="oc-flow"></section></div>
   <section class="panel mt" id="oc-mining"></section>
+  <section class="panel mt" id="oc-miners"></section>
   <section class="panel mt" id="oc-links"></section>`;
 }
 function hashFmt(h) { return isNum(h) ? `${fmtNum(h / 1e18, 0, 0)} EH/s` : '—'; }
@@ -86,22 +93,64 @@ function drawOcNet() {
 // ---------- blocos: fila (mempool) e minerados ----------
 // cores por faixa de taxa (texto branco legível em todas: contraste ≥ 4,5:1)
 function feeTone(f) { return !isNum(f) ? '#3a4560' : f < 2 ? '#1d6b4f' : f < 5 ? '#2b6e3c' : f < 10 ? '#6e6a1d' : f < 30 ? '#8f5419' : '#9b2c33'; }
+const OCB = { sel: null, top: null };
 function drawOcBlocks() {
   const c = CACHE.get('mp-blocks'); const B = c && c.v;
-  const head = panelHead('square-stack', L('Blocos: fila e minerados', 'Blocks: queue and mined'), { sub: esc(L('À esquerda, os próximos blocos montados com as transações que esperam na fila (taxa mediana em sat/vB). À direita, os últimos blocos minerados e quem minerou.', 'Left: the next blocks assembled from waiting transactions (median fee in sat/vB). Right: the latest mined blocks and who mined them.')), right: stamp('mp-blocks') });
+  const head = panelHead('square-stack', L('Blocos: fila e minerados', 'Blocks: queue and mined'), { sub: esc(L('À esquerda, os próximos blocos montados com as transações que esperam na fila; à direita, os últimos minerados. Clique em qualquer bloco para ver os detalhes. Cor = taxa mediana (verde barata, vermelho cara).', 'Left: next blocks from the waiting queue; right: latest mined. Click any block for details. Color = median fee (green cheap, red expensive).')), right: stamp('mp-blocks') });
   if (!B) { setHTML('#oc-blocks', head + `<div class="oc-chain">${'<div class="skel oc-cube"></div>'.repeat(7)}</div>`); return; }
-  const btc = PX.BTCUSDT && PX.BTCUSDT.p;
   const fd = (v) => fmtNum(v, 0, v < 10 ? 1 : 0);
   const range = (r) => (r && r.length > 1 ? `${fd(r[0])}–${fd(r[r.length - 1])} sat/vB` : '');
-  const next = B.next.slice().reverse().map((x, i, a) => `<div class="oc-cube next" style="--fc:${feeTone(x.fee)}" title="${esc(L('Bloco projetado com as transações da fila', 'Projected block from queued transactions'))}">
-    <span class="h">${esc(L(`em ~${(a.length - i) * 10} min`, `in ~${(a.length - i) * 10} min`))}</span><b>~${esc(fmtNum(x.fee, 0, x.fee < 10 ? 1 : 0))} sat/vB</b><span>${esc(range(x.range))}</span><span>${esc(fmtNum(x.n, 0, 0))} ${esc(L('transações', 'txs'))}</span>${isNum(x.fees) ? `<span>${esc(fmtNum(x.fees / 1e8, 3, 3))} BTC ${esc(L('em taxas', 'in fees'))}</span>` : ''}</div>`).join('');
-  const mined = B.blocks.slice(0, 6).map((x) => `<a class="oc-cube" style="--fc:${feeTone(x.fee)}" href="${esc(safeUrl('https://mempool.space/pt/block/' + x.h))}" target="_blank" rel="noopener noreferrer">
-    <span class="h">${esc(fmtNum(x.h, 0, 0))}</span><b>~${esc(fmtNum(x.fee, 0, x.fee < 10 ? 1 : 0))} sat/vB</b><span>${esc(fmtNum(x.n, 0, 0))} ${esc(L('transações', 'txs'))} · ${esc(fmtNum(x.size / 1e6, 2, 2))} MB</span><span class="p">${esc(x.pool || '—')}</span><span class="t">${esc(ago(x.t))}</span></a>`).join('');
-  const rw = B.rw;
+  // bloco novo minerado: animação de entrada
+  const isNew = OCB.top && B.blocks[0] && B.blocks[0].h > OCB.top;
+  OCB.top = B.blocks[0] ? B.blocks[0].h : OCB.top;
+  if (!OCB.sel || (OCB.sel.k === 'm' && !B.blocks.some((x) => x.h === OCB.sel.h)) || (OCB.sel.k === 'n' && !B.next[OCB.sel.i])) OCB.sel = B.next.length ? { k: 'n', i: 0 } : { k: 'm', h: B.blocks[0].h };
+  const selN = (i) => OCB.sel.k === 'n' && OCB.sel.i === i, selM = (h) => OCB.sel.k === 'm' && OCB.sel.h === h;
+  const next = B.next.map((x, i) => ({ x, i })).reverse().map(({ x, i }) => `<button class="oc-cube next${selN(i) ? ' on' : ''}" style="--fc:${feeTone(x.fee)}" data-act="ocBlk" data-k="n" data-i="${i}" aria-pressed="${selN(i)}">
+    <span class="h">${esc(i === 0 ? L('próximo', 'next') : L(`em ~${(i + 1) * 10} min`, `in ~${(i + 1) * 10} min`))}</span><b>~${esc(fd(x.fee))} sat/vB</b><span>${esc(range(x.range))}</span><span>${esc(fmtNum(x.n, 0, 0))} ${esc(L('transações', 'txs'))}</span>${i === B.next.length - 1 && B.next.length >= 4 ? `<span class="t">${esc(L('e o resto da fila', 'and the rest of the queue'))}</span>` : ''}</button>`).join('');
+  const mined = B.blocks.slice(0, 8).map((x, j) => `<button class="oc-cube${selM(x.h) ? ' on' : ''}${isNew && j === 0 ? ' new' : ''}" style="--fc:${feeTone(x.fee)}" data-act="ocBlk" data-k="m" data-h="${x.h}" aria-pressed="${selM(x.h)}">
+    <span class="h">${esc(fmtNum(x.h, 0, 0))}</span><b>~${esc(fd(x.fee))} sat/vB</b><span>${esc(fmtNum(x.n, 0, 0))} ${esc(L('transações', 'txs'))} · ${esc(fmtNum(x.size / 1e6, 2, 2))} MB</span><span class="p">${esc(x.pool || '—')}</span><span class="t">${esc(ago(x.t))}</span></button>`).join('');
+  const rw = B.rw; const btc = PX.BTCUSDT && PX.BTCUSDT.p;
   const feeShare = rw && rw.reward > 0 ? rw.fee / rw.reward * 100 : null;
-  setHTML('#oc-blocks', head + `<div class="oc-chain"><div class="oc-q">${next}</div><div class="oc-sep" aria-hidden="true"></div><div class="oc-m">${mined}</div></div>
-    ${rw ? `<div class="row wrap mt" style="gap:8px 22px"><span class="small">${esc(L('Últimos 144 blocos (~24 h):', 'Last 144 blocks (~24 h):'))} <b>${esc(fmtNum(rw.tx, 0, 0))}</b> ${esc(L('transações', 'transactions'))}</span><span class="small">${esc(L('mineradores receberam', 'miners earned'))} <b>${esc(fmtNum(rw.reward / 1e8, 2, 2))} BTC</b>${btc ? ` (${esc(fmtCompact(rw.reward / 1e8 * btc))})` : ''}</span><span class="small">${esc(L('taxas foram', 'fees were'))} <b>${esc(fmtPct(feeShare, 1, false))}</b> ${esc(L('disso', 'of it'))}</span></div>` : ''}`);
+  const prevCh = $('#oc-blocks .oc-chain'); const keepX = prevCh && prevCh.querySelector('.oc-cube:not(.skel)') ? prevCh.scrollLeft : null;
+  setHTML('#oc-blocks', head + `<div class="oc-chain"><div class="oc-q">${next}</div><div class="oc-sep" aria-hidden="true"><span>${esc(L('agora', 'now'))}</span></div><div class="oc-m">${mined}</div></div>
+    <div id="oc-bdet" class="oc-bdet">${ocBlockDetail(B)}</div>
+    ${rw ? `<div class="row wrap mt" style="gap:8px 22px"><span class="small">${esc(L('Últimos 144 blocos (~24 h):', 'Last 144 blocks (~24 h):'))} <b>${esc(fmtNum(rw.tx, 0, 0))}</b> ${esc(L('transações', 'transactions'))}</span><span class="small">${esc(L('mineradores receberam', 'miners earned'))} <b>${esc(fmtNum(rw.reward / 1e8, 2, 2))} BTC</b>${btc ? ` (${esc(fmtCompact(rw.reward / 1e8 * btc))}${toBRL(rw.reward / 1e8 * btc) ? ' · ' + esc(fmtCompact(toBRL(rw.reward / 1e8 * btc), 'BRL')) : ''})` : ''}</span><span class="small">${esc(L('taxas foram', 'fees were'))} <b>${esc(fmtPct(feeShare, 1, false))}</b> ${esc(L('disso', 'of it'))}</span></div>` : ''}`);
+  // a fila fica à esquerda e os minerados à direita: começa centrado no "agora" (no celular a tela é estreita)
+  const chn = $('#oc-blocks .oc-chain'), sep = chn && chn.querySelector('.oc-sep');
+  if (chn && sep) chn.scrollLeft = keepX !== null ? keepX : Math.max(0, sep.offsetLeft - chn.clientWidth / 2);
 }
+// detalhe do bloco escolhido (minerado ou ainda na fila)
+function ocBlockDetail(B) {
+  const btc = PX.BTCUSDT && PX.BTCUSDT.p;
+  const money = (sats) => { if (!isNum(sats)) return '—'; const b = sats / 1e8; return `${fmtNum(b, b < 0.1 ? 4 : 3, b < 0.1 ? 4 : 3)} BTC${btc ? ` · ${usd(b * btc, [2, 2])}${toBRL(b * btc) ? ' · ' + brl(toBRL(b * btc), [2, 2]) : ''}` : ''}`; };
+  const fd = (v) => (isNum(v) ? fmtNum(v, 0, v < 10 ? 2 : 1) : '—');
+  // custo de uma transação comum (1 entrada → 2 saídas, ~141 vB) na taxa indicada
+  const txCost = (rate) => (isNum(rate) && btc ? `${usd(rate * 141 / 1e8 * btc, [2, 2])}${toBRL(rate * 141 / 1e8 * btc) ? ' · ' + brl(toBRL(rate * 141 / 1e8 * btc), [2, 2]) : ''}` : '—');
+  const feeBar = (r) => {
+    if (!r || r.length < 2) return '';
+    const mx = Math.log10(Math.max(...r) + 1) || 1;
+    const lbl = [L('mín', 'min'), '10%', '25%', L('mediana', 'median'), '75%', '90%', L('máx', 'max')];
+    return `<div class="oc-fees">${r.map((v, i) => `<div title="${esc(lbl[i] || '')}: ${esc(fd(v))} sat/vB"><i style="height:${Math.max(6, Math.log10(v + 1) / mx * 100)}%;background:${feeTone(v)}"></i><span>${esc(fd(v))}</span><em>${esc(lbl[i] || '')}</em></div>`).join('')}</div>`;
+  };
+  const row = (k, v) => `<div class="oc-dr"><span>${esc(k)}</span><b>${v}</b></div>`;
+  if (OCB.sel && OCB.sel.k === 'n') {
+    const x = B.next[OCB.sel.i]; if (!x) return '';
+    const last = OCB.sel.i === B.next.length - 1 && B.next.length >= 4;
+    return `<div class="oc-dh"><b>${esc(OCB.sel.i === 0 ? L('Próximo bloco (montado com a fila)', 'Next block (built from the queue)') : L(`Bloco projetado nº ${OCB.sel.i + 1} da fila`, `Projected block #${OCB.sel.i + 1}`))}</b><span class="faint small">${esc(last ? L('inclui o restante da fila', 'includes the rest of the queue') : L(`deve sair em ~${(OCB.sel.i + 1) * 10} min (média de um bloco a cada 10 min)`, `expected in ~${(OCB.sel.i + 1) * 10} min`))}</span></div>
+      <div class="oc-dg">${row(L('Transações', 'Transactions'), esc(fmtNum(x.n, 0, 0)))}${row(L('Tamanho virtual', 'Virtual size'), esc(fmtNum(x.vsize / 1e6, 2, 2) + ' MvB'))}${row(L('Taxa mediana', 'Median fee'), esc(fd(x.fee) + ' sat/vB'))}${row(L('Para entrar neste bloco', 'To get into this block'), esc(L(`pagar ≥ ${fd(x.range[0])} sat/vB`, `pay ≥ ${fd(x.range[0])} sat/vB`)))}${row(L('Custo de uma transação comum (~141 vB) na mediana', 'Cost of a typical tx (~141 vB) at median'), esc(txCost(x.fee)))}${row(L('Taxas somadas', 'Total fees'), esc(money(x.fees)))}</div>
+      ${feeBar(x.range)}<p class="panel-note">${esc(L('As barras mostram a faixa de taxas das transações deste bloco (da mais barata à mais cara). Quem paga mais entra antes.', 'Bars show the fee range in this block (cheapest to priciest). Higher fees get in first.'))}</p>`;
+  }
+  const x = B.blocks.find((b) => OCB.sel && b.h === OCB.sel.h) || B.blocks[0]; if (!x) return '';
+  const subsidy = isNum(x.reward) && isNum(x.fees) ? x.reward - x.fees : null;
+  return `<div class="oc-dh"><b>${esc(L('Bloco', 'Block'))} ${esc(fmtNum(x.h, 0, 0))}</b><span class="faint small">${esc(fmtDateTime(x.t))} · ${esc(ago(x.t))}</span><a class="link-btn" href="${esc(safeUrl('https://mempool.space/pt/block/' + (x.id || x.h)))}" target="_blank" rel="noopener noreferrer">${esc(L('ver no mempool.space', 'view on mempool.space'))}${ico('external-link', 14)}</a></div>
+    <div class="oc-dg">${row(L('Minerado por', 'Mined by'), esc(x.pool || '—'))}${row(L('Transações', 'Transactions'), esc(fmtNum(x.n, 0, 0)))}${row(L('Tamanho', 'Size'), esc(fmtNum(x.size / 1e6, 2, 2) + ' MB') + (isNum(x.w) ? ` <span class="faint">(${esc(fmtPct(x.w / 4e6 * 100, 0, false))} ${esc(L('cheio', 'full'))})</span>` : ''))}${row(L('Taxa mediana', 'Median fee'), esc(fd(x.fee) + ' sat/vB'))}${isNum(x.avg) ? row(L('Taxa média', 'Average fee'), esc(fd(x.avg) + ' sat/vB')) : ''}${row(L('Recompensa total', 'Total reward'), esc(money(x.reward)))}${row(L('Subsídio (moedas novas)', 'Subsidy (new coins)'), esc(money(subsidy)))}${row(L('Taxas pagas', 'Fees paid'), esc(money(x.fees)))}</div>
+    ${feeBar(x.range)}${x.id ? `<div class="tiny faint oc-hash" title="hash">${esc(x.id)}</div>` : ''}`;
+}
+ACT.ocBlk = (el) => {
+  OCB.sel = el.dataset.k === 'n' ? { k: 'n', i: +el.dataset.i } : { k: 'm', h: +el.dataset.h };
+  $$('#oc-blocks .oc-cube').forEach((b) => { const on = b === el; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+  const c = CACHE.get('mp-blocks'); if (c) setHTML('#oc-bdet', ocBlockDetail(c.v));
+};
 // ---------- halving e oferta ----------
 function drawOcHalving() {
   const m = CACHE.get('mempool'); const M = m && m.v;
@@ -249,19 +298,36 @@ async function drawOcMining() {
   const seen = new Set(); ds.setData(dd.filter((x) => (seen.has(x.time) ? false : seen.add(x.time))).sort((a, b) => a.time - b.time));
   ch.timeScale().fitContent();
 }
+// ---------- mineradoras listadas: cotação e relevância (fatia do valor de mercado do grupo) ----------
+function drawOcMiners() {
+  const box = $('#oc-miners'); if (!box) return;
+  const c = CACHE.get('miners'); const M = c && c.v;
+  const head = panelHead('building-2', L('Maiores empresas de mineração', 'Largest mining companies'), { sub: esc(L('Mineradoras de bitcoin com ações na bolsa dos EUA. Relevância = fatia de cada uma no valor de mercado somado do grupo (quanto o mercado acha que ela vale).', 'Bitcoin miners listed in the US. Relevance = each one’s share of the group’s combined market value.')), right: stamp('miners') });
+  if (!M) { setHTML(box, head + (HEALTH.miners && HEALTH.miners.ok === false ? emptyBox('database', L('Cotações das mineradoras ainda não publicadas', 'Miner quotes not published yet'), esc(L('O robô do NEXUS traz essas cotações; assim que publicar, aparecem aqui.', 'The NEXUS bot brings these quotes; they appear here once published.'))) : skel(6, 18))); return; }
+  const fx = brlRate(); const rv = fx ? fx.v : null;
+  const list = M.list.filter((x) => isNum(x.p)).slice().sort((a, b) => (b.mcap || 0) - (a.mcap || 0) || b.p - a.p);
+  const tot = sum(list.map((x) => x.mcap || 0));
+  const tier = (sh) => (sh >= 15 ? [L('Gigante', 'Giant'), 'up'] : sh >= 8 ? [L('Grande', 'Large'), 'info'] : sh >= 4 ? [L('Média', 'Mid'), 'signal'] : [L('Menor', 'Small'), 'muted']);
+  const mx = Math.max(...list.map((x) => x.mcap || 0), 1);
+  setHTML(box, head + `<div class="tbl-wrap"><table class="tbl oc-mn"><thead><tr><th>#</th><th>${esc(L('Empresa', 'Company'))}</th><th class="r">${esc(L('Cotação', 'Price'))}</th><th class="r">${esc(L('Dia', 'Day'))}</th><th class="r">${esc(L('Valor de mercado', 'Market cap'))}</th><th style="min-width:180px">${esc(L('Relevância', 'Relevance'))}</th></tr></thead><tbody>${list.map((x, i) => {
+    const sh = tot > 0 && x.mcap ? x.mcap / tot * 100 : null; const [tn, tc] = isNum(sh) ? tier(sh) : ['—', 'muted'];
+    return `<tr><td class="faint">${i + 1}</td><td><b>${esc(x.n)}</b> <span class="faint small">${esc(x.s)}</span></td><td class="r num">${esc(usd(x.p, [2, 2]))}${rv ? `<div class="tiny faint">${esc(brl(x.p * rv, [2, 2]))}</div>` : ''}</td><td class="r">${chg(x.chg, 2, 'sm')}</td><td class="r num">${x.mcap ? esc(fmtCompact(x.mcap)) : '—'}${x.mcap && rv ? `<div class="tiny faint">${esc(fmtCompact(x.mcap * rv, 'BRL'))}</div>` : ''}</td><td>${isNum(sh) ? `<div class="oc-rel"><span class="bar"><i style="width:${(x.mcap / mx * 100).toFixed(1)}%"></i></span><b>${esc(fmtPct(sh, 1, false))}</b><span class="badge oc-t-${tc}">${esc(tn)}</span></div>` : '<span class="faint">—</span>'}</td></tr>`;
+  }).join('')}</tbody></table></div>` + note(L(`Cotações da bolsa dos EUA com atraso de até 30 min (Yahoo, pelo robô do NEXUS); valor de mercado pela planilha pública do companiesmarketcap.com. Leitura de ${fmtDateTime(M.at)}. Algumas também alugam data centers para IA — o valor de mercado reflete o negócio todo, não só a mineração.`, `US quotes delayed up to 30 min; market cap from companiesmarketcap.com. Read ${fmtDateTime(M.at)}. Some also host AI data centers — market cap reflects the whole business.`)));
+}
 function drawOcLinks() {
   setHTML('#oc-links', panelHead('link', L('Para ir mais fundo', 'Go deeper')) + `<div class="row wrap" style="gap:8px 18px">${[
     ['https://mempool.space/pt/', 'mempool.space'], ['https://charts.checkonchain.com/', 'Checkonchain'], ['https://www.bitcoinmagazinepro.com/charts/', 'Bitcoin Magazine Pro'],
     ['https://studio.glassnode.com/', 'Glassnode Studio'], ['https://charts.coinmetrics.io/', 'Coin Metrics Charts'], ['https://charts.bgeometrics.com/', 'BGeometrics'],
   ].map(([u, t]) => extLink(u, t)).join('')}</div>`);
 }
-function onchainDraw() { drawOcNet(); drawOcBlocks(); drawOcHalving(); drawOcFees(); drawOcThermo(); drawOcLadder(); drawOcFlow(); drawOcMining(); drawOcLinks(); }
+function onchainDraw() { drawOcNet(); drawOcBlocks(); drawOcHalving(); drawOcFees(); drawOcThermo(); drawOcLadder(); drawOcFlow(); drawOcMining(); drawOcMiners(); drawOcLinks(); }
 let _ocT = 0;
 onPrice((set) => {
   if (S.page !== 'onchain') return;
   if (set.has('MEMPOOL')) { drawOcNet(); drawOcHalving(); drawOcFees(); }
   if (set.has('MPBLK')) drawOcBlocks();
   if (set.has('MPMIN')) drawOcMining();
+  if (set.has('MINERS') || set.has('FX')) drawOcMiners();
   if (set.has('LAB')) { LAB.D = null; drawOcThermo(); drawOcLadder(); drawOcFlow(); }
   if (set.has('BTCUSDT') && Date.now() - _ocT > 15000) { _ocT = Date.now(); LAB.D = null; drawOcFees(); drawOcThermo(); drawOcLadder(); }
 });

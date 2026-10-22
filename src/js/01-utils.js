@@ -22,6 +22,41 @@ function stripHtml(s) {
   d.innerHTML = String(s).replace(/<(script|style)[\s\S]*?<\/\1>/gi, '');
   return (d.textContent || '').replace(/\s+/g, ' ').trim();
 }
+// Entidades HTML (&nbsp;, &amp;, &ccedil;…) → caractere; feeds RSS chegam com elas, às vezes duas vezes codificadas
+const _ENT = Object.fromEntries('AElig:198,Aacute:193,Acirc:194,Agrave:192,Aring:197,Atilde:195,Auml:196,Ccedil:199,ETH:208,Eacute:201,Ecirc:202,Egrave:200,Euml:203,Iacute:205,Icirc:206,Igrave:204,Iuml:207,Ntilde:209,OElig:338,Oacute:211,Ocirc:212,Ograve:210,Oslash:216,Otilde:213,Ouml:214,Scaron:352,THORN:222,Uacute:218,Ucirc:219,Ugrave:217,Uuml:220,Yacute:221,aacute:225,acirc:226,acute:180,aelig:230,agrave:224,amp:38,aring:229,atilde:227,auml:228,bdquo:8222,brvbar:166,bull:8226,ccedil:231,cedil:184,cent:162,copy:169,curren:164,dagger:8224,deg:176,divide:247,eacute:233,ecirc:234,egrave:232,emsp:8195,ensp:8194,eth:240,euml:235,euro:8364,frac12:189,frac14:188,frac34:190,gt:62,hellip:8230,iacute:237,icirc:238,iexcl:161,igrave:236,iquest:191,iuml:239,laquo:171,ldquo:8220,lrm:8206,lsquo:8216,lt:60,macr:175,mdash:8212,micro:181,middot:183,nbsp:160,ndash:8211,not:172,ntilde:241,oacute:243,ocirc:244,oelig:339,ograve:242,ordf:170,ordm:186,oslash:248,otilde:245,ouml:246,para:182,permil:8240,plusmn:177,pound:163,prime:8242,quot:34,raquo:187,rdquo:8221,reg:174,rlm:8207,rsquo:8217,sbquo:8218,scaron:353,sect:167,shy:173,sup1:185,sup2:178,sup3:179,szlig:223,thinsp:8201,thorn:254,times:215,trade:8482,uacute:250,ucirc:251,ugrave:249,uml:168,uuml:252,yacute:253,yen:165,yuml:255,zwj:8205,zwnj:8204'.split(',').map((x) => { const [k, v] = x.split(':'); return [k, String.fromCodePoint(+v)]; }));
+function decEnt(s) {
+  let t = s === null || s === undefined ? '' : String(s);
+  for (let i = 0; i < 3 && /&(#x?[0-9a-f]+|[a-z]+\d*);/i.test(t); i++) {
+    t = t.replace(/&(#x?[0-9a-f]+|[a-z]+\d*);/gi, (m, e) => {
+      if (e[0] === '#') { const c = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return c > 0 && c < 0x110000 ? String.fromCodePoint(c) : ''; }
+      return _ENT[e] ?? _ENT[e.toLowerCase()] ?? m;
+    });
+  }
+  return t;
+}
+// texto externo "limpo": sem entidades, sem tags, sem espaços duplos (o resultado ainda passa por esc() ao desenhar)
+const cleanTxt = (s) => decEnt(decEnt(s).replace(/<[^>]*>/g, ' ')).replace(/[\u00a0\u2000-\u200b\s]+/g, ' ').trim();
+// Número digitado por brasileiro OU no formato americano: "1.432,17", "1432,17", "1,432.17", "0.005", "R$ 500"
+// "1.432" (ponto seguido de 3 dígitos) é ambíguo: vale como milhar (padrão BR) — parseDecInfo avisa.
+function parseDecInfo(raw) {
+  if (typeof raw === 'number') return { v: Number.isFinite(raw) ? raw : null, amb: false };
+  let s = String(raw ?? '').trim().replace(/\s|R\$|US\$|\$/gi, '');
+  if (!s) return { v: null, amb: false, empty: true };
+  if (!/^-?[\d.,]+$/.test(s) || !/\d/.test(s)) return { v: null, amb: false, bad: true };
+  let amb = false;
+  const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.'), nc = (s.match(/,/g) || []).length, nd = (s.match(/\./g) || []).length;
+  if (lc >= 0 && ld >= 0) s = lc > ld ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  else if (nc) { if (nc === 1 && /^-?[1-9]\d{0,2},\d{3}$/.test(s)) amb = true; s = nc > 1 ? s.replace(/,/g, '') : s.replace(',', '.'); }
+  else if (nd > 1) s = s.replace(/\./g, '');
+  else if (nd === 1 && /^-?[1-9]\d{0,2}\.\d{3}$/.test(s)) { amb = true; s = s.replace('.', ''); }
+  const v = parseFloat(s);
+  // alt = a outra leitura possível ("1.432" → 1,432; "1,000" → 1000)
+  const alt = !amb ? null : nc ? parseFloat(String(raw).replace(/[^\d-]/g, '')) : parseFloat(String(raw).trim().replace(/[^\d.-]/g, ''));
+  return { v: Number.isFinite(v) ? v : null, amb, alt };
+}
+const parseDec = (raw) => parseDecInfo(raw).v;
+// número no formato brasileiro para devolver a um campo ("1.432,17")
+const decOut = (v, max = 8) => (isNum(v) ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: max, useGrouping: true }).format(v) : '');
 function debounce(fn, ms = 250) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 function hashColor(s) {
   const pal = ['#8e98ff', '#31d67f', '#f4b43f', '#ff6170', '#62b4ff', '#c084fc', '#2dd4bf', '#fb923c'];

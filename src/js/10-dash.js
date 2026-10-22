@@ -161,17 +161,16 @@ function registerDashSources() {
     onData: () => _markDirty('TREND'),
   });
   source({
-    id: 'rsi', label: 'RSI BTC/ETH', provider: 'Binance', every: 5 * 60e3, need, persist: true,
+    id: 'rsi', label: L('RSI das moedas escolhidas', 'RSI of chosen coins'), provider: 'Binance', every: 5 * 60e3, need, persist: true,
     run: async () => {
       const out = {};
-      for (const [b, s] of [['BTC', 'BTCUSDT'], ['ETH', 'ETHUSDT']]) {
-        out[b] = {};
+      for (const s of rsiPairs()) {
         const tfs = await Promise.all(['1h', '4h', '1d', '1w'].map((tf) => klines(s, tf, 300)));
-        ['1h', '4h', '1d', '1w'].forEach((tf, i) => { out[b][tf] = lastOf(rsiSeries(tfs[i].map((k) => k.c))); });
+        out[s] = {}; ['1h', '4h', '1d', '1w'].forEach((tf, i) => { out[s][tf] = lastOf(rsiSeries(tfs[i].map((k) => k.c))); });
       }
       return out;
     },
-    validate: (d) => isNum(d.BTC['1d']),
+    validate: (d) => rsiPairs().some((s) => d[s] && isNum(d[s]['1d'])),
     onData: () => _markDirty('RSI'),
   });
   source({
@@ -266,15 +265,31 @@ function rsiState(v) {
   if (v <= 30) return ['up', L('Sobrevendido', 'Oversold')];
   return ['', L('Neutro', 'Neutral')];
 }
+// moedas do painel de RSI (padrão BTC e ETH; você troca qualquer uma pela lista da Binance)
+function rsiPairs() { const a = LS.get('rsi-coins'); const ok = Array.isArray(a) ? a.filter((s) => BY_SYM[s]).slice(0, 2) : []; return ok.length === 2 ? ok : ['BTCUSDT', 'ETHUSDT']; }
 function drawRsi() {
   const box = $('#d-rsi'); if (!box) return;
   const r = CACHE.get('rsi');
-  const head = panelHead('activity', L('Força relativa (RSI 14)', 'Relative strength (RSI 14)'), { sub: esc(L('Acima de 70: esticado para cima. Abaixo de 30: esticado para baixo.', 'Above 70: stretched up. Below 30: stretched down.')), right: stamp('rsi') });
-  if (!r) { box.innerHTML = head + skel(8, 14); return; }
+  const head = panelHead('activity', L('Força relativa (RSI 14)', 'Relative strength (RSI 14)'), { sub: esc(L('Acima de 70: esticado para cima. Abaixo de 30: esticado para baixo. Clique na moeda para trocar.', 'Above 70: stretched up. Below 30: stretched down. Click the coin to change it.')), right: stamp('rsi') });
+  const pairs = rsiPairs();
   const tfn = { '1h': '1h', '4h': '4h', '1d': L('1D', '1D'), '1w': L('1S', '1W') };
-  const grp = (b) => `<div class="rsi-g"><div class="rsi-h">${coinLogo({ ...BY_BASE[b], logo: LOGOS[BY_BASE[b].cg] }, 20)}${esc(b)}</div>${['1h', '4h', '1d', '1w'].map((tf) => { const v = r.v[b] && r.v[b][tf]; const [cls, st] = rsiState(v); return `<div class="rsi-r"><span class="tf">${tfn[tf]}</span><div class="rsi-bar">${isNum(v) ? `<i style="left:${clamp(v, 0, 100)}%"></i>` : ''}</div><span class="v">${isNum(v) ? fmtNum(v, 1, 1) : '—'}</span><span class="st ${cls}">${esc(st)}</span></div>`; }).join('')}</div>`;
-  box.innerHTML = head + grp('BTC') + grp('ETH') + note(L('Método de Wilder sobre as velas da Binance; a vela atual entra no cálculo (como nas corretoras).', 'Wilder method on Binance candles; the current candle is included (as on exchanges).'));
+  const grp = (s, i) => {
+    const c = BY_SYM[s]; const d = r && r.v && r.v[s];
+    const q = PX[s];
+    return `<div class="rsi-g"><button class="rsi-h rsi-pick" data-act="rsiPick" data-i="${i}" title="${esc(L('Trocar moeda', 'Change coin'))}">${coinLogo({ ...c, logo: LOGOS[c.cg] }, 20)}<b>${esc(c.b)}</b>${q ? `<span class="small faint">${esc(usd(q.p))}</span>` : ''}<span class="tiny faint" style="margin-left:auto">${esc(L('trocar', 'change'))} ${ico('chevron-down', 13)}</span></button>${['1h', '4h', '1d', '1w'].map((tf) => { const v = d && d[tf]; const [cls, st] = rsiState(v); return `<div class="rsi-r"><span class="tf">${tfn[tf]}</span><div class="rsi-bar">${isNum(v) ? `<i style="left:${clamp(v, 0, 100)}%"></i>` : ''}</div><span class="v">${isNum(v) ? fmtNum(v, 1, 1) : d ? '—' : '…'}</span><span class="st ${cls}">${esc(d ? st : L('carregando', 'loading'))}</span></div>`; }).join('')}</div>`;
+  };
+  if (!r) { box.innerHTML = head + skel(8, 14); return; }
+  if (!pairs.every((s) => r.v && r.v[s]) && !drawRsi._kick) { drawRsi._kick = true; setTimeout(() => { drawRsi._kick = false; }, 15000); runSource('rsi', { force: true }); }
+  box.innerHTML = head + pairs.map(grp).join('') + note(L('Método de Wilder sobre as velas da Binance; a vela atual entra no cálculo (como nas corretoras).', 'Wilder method on Binance candles; the current candle is included (as on exchanges).'));
 }
+ACT.rsiPick = (el) => {
+  const i = +el.dataset.i; const pairs = rsiPairs();
+  openCoinPicker({ title: L('Moeda do painel de RSI', 'RSI panel coin'), exclude: pairs.filter((_, j) => j !== i), onPick: (p) => {
+    if (p.kind !== 'b' || !BY_SYM[p.s]) { toast(L('O RSI usa as velas da Binance: escolha uma moeda da lista principal (tempo real).', 'RSI uses Binance candles: pick a main-list coin.'), { type: 'warn' }); return; }
+    const np = [...pairs]; np[i] = p.s; LS.set('rsi-coins', np);
+    drawRsi(); runSource('rsi', { force: true });
+  } });
+};
 function moverList(dir) {
   const mv = typeof tickerMovers === 'function' ? tickerMovers() : { up: [], down: [] };
   const top = dir > 0 ? mv.up : mv.down;

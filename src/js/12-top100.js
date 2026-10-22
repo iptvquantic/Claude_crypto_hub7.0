@@ -53,7 +53,7 @@ function drawT100() {
   const tr = rows.map((r) => `<tr class="${r.sym ? 'click' : ''}" ${r.sym ? `data-act="go" data-to="chart" data-params='${esc(JSON.stringify({ s: r.sym }))}'` : ''} data-id="${esc(r.id)}">
     <td class="r rank">${r.rank || '—'}</td>
     <td><div class="coin">${coinLogo({ b: r.s, logo: r.logo, cg: r.id }, 28)}<div><div class="nm">${esc(r.n)}</div><div class="sy">${esc(r.s)}</div></div></div></td>
-    <td class="r num" data-f="p">${r.live ? '<i class="dot-live" title="Binance ao vivo"></i>' : ''}${esc(usd(r.p))}</td>
+    <td class="r num" data-f="p">${r.live ? '<i class="dot-live" title="Binance ao vivo"></i>' : ''}${esc(usd(r.p))}${toBRL(r.p) ? `<div class="tiny faint">${esc(brl(toBRL(r.p)))}</div>` : ''}</td>
     <td class="r">${chg(r.h1, 2, 'sm')}</td><td class="r" data-f="d1">${chg(r.d1, 2, 'sm')}</td><td class="r">${chg(r.d7, 2, 'sm')}</td><td class="r">${chg(r.d30, 2, 'sm')}</td>
     <td class="r">${esc(fmtCompact(r.mcap))}</td><td class="r">${esc(fmtCompact(r.vol))}</td>
     <td class="r" style="width:120px"><div style="width:110px;margin-left:auto">${sparkSVG(r.spark ? r.spark.filter((_, i) => i % 4 === 0) : [], { w: 110, h: 30 })}</div></td></tr>`).join('');
@@ -64,7 +64,7 @@ function updT100Live(set) {
   $$('#t100-box tr[data-id]').forEach((tr) => {
     const u = BY_CG[tr.dataset.id]; if (!u || !set.has(u.s)) return;
     const q = PX[u.s];
-    setHTML($('[data-f=p]', tr), `<i class="dot-live" title="Binance ao vivo"></i>${esc(usd(q.p))}`);
+    setHTML($('[data-f=p]', tr), `<i class="dot-live" title="Binance ao vivo"></i>${esc(usd(q.p))}${toBRL(q.p) ? `<div class="tiny faint">${esc(brl(toBRL(q.p)))}</div>` : ''}`);
     setHTML($('[data-f=d1]', tr), chg(q.chg, 2, 'sm'));
   });
 }

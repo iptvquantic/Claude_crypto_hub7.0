@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-2GANgSIQsxJW83D+odRwPVrqgY1AHAMCza75w35KETY=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ZvC3ymiTS1Sf8GR9gsVQ1TwK2JPuMGwL1nAqu2NbzDI=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -1453,6 +1453,119 @@ a.oc-cube:hover { color: #fff; filter: brightness(1.12); }
 .tk-mbars .bs i { display: block; width: 30%; max-width: 12px; border-radius: 3px 3px 1px 1px; }
 .tk-mbars span { font-size: 11.5px; color: var(--text-3); }
 
+/* ===== 3.2: Vault (formulário seguro, conferência, gráfico do ativo) ===== */
+.form-msg.warn { color: var(--stale); }
+.vf-warn { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--down-bg, rgba(255,97,112,.12)); color: var(--text); font-size: 13px; line-height: 1.45; }
+.vf-warn .ico { color: var(--down); flex: none; margin-top: 2px; }
+.vf-warn .btn { margin-left: 6px; vertical-align: middle; }
+#vf .hint b { color: var(--text); font-variant-numeric: tabular-nums; }
+.modal.nudge { animation: nx-nudge .32s ease; }
+@keyframes nx-nudge { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.v-pos tr.closed td { opacity: .62; }
+.v-pos tr.closed:hover td { opacity: 1; }
+.v-check { border-color: var(--stale); }
+.v-check .panel-t .ico { color: var(--stale); }
+.ch-tip { position: absolute; z-index: 5; display: none; pointer-events: none; min-width: 170px; max-width: 280px; padding: 9px 11px; border-radius: 10px; background: var(--panel-3); border: 1px solid var(--line-2); box-shadow: 0 8px 24px rgba(0,0,0,.35); font-size: 12.5px; line-height: 1.5; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ch-tip b { color: var(--text); }
+.ch-tip .up { color: var(--up); } .ch-tip .down { color: var(--down); }
+.vf-warn.soft { background: var(--signal-bg); }
+.vf-warn.soft .ico { color: var(--stale); }
+
+/* ===== 3.2: Gráfico (médias à escolha, legenda colorida, RSI) ===== */
+.ch-ind { align-items: center; }
+.ch-ma { display: inline-flex; align-items: center; gap: 2px; height: 30px; padding: 0 2px 0 9px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); }
+.ch-ma > i { width: 12px; height: 3px; border-radius: 2px; background: var(--c); margin-right: 4px; }
+.ch-ma-t { font: inherit; font-size: 12px; font-weight: 700; color: var(--c); background: none; border: 0; cursor: pointer; padding: 2px 3px; border-radius: 6px; }
+.ch-ma-t:hover { background: var(--panel-3); }
+.ch-ma-n { width: 54px; height: 24px; padding: 0 4px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; }
+.ch-ma-n:hover { border-color: var(--line-2); }
+.ch-ma-n:focus { outline: none; border-color: var(--c); background: var(--panel); }
+.ch-ma-x { display: grid; place-items: center; width: 24px; height: 24px; border: 0; background: none; color: var(--text-3); border-radius: 6px; cursor: pointer; }
+.ch-ma-x:hover { color: var(--down); background: var(--panel-3); }
+.ch-sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+.ch-legend { display: flex; flex-direction: column; gap: 3px; min-height: 22px; font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ch-legend .lg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.ch-legend .lg-d { color: var(--text); }
+.ch-legend em { font-style: normal; font-weight: 750; margin-right: 3px; }
+.ch-legend .lg-o { color: var(--info); }
+.ch-legend .lg-h { color: var(--up); }
+.ch-legend .lg-l { color: var(--down); }
+.ch-legend .lg-c.up { color: var(--up); } .ch-legend .lg-c.down { color: var(--down); }
+.ch-legend .lg-v { color: var(--signal); }
+.ch-legend .chip { font-size: 12px; padding: 1px 7px; }
+.ch-rsi-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13px; }
+.ch-rsi-h b { color: var(--accent); }
+@media (max-width: 640px) { .ch-sep { display: none; } .ch-legend { font-size: 12px; } }
+
+/* ===== 3.2: Índices e câmbio — cards sem vazamento ===== */
+.mk-card { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mk-t { display: flex; align-items: flex-start; gap: 6px; font-size: 13.5px; font-weight: 650; color: var(--text-2); line-height: 1.3; min-width: 0; }
+.mk-t span { overflow-wrap: anywhere; }
+.mk-v { font-size: clamp(20px, 2vw, 26px); font-weight: 760; line-height: 1.15; margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mk-v.sm { font-size: clamp(18px, 1.7vw, 22px); }
+.mk-brl { font-size: 13.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.mk-brl b { color: var(--accent); font-weight: 700; }
+.mk-s { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13px; color: var(--text-2); min-height: 4px; }
+.mk-f { font-size: 12px; color: var(--text-3); line-height: 1.4; overflow-wrap: anywhere; }
+.mk-st { margin-top: auto; padding-top: 6px; display: flex; min-width: 0; }
+.mk-st .stamp { max-width: 100%; }
+
+/* ===== 3.2: ETFs por moeda ===== */
+.g-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .g-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.etf-chips .btn { gap: 6px; }
+.etf-k .kpi .v { font-size: clamp(18px, 1.8vw, 24px); }
+.etf-viz { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--r-md, 12px); background: var(--panel-2); }
+.etf-stack-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.etf-stack { display: flex; height: 18px; border-radius: 9px; overflow: hidden; gap: 2px; background: var(--panel-3); }
+.etf-stack i { display: block; min-width: 3px; }
+.etf-bars { display: flex; flex-direction: column; gap: 7px; }
+.etf-bar { display: grid; grid-template-columns: minmax(120px, 210px) 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.etf-bar .t { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.etf-bar .t i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.etf-bar .bar { height: 10px; border-radius: 5px; background: var(--panel-3); overflow: hidden; }
+.etf-bar .bar span { display: block; height: 100%; border-radius: 5px; }
+.etf-bar .v { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+@media (max-width: 560px) { .etf-bar { grid-template-columns: 1fr auto; } .etf-bar .bar { grid-column: 1 / -1; order: 3; } }
+.rsi-pick { width: 100%; border: 1px solid transparent; background: none; color: var(--text); font: inherit; font-weight: 720; cursor: pointer; padding: 4px 6px; margin-left: -6px; border-radius: var(--r-sm); text-align: left; }
+.rsi-pick:hover { background: var(--panel-2); border-color: var(--line); }
+
+/* ===== 3.2: blocos interativos ===== */
+button.oc-cube { font: inherit; text-align: left; cursor: pointer; border: 0; transition: transform .15s ease, filter .15s ease, box-shadow .15s ease; }
+button.oc-cube.next { border: 1px dashed var(--line-2); border-left: 5px solid var(--fc); }
+button.oc-cube:hover { transform: translateY(-3px); filter: brightness(1.1); }
+button.oc-cube:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.oc-cube.on { box-shadow: 0 0 0 3px var(--accent), 0 10px 24px rgba(0,0,0,.35); transform: translateY(-3px); }
+.oc-cube.new { animation: oc-in .9s cubic-bezier(.2,.8,.2,1); }
+@keyframes oc-in { 0% { transform: translateX(-40px) scale(.9); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.oc-sep { position: relative; display: flex; align-items: flex-start; }
+.oc-sep span { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); font-size: 10.5px; font-weight: 700; color: var(--text-3); background: var(--panel); padding: 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+.oc-bdet { margin-top: 12px; padding: 14px 16px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); }
+.oc-dh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 10px; }
+.oc-dh b { font-size: 15.5px; }
+.oc-dg { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 6px 22px; }
+.oc-dr { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.oc-dr span { color: var(--text-2); }
+.oc-dr b { text-align: right; font-variant-numeric: tabular-nums; font-weight: 680; }
+.oc-fees { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; height: 120px; margin-top: 14px; align-items: end; }
+.oc-fees > div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 3px; min-width: 0; }
+.oc-fees i { width: 100%; max-width: 46px; border-radius: 6px 6px 2px 2px; }
+.oc-fees span { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.oc-fees em { font-style: normal; font-size: 11px; color: var(--text-3); }
+.oc-hash { margin-top: 8px; overflow-wrap: anywhere; font-family: ui-monospace, monospace; }
+.oc-rel { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; }
+.oc-rel .bar { height: 8px; border-radius: 4px; background: var(--panel-3); overflow: hidden; }
+.oc-rel .bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--signal)); }
+.oc-rel b { font-variant-numeric: tabular-nums; font-size: 13px; }
+.badge.oc-t-up { background: var(--up-bg, rgba(49,214,127,.14)); color: var(--up); }
+.badge.oc-t-info { background: var(--info-bg); color: var(--info); }
+.badge.oc-t-signal { background: var(--signal-bg); color: var(--stale); }
+.etf-chips .coin-logo, .etf-chips .coin-fb { width: 18px; height: 18px; font-size: 7px !important; }
+.rsi-pick .coin-logo, .rsi-pick .coin-fb { width: 22px; height: 22px; }
+.oc-chain { padding-top: 22px; position: relative; }
+.oc-sep span { top: -20px; }
+[data-theme="light"] .ch-ma-t, [data-theme="light"] .ch-legend .lg-row span[style] { filter: brightness(.62) saturate(1.3); }
+
 </style>
 </head>
 <body>
@@ -1504,8 +1617,8 @@ a.oc-cube:hover { color: #fff; filter: brightness(1.12); }
 // com fonte e data de conferência) ou AUSENTE ("—"). Nada de constante disfarçada de dado.
 // =====================================================================
 const NX = {
-  version: '3.1.0',
-  build: '20261016-1047-6668248',
+  version: '3.2.0',
+  build: '20261022-0953-9aa7e73',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',
@@ -1659,6 +1772,41 @@ function stripHtml(s) {
   d.innerHTML = String(s).replace(/<(script|style)[\s\S]*?<\/\1>/gi, '');
   return (d.textContent || '').replace(/\s+/g, ' ').trim();
 }
+// Entidades HTML (&nbsp;, &amp;, &ccedil;…) → caractere; feeds RSS chegam com elas, às vezes duas vezes codificadas
+const _ENT = Object.fromEntries('AElig:198,Aacute:193,Acirc:194,Agrave:192,Aring:197,Atilde:195,Auml:196,Ccedil:199,ETH:208,Eacute:201,Ecirc:202,Egrave:200,Euml:203,Iacute:205,Icirc:206,Igrave:204,Iuml:207,Ntilde:209,OElig:338,Oacute:211,Ocirc:212,Ograve:210,Oslash:216,Otilde:213,Ouml:214,Scaron:352,THORN:222,Uacute:218,Ucirc:219,Ugrave:217,Uuml:220,Yacute:221,aacute:225,acirc:226,acute:180,aelig:230,agrave:224,amp:38,aring:229,atilde:227,auml:228,bdquo:8222,brvbar:166,bull:8226,ccedil:231,cedil:184,cent:162,copy:169,curren:164,dagger:8224,deg:176,divide:247,eacute:233,ecirc:234,egrave:232,emsp:8195,ensp:8194,eth:240,euml:235,euro:8364,frac12:189,frac14:188,frac34:190,gt:62,hellip:8230,iacute:237,icirc:238,iexcl:161,igrave:236,iquest:191,iuml:239,laquo:171,ldquo:8220,lrm:8206,lsquo:8216,lt:60,macr:175,mdash:8212,micro:181,middot:183,nbsp:160,ndash:8211,not:172,ntilde:241,oacute:243,ocirc:244,oelig:339,ograve:242,ordf:170,ordm:186,oslash:248,otilde:245,ouml:246,para:182,permil:8240,plusmn:177,pound:163,prime:8242,quot:34,raquo:187,rdquo:8221,reg:174,rlm:8207,rsquo:8217,sbquo:8218,scaron:353,sect:167,shy:173,sup1:185,sup2:178,sup3:179,szlig:223,thinsp:8201,thorn:254,times:215,trade:8482,uacute:250,ucirc:251,ugrave:249,uml:168,uuml:252,yacute:253,yen:165,yuml:255,zwj:8205,zwnj:8204'.split(',').map((x) => { const [k, v] = x.split(':'); return [k, String.fromCodePoint(+v)]; }));
+function decEnt(s) {
+  let t = s === null || s === undefined ? '' : String(s);
+  for (let i = 0; i < 3 && /&(#x?[0-9a-f]+|[a-z]+\d*);/i.test(t); i++) {
+    t = t.replace(/&(#x?[0-9a-f]+|[a-z]+\d*);/gi, (m, e) => {
+      if (e[0] === '#') { const c = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return c > 0 && c < 0x110000 ? String.fromCodePoint(c) : ''; }
+      return _ENT[e] ?? _ENT[e.toLowerCase()] ?? m;
+    });
+  }
+  return t;
+}
+// texto externo "limpo": sem entidades, sem tags, sem espaços duplos (o resultado ainda passa por esc() ao desenhar)
+const cleanTxt = (s) => decEnt(decEnt(s).replace(/<[^>]*>/g, ' ')).replace(/[\u00a0\u2000-\u200b\s]+/g, ' ').trim();
+// Número digitado por brasileiro OU no formato americano: "1.432,17", "1432,17", "1,432.17", "0.005", "R$ 500"
+// "1.432" (ponto seguido de 3 dígitos) é ambíguo: vale como milhar (padrão BR) — parseDecInfo avisa.
+function parseDecInfo(raw) {
+  if (typeof raw === 'number') return { v: Number.isFinite(raw) ? raw : null, amb: false };
+  let s = String(raw ?? '').trim().replace(/\s|R\$|US\$|\$/gi, '');
+  if (!s) return { v: null, amb: false, empty: true };
+  if (!/^-?[\d.,]+$/.test(s) || !/\d/.test(s)) return { v: null, amb: false, bad: true };
+  let amb = false;
+  const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.'), nc = (s.match(/,/g) || []).length, nd = (s.match(/\./g) || []).length;
+  if (lc >= 0 && ld >= 0) s = lc > ld ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  else if (nc) { if (nc === 1 && /^-?[1-9]\d{0,2},\d{3}$/.test(s)) amb = true; s = nc > 1 ? s.replace(/,/g, '') : s.replace(',', '.'); }
+  else if (nd > 1) s = s.replace(/\./g, '');
+  else if (nd === 1 && /^-?[1-9]\d{0,2}\.\d{3}$/.test(s)) { amb = true; s = s.replace('.', ''); }
+  const v = parseFloat(s);
+  // alt = a outra leitura possível ("1.432" → 1,432; "1,000" → 1000)
+  const alt = !amb ? null : nc ? parseFloat(String(raw).replace(/[^\d-]/g, '')) : parseFloat(String(raw).trim().replace(/[^\d.-]/g, ''));
+  return { v: Number.isFinite(v) ? v : null, amb, alt };
+}
+const parseDec = (raw) => parseDecInfo(raw).v;
+// número no formato brasileiro para devolver a um campo ("1.432,17")
+const decOut = (v, max = 8) => (isNum(v) ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: max, useGrouping: true }).format(v) : '');
 function debounce(fn, ms = 250) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 function hashColor(s) {
   const pal = ['#8e98ff', '#31d67f', '#f4b43f', '#ff6170', '#62b4ff', '#c084fc', '#2dd4bf', '#fb923c'];
@@ -2385,12 +2533,12 @@ function toast(msg, { type = 'info', ms = 4200, action } = {}) {
 
 // ---------- janelas (modal) ----------
 let _modal = null;
-function openModal({ title, body, foot = '', wide = false, onOpen, onClose, label }) {
+function openModal({ title, body, foot = '', wide = false, onOpen, onClose, label, guard }) {
   closeModal();
   const sc = $('#scrim');
   sc.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(label || title)}"><div class="modal-h"><h2 class="modal-t">${esc(title)}</h2><button class="icon-btn" data-act="closeModal" aria-label="${esc(L('Fechar', 'Close'))}">${ico('x', 18)}</button></div><div class="modal-b">${body}</div>${foot ? `<div class="modal-f">${foot}</div>` : ''}</div>`;
   sc.classList.add('open');
-  _modal = { el: sc.firstElementChild, onClose, prevFocus: document.activeElement };
+  _modal = { el: sc.firstElementChild, onClose, guard, prevFocus: document.activeElement };
   setTimeout(() => { const f = sc.querySelector('[autofocus], input:not([type=hidden]):not(.hp), select, textarea, .btn.pri'); if (f) f.focus(); }, 30);
   if (onOpen) onOpen(_modal.el);
   return _modal.el;
@@ -2403,7 +2551,14 @@ function closeModal() {
   if (m && m.prevFocus && m.prevFocus.focus) m.prevFocus.focus();
 }
 ACT.closeModal = closeModal;
-document.addEventListener('mousedown', (e) => { if (e.target.id === 'scrim' && !e.target.dataset.static) closeModal(); });
+// janela com dados digitados (guard) não fecha por clique fora nem por Esc — só por Cancelar/Salvar/X
+function modalGuarded() {
+  if (!_modal || !_modal.guard) return false;
+  let g = false; try { g = !!_modal.guard(); } catch { g = false; }
+  if (g) { const m = _modal.el; m.classList.remove('nudge'); void m.offsetWidth; m.classList.add('nudge'); toast(L('Você tem dados não salvos: use Salvar ou Cancelar.', 'You have unsaved data: use Save or Cancel.'), { type: 'warn', ms: 2600 }); }
+  return g;
+}
+document.addEventListener('mousedown', (e) => { if (e.target.id === 'scrim' && !e.target.dataset.static && !modalGuarded()) closeModal(); });
 function confirmBox(msg, { ok = L('Confirmar', 'Confirm'), danger = false, title = L('Confirmar', 'Confirm') } = {}) {
   return new Promise((res) => {
     let done = false;
@@ -2463,10 +2618,11 @@ ACT.cmdk = openCmdk;
 
 // ---------- escolher moeda (qualquer cripto) ----------
 let _pick = { cb: null, results: [], exclude: new Set() };
-function openCoinPicker({ title = L('Escolher moeda', 'Pick a coin'), exclude = [], onPick }) {
-  _pick = { cb: onPick, results: [], exclude: new Set(exclude) };
+function openCoinPicker({ title = L('Escolher moeda', 'Pick a coin'), exclude = [], onPick, onCancel }) {
+  _pick = { cb: onPick, results: [], exclude: new Set(exclude), picked: false };
   openModal({
     title,
+    onClose: () => { if (!_pick.picked && onCancel) setTimeout(onCancel, 0); },
     body: `<div class="inp-search">${ico('search', 18)}<input class="inp" id="cp-q" placeholder="${esc(L('Nome ou símbolo (ex.: Bitcoin, SOL)', 'Name or symbol (e.g. Bitcoin, SOL)'))}" autocomplete="off" spellcheck="false"></div>
       <div class="list mt" id="cp-list" style="max-height:52vh;overflow-y:auto"></div>
       <p class="panel-note">${esc(L('Moedas da lista principal atualizam em tempo real (Binance). As outras vêm do CoinGecko e atualizam a cada minuto.', 'Main-list coins update in real time (Binance). Others come from CoinGecko and refresh every minute.'))}</p>`,
@@ -2502,7 +2658,7 @@ function openCoinPicker({ title = L('Escolher moeda', 'Pick a coin'), exclude = 
         let pick;
         if (b.dataset.k === 'b') { const c = cur[+b.dataset.i]; pick = { kind: 'b', s: c.s, b: c.b, n: c.n, cg: c.cg, c: c.c, logo: LOGOS[c.cg] || '' }; }
         else { const c = _pick.results[+b.dataset.i]; pick = { kind: 'g', s: null, b: (c.symbol || '').toUpperCase().slice(0, 12), n: c.name, cg: c.id, c: hashColor(c.id), logo: c.large || c.thumb || '' }; }
-        const cb = _pick.cb; closeModal(); if (cb) cb(pick);
+        const cb = _pick.cb; _pick.picked = true; closeModal(); if (cb) cb(pick);
       });
       draw();
     },
@@ -2588,7 +2744,7 @@ document.addEventListener('change', (e) => { const el = e.target.closest('[data-
 document.addEventListener('input', (e) => { const el = e.target.closest('[data-inp]'); if (el && ACT[el.dataset.inp]) ACT[el.dataset.inp](el, e); });
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if ($('#scrim.open')) closeModal(); else openCmdk(); return; }
-  if (e.key === 'Escape') { if ($('#scrim.open')) { closeModal(); return; } if ($('#ai.open')) { aiOpen(false); return; } closeMenus(); document.body.classList.remove('sb-open'); }
+  if (e.key === 'Escape') { if ($('#scrim.open')) { if (!modalGuarded()) closeModal(); return; } if ($('#ai.open')) { aiOpen(false); return; } closeMenus(); document.body.classList.remove('sb-open'); }
   if (e.key === 'Enter' && e.target.id === 'ai-in' && !e.shiftKey) { e.preventDefault(); ACT.aiSend(); }
   // seções com abas: setas trocam a aba
   if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && e.target.matches('.seg button')) {
@@ -3386,17 +3542,16 @@ function registerDashSources() {
     onData: () => _markDirty('TREND'),
   });
   source({
-    id: 'rsi', label: 'RSI BTC/ETH', provider: 'Binance', every: 5 * 60e3, need, persist: true,
+    id: 'rsi', label: L('RSI das moedas escolhidas', 'RSI of chosen coins'), provider: 'Binance', every: 5 * 60e3, need, persist: true,
     run: async () => {
       const out = {};
-      for (const [b, s] of [['BTC', 'BTCUSDT'], ['ETH', 'ETHUSDT']]) {
-        out[b] = {};
+      for (const s of rsiPairs()) {
         const tfs = await Promise.all(['1h', '4h', '1d', '1w'].map((tf) => klines(s, tf, 300)));
-        ['1h', '4h', '1d', '1w'].forEach((tf, i) => { out[b][tf] = lastOf(rsiSeries(tfs[i].map((k) => k.c))); });
+        out[s] = {}; ['1h', '4h', '1d', '1w'].forEach((tf, i) => { out[s][tf] = lastOf(rsiSeries(tfs[i].map((k) => k.c))); });
       }
       return out;
     },
-    validate: (d) => isNum(d.BTC['1d']),
+    validate: (d) => rsiPairs().some((s) => d[s] && isNum(d[s]['1d'])),
     onData: () => _markDirty('RSI'),
   });
   source({
@@ -3491,15 +3646,31 @@ function rsiState(v) {
   if (v <= 30) return ['up', L('Sobrevendido', 'Oversold')];
   return ['', L('Neutro', 'Neutral')];
 }
+// moedas do painel de RSI (padrão BTC e ETH; você troca qualquer uma pela lista da Binance)
+function rsiPairs() { const a = LS.get('rsi-coins'); const ok = Array.isArray(a) ? a.filter((s) => BY_SYM[s]).slice(0, 2) : []; return ok.length === 2 ? ok : ['BTCUSDT', 'ETHUSDT']; }
 function drawRsi() {
   const box = $('#d-rsi'); if (!box) return;
   const r = CACHE.get('rsi');
-  const head = panelHead('activity', L('Força relativa (RSI 14)', 'Relative strength (RSI 14)'), { sub: esc(L('Acima de 70: esticado para cima. Abaixo de 30: esticado para baixo.', 'Above 70: stretched up. Below 30: stretched down.')), right: stamp('rsi') });
-  if (!r) { box.innerHTML = head + skel(8, 14); return; }
+  const head = panelHead('activity', L('Força relativa (RSI 14)', 'Relative strength (RSI 14)'), { sub: esc(L('Acima de 70: esticado para cima. Abaixo de 30: esticado para baixo. Clique na moeda para trocar.', 'Above 70: stretched up. Below 30: stretched down. Click the coin to change it.')), right: stamp('rsi') });
+  const pairs = rsiPairs();
   const tfn = { '1h': '1h', '4h': '4h', '1d': L('1D', '1D'), '1w': L('1S', '1W') };
-  const grp = (b) => `<div class="rsi-g"><div class="rsi-h">${coinLogo({ ...BY_BASE[b], logo: LOGOS[BY_BASE[b].cg] }, 20)}${esc(b)}</div>${['1h', '4h', '1d', '1w'].map((tf) => { const v = r.v[b] && r.v[b][tf]; const [cls, st] = rsiState(v); return `<div class="rsi-r"><span class="tf">${tfn[tf]}</span><div class="rsi-bar">${isNum(v) ? `<i style="left:${clamp(v, 0, 100)}%"></i>` : ''}</div><span class="v">${isNum(v) ? fmtNum(v, 1, 1) : '—'}</span><span class="st ${cls}">${esc(st)}</span></div>`; }).join('')}</div>`;
-  box.innerHTML = head + grp('BTC') + grp('ETH') + note(L('Método de Wilder sobre as velas da Binance; a vela atual entra no cálculo (como nas corretoras).', 'Wilder method on Binance candles; the current candle is included (as on exchanges).'));
+  const grp = (s, i) => {
+    const c = BY_SYM[s]; const d = r && r.v && r.v[s];
+    const q = PX[s];
+    return `<div class="rsi-g"><button class="rsi-h rsi-pick" data-act="rsiPick" data-i="${i}" title="${esc(L('Trocar moeda', 'Change coin'))}">${coinLogo({ ...c, logo: LOGOS[c.cg] }, 20)}<b>${esc(c.b)}</b>${q ? `<span class="small faint">${esc(usd(q.p))}</span>` : ''}<span class="tiny faint" style="margin-left:auto">${esc(L('trocar', 'change'))} ${ico('chevron-down', 13)}</span></button>${['1h', '4h', '1d', '1w'].map((tf) => { const v = d && d[tf]; const [cls, st] = rsiState(v); return `<div class="rsi-r"><span class="tf">${tfn[tf]}</span><div class="rsi-bar">${isNum(v) ? `<i style="left:${clamp(v, 0, 100)}%"></i>` : ''}</div><span class="v">${isNum(v) ? fmtNum(v, 1, 1) : d ? '—' : '…'}</span><span class="st ${cls}">${esc(d ? st : L('carregando', 'loading'))}</span></div>`; }).join('')}</div>`;
+  };
+  if (!r) { box.innerHTML = head + skel(8, 14); return; }
+  if (!pairs.every((s) => r.v && r.v[s]) && !drawRsi._kick) { drawRsi._kick = true; setTimeout(() => { drawRsi._kick = false; }, 15000); runSource('rsi', { force: true }); }
+  box.innerHTML = head + pairs.map(grp).join('') + note(L('Método de Wilder sobre as velas da Binance; a vela atual entra no cálculo (como nas corretoras).', 'Wilder method on Binance candles; the current candle is included (as on exchanges).'));
 }
+ACT.rsiPick = (el) => {
+  const i = +el.dataset.i; const pairs = rsiPairs();
+  openCoinPicker({ title: L('Moeda do painel de RSI', 'RSI panel coin'), exclude: pairs.filter((_, j) => j !== i), onPick: (p) => {
+    if (p.kind !== 'b' || !BY_SYM[p.s]) { toast(L('O RSI usa as velas da Binance: escolha uma moeda da lista principal (tempo real).', 'RSI uses Binance candles: pick a main-list coin.'), { type: 'warn' }); return; }
+    const np = [...pairs]; np[i] = p.s; LS.set('rsi-coins', np);
+    drawRsi(); runSource('rsi', { force: true });
+  } });
+};
 function moverList(dir) {
   const mv = typeof tickerMovers === 'function' ? tickerMovers() : { up: [], down: [] };
   const top = dir > 0 ? mv.up : mv.down;
@@ -3583,28 +3754,48 @@ page({
 
 // ---- 11-chart.js ----
 // =====================================================================
-// GRÁFICO — velas da Binance para qualquer moeda da lista, médias móveis,
-// Bandas de Bollinger e volume. A última vela se move ao vivo.
+// GRÁFICO — velas da Binance para qualquer moeda da lista, como numa
+// corretora: mira livre (o preço segue o mouse, dentro ou fora da vela),
+// arrastar para cima/baixo e para os lados, roda para zoom, escala log,
+// médias móveis à sua escolha (MM ou MME, quantas quiser), Bollinger,
+// volume e RSI em painel próprio. Mais velas antigas carregam ao voltar.
 // =====================================================================
-const CH = { s: 'BTCUSDT', tf: '1d', ov: { ma20: true, ma50: true, ma200: true, bb: false, vol: true }, seq: 0, kl: [], cs: null, ch: null, intraday: false };
+const MA_COLORS = ['#f4b43f', '#62b4ff', '#c084fc', '#2dd4bf', '#fb923c', '#f472b6', '#a3e635', '#e879f9'];
+const MA_SUGEST = [7, 9, 12, 20, 21, 26, 50, 100, 120, 144, 200, 300];
+const CH = { s: 'BTCUSDT', tf: '1d', mas: [{ t: 'sma', n: 20, c: 0 }, { t: 'sma', n: 50, c: 1 }, { t: 'sma', n: 200, c: 2 }], vol: true, rsi: true, bb: false, log: false, seq: 0, kl: [], cs: null, ch: null, rch: null, rs: null, intraday: false, more: false, end: false, auto: true };
 const CH_TF = [['15m', '15m'], ['1h', '1h'], ['4h', '4h'], ['1d', '1D'], ['1w', '1S'], ['1M', '1M']];
-const CH_OV = [['ma20', 'MM 20', '#f4b43f'], ['ma50', 'MM 50', '#62b4ff'], ['ma200', 'MM 200', '#c084fc'], ['bb', 'Bollinger (20, 2)', '#8b97b2'], ['vol', 'Volume', '']];
 function chartPrefs() {
   const p = LS.get('chart'); if (!p) return;
   if (p.s && BY_SYM[p.s]) CH.s = p.s;
   if (CH_TF.some(([v]) => v === p.tf)) CH.tf = p.tf;
-  if (p.ov) Object.assign(CH.ov, p.ov);
+  if (Array.isArray(p.mas)) CH.mas = p.mas.filter((m) => m && Number.isInteger(m.n) && m.n >= 2 && m.n <= 500 && (m.t === 'sma' || m.t === 'ema')).slice(0, 8).map((m, i) => ({ t: m.t, n: m.n, c: Number.isInteger(m.c) ? m.c : i }));
+  else if (p.ov) { // preferências da versão anterior (MM 20/50/200 fixas)
+    CH.mas = [[20, 'ma20'], [50, 'ma50'], [200, 'ma200']].filter(([, k]) => p.ov[k] !== false).map(([n], i) => ({ t: 'sma', n, c: i }));
+  }
+  for (const k of ['vol', 'rsi', 'bb', 'log']) if (typeof p[k] === 'boolean') CH[k] = p[k];
+  if (p.ov && typeof p.ov.vol === 'boolean' && typeof p.vol !== 'boolean') CH.vol = p.ov.vol;
 }
-const saveChartPrefs = () => LS.set('chart', { s: CH.s, tf: CH.tf, ov: CH.ov });
+const saveChartPrefs = () => LS.set('chart', { s: CH.s, tf: CH.tf, mas: CH.mas.map(({ t, n, c }) => ({ t, n, c })), vol: CH.vol, rsi: CH.rsi, bb: CH.bb, log: CH.log });
+// cada média guarda a sua cor (remover uma não troca a cor das outras)
+const maColor = (i) => { const m = CH.mas[i]; return MA_COLORS[(m && Number.isInteger(m.c) ? m.c : i) % MA_COLORS.length]; };
+const maFreeColor = () => { const used = new Set(CH.mas.map((m) => m.c)); for (let i = 0; i < MA_COLORS.length; i++) if (!used.has(i)) return i; return CH.mas.length % MA_COLORS.length; };
+const maLabel = (m) => `${m.t === 'ema' ? L('MME', 'EMA') : L('MM', 'MA')} ${m.n}`;
 function chartHeadHtml() {
   const c = BY_SYM[CH.s]; const q = PX[CH.s];
+  const brl = (v) => (isNum(v) && toBRL(v) ? esc(fmtMoney(toBRL(v), 'BRL')) : '');
   return `<button class="btn" data-act="chPick" style="height:46px;padding:0 14px 0 10px">${coinLogo({ ...c, logo: LOGOS[c.cg] }, 30)}<span style="text-align:left;line-height:1.2"><b style="display:block">${esc(c.n)}</b><span class="tiny faint">${esc(c.b)}/USDT · ${esc(L('trocar', 'change'))}</span></span>${ico('chevron-down', 16)}</button>
   <div class="row wrap" style="gap:6px 22px" id="ch-kpis">
-    ${kpiBox(L('Preço', 'Price'), q ? esc(usd(q.p)) : '—', q ? chg(q.chg) + ' <span class="faint">24h</span>' : '', 'ch-k')}
-    ${kpiBox(L('Máxima 24h', '24h high'), q ? esc(usd(q.hi)) : '—', '', 'ch-k')}
-    ${kpiBox(L('Mínima 24h', '24h low'), q ? esc(usd(q.lo)) : '—', '', 'ch-k')}
+    ${kpiBox(L('Preço', 'Price'), q ? esc(usd(q.p)) : '—', q ? `${chg(q.chg)} <span class="faint">24h</span>${toBRL(q.p) ? ` · ${esc(fmtMoney(toBRL(q.p), 'BRL'))}` : ''}` : '', 'ch-k')}
+    ${kpiBox(L('Máxima 24h', '24h high'), q ? `<span class="up">${esc(usd(q.hi))}</span>` : '—', brl(q && q.hi), 'ch-k')}
+    ${kpiBox(L('Mínima 24h', '24h low'), q ? `<span class="down">${esc(usd(q.lo))}</span>` : '—', brl(q && q.lo), 'ch-k')}
     ${kpiBox(L('Volume 24h', '24h volume'), q ? esc(fmtCompact(q.qv)) : '—', '', 'ch-k')}
   </div>`;
+}
+function chartIndHtml() {
+  const chips = CH.mas.map((m, i) => `<span class="ch-ma" style="--c:${maColor(i)}"><i></i><button class="ch-ma-t" data-act="chMaType" data-i="${i}" title="${esc(L('Trocar entre média simples (MM) e exponencial (MME)', 'Toggle simple (MA) / exponential (EMA)'))}">${m.t === 'ema' ? esc(L('MME', 'EMA')) : esc(L('MM', 'MA'))}</button><input class="ch-ma-n" type="text" inputmode="numeric" list="ch-ma-l" maxlength="3" value="${m.n}" data-i="${i}" aria-label="${esc(L('Período da média (dias/velas)', 'Average period (candles)'))}"><button class="ch-ma-x" data-act="chMaDel" data-i="${i}" aria-label="${esc(L('Remover média', 'Remove average'))}">${ico('x', 13)}</button></span>`).join('');
+  const tg = (k, label, icon) => `<button class="btn xs ${CH[k] ? '' : 'ghost'}" data-act="chTog" data-k="${k}" aria-pressed="${CH[k]}">${ico(icon, 14)}${esc(label)}</button>`;
+  return `<span class="small faint" style="margin-right:2px">${esc(L('Médias:', 'Averages:'))}</span>${chips}${CH.mas.length < 8 ? `<button class="btn xs" data-act="chMaAdd" title="${esc(L('Adicionar outra média', 'Add another average'))}">${ico('plus', 14)}${esc(L('Média', 'Average'))}</button>` : ''}<datalist id="ch-ma-l">${MA_SUGEST.map((n) => `<option value="${n}">`).join('')}</datalist>
+    <span class="ch-sep"></span>${tg('vol', 'Volume', 'chart-column')}${tg('rsi', L('RSI 14', 'RSI 14'), 'activity')}${tg('bb', 'Bollinger', 'waves')}`;
 }
 function chartHtml() {
   const p = PAGES.chart;
@@ -3613,21 +3804,25 @@ function chartHtml() {
     <div class="row wrap between" style="gap:14px" id="ch-head">${chartHeadHtml()}</div>
     <div class="row wrap between mt" style="gap:10px">
       <div class="seg-scroll">${seg('chtf', CH_TF.map(([v, l]) => [v, l]), CH.tf)}</div>
-      <div class="row wrap" style="gap:6px" id="ch-ov">${CH_OV.map(([k, l, col]) => `<button class="btn xs ${CH.ov[k] ? '' : 'ghost'}" data-act="chOv" data-k="${k}" aria-pressed="${CH.ov[k]}">${col ? `<i style="width:10px;height:3px;border-radius:2px;background:${col};display:inline-block"></i>` : ico('chart-column', 14)}${esc(l)}</button>`).join('')}</div>
+      <div class="row wrap ch-tools" style="gap:6px"><button class="btn xs ${CH.log ? '' : 'ghost'}" data-act="chLog" aria-pressed="${CH.log}" title="${esc(L('Escala logarítmica', 'Log scale'))}">Log</button><button class="btn xs ${CH.auto ? '' : 'ghost'}" id="ch-auto" data-act="chAuto" title="${esc(L('Ajustar o preço automaticamente (desliga quando você arrasta para cima/baixo)', 'Auto-fit price (turns off when you drag up/down)'))}">${ico('move-vertical', 14)}Auto</button><button class="btn xs ghost" data-act="chFit" title="${esc(L('Voltar para as velas recentes', 'Back to recent candles'))}">${ico('rotate-ccw', 14)}${esc(L('Recentes', 'Recent'))}</button></div>
     </div>
-    <div id="ch-legend" class="small faint mt" style="min-height:20px"></div>
-    <div id="ch-box" style="height:clamp(340px,58vh,620px);margin-top:6px;position:relative"></div>
-    ${note(L('Velas da Binance (par em USDT). Velas diárias, semanais e mensais seguem o dia UTC; as de 15 min a 4 h estão no seu horário. MM = média móvel simples dos fechamentos.', 'Binance candles (USDT pair). Daily, weekly and monthly candles follow the UTC day; 15m–4h are in your local time. MA = simple moving average of closes.'))}
+    <div class="row wrap mt ch-ind" id="ch-ind" style="gap:6px">${chartIndHtml()}</div>
+    <div id="ch-legend" class="ch-legend mt"></div>
+    <div id="ch-box" style="height:clamp(340px,56vh,620px);margin-top:6px;position:relative"></div>
+    <div id="ch-rsi-wrap" style="${CH.rsi ? '' : 'display:none'}"><div class="ch-rsi-h"><b>RSI 14</b> <span id="ch-rsi-v" class="faint"></span><span class="faint tiny">${esc(L('acima de 70: esticado para cima · abaixo de 30: esticado para baixo', 'above 70: overbought · below 30: oversold'))}</span></div><div id="ch-rsi" style="height:150px;position:relative"></div></div>
+    ${note(L('Velas da Binance (par em USDT). Arraste o gráfico para os lados e para cima/baixo; roda do mouse ou pinça dá zoom; arrastar o eixo de preço estica a escala; dois cliques no eixo voltam ao automático. Ao voltar no tempo, velas mais antigas carregam sozinhas. Diárias, semanais e mensais seguem o dia UTC; 15 min a 4 h estão no seu horário. MM = média simples dos fechamentos; MME = média exponencial.', 'Binance candles (USDT pair). Drag sideways and up/down; wheel or pinch zooms; drag the price axis to stretch; double-click the axis for auto. Older candles load as you scroll back. Daily/weekly/monthly follow the UTC day; 15m–4h are local time. MA = simple average of closes; EMA = exponential.'))}
   </section>`;
 }
 async function chartLoad() {
   const seq = ++CH.seq, box = $('#ch-box'); if (!box) return;
   if (!CH.cs) box.innerHTML = `<div class="skel" style="position:absolute;inset:0"></div>`;
+  CH.end = false; CH.more = false;
   try {
-    const kl = await klines(CH.s, CH.tf, CH.tf === '1M' ? 300 : 600);
+    const kl = await klines(CH.s, CH.tf, 1000);
     if (seq !== CH.seq) return;
     if (!kl.length) throw new Error(L('sem velas para este par', 'no candles for this pair'));
     CH.kl = kl.map((k) => ({ ...k }));
+    if (kl.length < 1000) CH.end = true;
     await chartRender(seq);
   } catch (e) {
     if (seq !== CH.seq) return;
@@ -3636,77 +3831,222 @@ async function chartLoad() {
   }
 }
 ACT.chReload = () => chartLoad();
-async function chartRender(seq) {
+// velas mais antigas quando você volta no tempo (até ~8 mil velas)
+async function chartMore() {
+  if (CH.more || CH.end || !CH.kl.length || CH.kl.length > 8000) return;
+  CH.more = true; const seq = CH.seq;
+  try {
+    const first = CH.kl[0];
+    const older = await klines(CH.s, CH.tf, 1000, { endTime: first.t - 1 });
+    if (seq !== CH.seq) return;
+    const add = older.filter((k) => k.t < first.t);
+    if (add.length < 1) { CH.end = true; return; }
+    if (older.length < 1000) CH.end = true;
+    const ts = CH.ch.timeScale(); const r = ts.getVisibleLogicalRange();
+    CH.kl = add.concat(CH.kl);
+    await chartRender(seq, r ? { from: r.from + add.length, to: r.to + add.length } : null);
+  } catch { /* fica com o que já tem */ } finally { CH.more = false; }
+}
+function chartSeriesData() {
+  const kl = CH.kl, closes = kl.map((k) => k.c), intraday = CH.intraday;
+  const mas = CH.mas.map((m) => (m.t === 'ema' ? ema(closes, m.n) : sma(closes, m.n)));
+  const rsi = rsiSeries(closes, 14);
+  const bb = CH.bb ? bollinger(closes, 20, 2) : null;
+  return { closes, mas, rsi, bb, intraday };
+}
+async function chartRender(seq, keepRange) {
   const box = $('#ch-box'); if (!box) return;
   const intraday = ['15m', '1h', '4h'].includes(CH.tf); CH.intraday = intraday;
-  const { ch, c } = await makeChart(box, { intraday, onTheme: () => chartRender(CH.seq) });
-  if (seq !== CH.seq) { ch.remove(); return; }
+  const prevRange = keepRange || (CH.ch && CH.cs ? (() => { try { return CH.ch.timeScale().getVisibleLogicalRange(); } catch { return null; } })() : null);
+  const { ch, c, LWC } = await makeChart(box, { intraday, onTheme: () => chartRender(CH.seq) });
+  if (seq !== CH.seq) { try { ch.remove(); } catch { /* */ } return; }
   CH.ch = ch;
-  const kl = CH.kl, closes = kl.map((k) => k.c);
-  const cs = ch.addCandlestickSeries({ upColor: c.up, downColor: c.down, wickUpColor: c.up, wickDownColor: c.down, borderVisible: false });
+  const MODE = (LWC.CrosshairMode && LWC.CrosshairMode.Normal) ?? 0;
+  ch.applyOptions({
+    crosshair: { mode: MODE, vertLine: { labelVisible: true }, horzLine: { labelVisible: true } },
+    rightPriceScale: { mode: CH.log ? 1 : 0, autoScale: CH.auto, minimumWidth: 86, scaleMargins: { top: 0.08, bottom: CH.vol ? 0.2 : 0.06 } },
+    // no celular, arrastar na vertical continua rolando a página (senão o dedo fica preso no gráfico)
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: !CH_TOUCH() },
+    handleScale: { axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: { time: true, price: true }, mouseWheel: true, pinch: true },
+    timeScale: { rightOffset: 6, barSpacing: 8, minBarSpacing: 0.6 },
+  });
+  const kl = CH.kl; const D = chartSeriesData();
+  const cs = ch.addCandlestickSeries({ upColor: c.up, downColor: c.down, wickUpColor: c.up, wickDownColor: c.down, borderVisible: false, priceLineColor: c.text3 });
   cs.setData(kl.map((k) => ({ time: ctime(k.t, intraday), open: k.o, high: k.h, low: k.l, close: k.c })));
   CH.cs = cs;
   const line = (vals, color, opts = {}) => { const s = ch.addLineSeries({ color, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, ...opts }); s.setData(lineData(kl, vals, intraday)); return s; };
-  const legendVals = {};
-  for (const [k, n] of [['ma20', 20], ['ma50', 50], ['ma200', 200]]) {
-    if (!CH.ov[k]) continue;
-    const v = sma(closes, n); line(v, CH_OV.find((o) => o[0] === k)[2]); legendVals[k] = v;
-  }
-  if (CH.ov.bb) {
-    const b = bollinger(closes, 20, 2); const col = cssVar('--text-3');
-    line(b.up, col, { lineWidth: 1, lineStyle: 2 }); line(b.lo, col, { lineWidth: 1, lineStyle: 2 }); line(b.mid, col, { lineWidth: 1 });
-    legendVals.bb = b;
-  }
-  if (CH.ov.vol) {
+  D.mas.forEach((v, i) => line(v, maColor(i)));
+  if (D.bb) { const col = c.text3; line(D.bb.up, col, { lineWidth: 1, lineStyle: 2 }); line(D.bb.lo, col, { lineWidth: 1, lineStyle: 2 }); line(D.bb.mid, col, { lineWidth: 1 }); }
+  if (CH.vol) {
     const vs = ch.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false });
-    ch.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-    vs.setData(kl.map((k) => ({ time: ctime(k.t, intraday), value: k.qv, color: (k.c >= k.o ? c.up : c.down) + '50' })));
-  }
-  ch.timeScale().setVisibleLogicalRange({ from: Math.max(0, kl.length - (intraday ? 160 : 180)), to: kl.length + 2 });
+    ch.priceScale('vol').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
+    vs.setData(kl.map((k) => ({ time: ctime(k.t, intraday), value: k.qv, color: (k.c >= k.o ? c.up : c.down) + '55' })));
+    CH.vs = vs;
+  } else CH.vs = null;
+  // arrastar para cima/baixo: desliga o ajuste automático do preço (igual às corretoras)
+  chartDragWatch(box);
+  // RSI em painel próprio, sincronizado
+  await chartRsi(seq, D, c, LWC);
+  if (prevRange && keepRange !== false) ch.timeScale().setVisibleLogicalRange(prevRange);
+  else ch.timeScale().setVisibleLogicalRange({ from: Math.max(0, kl.length - (intraday ? 160 : 180)), to: kl.length + 4 });
+  const fp = (v) => esc(fmtNum(v, ...priceDigits(v)));
   const legend = (i) => {
     const k = kl[i]; if (!k) return;
-    const prev = kl[i - 1];
-    const parts = [`<b style="color:var(--text)">${esc(intraday ? fmtDateTime(k.t) : fmtDate(k.t, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b>`,
-      `${L('Abr', 'O')} ${esc(fmtNum(k.o, ...priceDigits(k.o)))}`, `${L('Máx', 'H')} ${esc(fmtNum(k.h, ...priceDigits(k.h)))}`, `${L('Mín', 'L')} ${esc(fmtNum(k.l, ...priceDigits(k.l)))}`, `${L('Fch', 'C')} ${esc(fmtNum(k.c, ...priceDigits(k.c)))}`,
-      prev ? `<span class="${tone(k.c - prev.c)}">${esc(fmtPct((k.c / prev.c - 1) * 100))}</span>` : ''];
-    for (const [key, lbl, col] of CH_OV) {
-      if (!legendVals[key] || key === 'bb') continue;
-      const v = legendVals[key][i]; if (isNum(v)) parts.push(`<span style="color:${col}">${esc(lbl)} ${esc(fmtNum(v, ...priceDigits(v)))}</span>`);
-    }
-    if (legendVals.bb && isNum(legendVals.bb.up[i])) parts.push(`<span>BB ${esc(fmtNum(legendVals.bb.lo[i], ...priceDigits(legendVals.bb.lo[i])))} – ${esc(fmtNum(legendVals.bb.up[i], ...priceDigits(legendVals.bb.up[i])))}</span>`);
-    setHTML('#ch-legend', parts.filter(Boolean).join(' &nbsp; '));
+    const prev = kl[i - 1]; const dir = k.c >= k.o ? 'up' : 'down';
+    const parts = [`<b class="lg-d">${esc(intraday ? fmtDateTime(k.t) : fmtDate(k.t, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b>`,
+      `<span class="lg-i"><em class="lg-o">${esc(L('Abertura', 'Open'))}</em> ${fp(k.o)}</span>`, `<span class="lg-i"><em class="lg-h">${esc(L('Máxima', 'High'))}</em> ${fp(k.h)}</span>`, `<span class="lg-i"><em class="lg-l">${esc(L('Mínima', 'Low'))}</em> ${fp(k.l)}</span>`, `<span class="lg-i"><em class="lg-c ${dir}">${esc(L('Fechamento', 'Close'))}</em> <span class="${dir}">${fp(k.c)}</span></span>`,
+      prev ? `<span class="lg-i chip ${tone(k.c - prev.c) || 'flat'}">${esc(fmtPct((k.c / prev.c - 1) * 100))}</span>` : '',
+      `<span class="lg-i"><em class="lg-v">Vol</em> ${esc(fmtCompact(k.qv))}</span>`];
+    const ma = CH.mas.map((m, j) => { const v = D.mas[j][i]; return isNum(v) ? `<span class="lg-i" style="color:${maColor(j)}"><em>${esc(maLabel(m))}</em> ${fp(v)}</span>` : ''; }).filter(Boolean);
+    if (D.bb && isNum(D.bb.up[i])) ma.push(`<span class="lg-i"><em class="lg-v">BB</em> ${fp(D.bb.lo[i])} – ${fp(D.bb.up[i])}</span>`);
+    setHTML('#ch-legend', `<div class="lg-row">${parts.filter(Boolean).join('')}</div>${ma.length ? `<div class="lg-row">${ma.join('')}</div>` : ''}`);
+    const rv = D.rsi[i]; setHTML('#ch-rsi-v', isNum(rv) ? `<span class="${rv >= 70 ? 'down' : rv <= 30 ? 'up' : ''}">${esc(fmtNum(rv, 1, 1))}</span>` : '—');
   };
+  CH.legend = legend; CH.D = D;
   legend(kl.length - 1);
+  const idxOf = (time) => { if (time === undefined || time === null) return -1; let lo = 0, hi = kl.length - 1; while (lo <= hi) { const m = (lo + hi) >> 1; const t = ctime(kl[m].t, intraday); if (t === time) return m; if (t < time) lo = m + 1; else hi = m - 1; } return -1; };
   ch.subscribeCrosshairMove((param) => {
-    if (!param || param.time === undefined) { legend(kl.length - 1); return; }
-    const i = kl.findIndex((k) => ctime(k.t, intraday) === param.time); if (i >= 0) legend(i);
+    if (!param || param.time === undefined) { legend(kl.length - 1); if (CH.rch) try { CH.rch.clearCrosshairPosition(); } catch { /* */ } return; }
+    const i = idxOf(param.time); if (i >= 0) legend(i);
+    if (CH.rch && CH.rs && i >= 0 && isNum(D.rsi[i])) { try { CH.rch.setCrosshairPosition(D.rsi[i], param.time, CH.rs); } catch { /* */ } }
+  });
+  ch.timeScale().subscribeVisibleLogicalRangeChange((r) => { if (r && r.from < 30) chartMore(); });
+}
+// Arrastar para cima/baixo move o preço (como nas corretoras). A biblioteca só move o preço com o ajuste
+// automático desligado no início do arraste: desligamos ao apertar o botão e religamos se o arraste foi só
+// para os lados (ou foi um clique). Arrastou na vertical: fica manual até clicar em "Auto" ou dar 2 cliques no eixo.
+const CH_TOUCH = () => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } };
+function chartDragWatch(box) {
+  if (box._dragWatch) return; box._dragWatch = true;
+  let st = null;
+  const syncAuto = () => { if (!CH.ch) return; try { const a = CH.ch.priceScale('right').options().autoScale; if (a !== CH.auto) { CH.auto = a; chartAutoBtn(); } } catch { /* */ } };
+  box.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || !CH.ch || (e.pointerType === 'touch' && CH_TOUCH())) return;
+    const r = box.getBoundingClientRect();
+    const onAxis = e.clientX > r.right - 90 || e.clientY > r.bottom - 28;
+    st = { x: e.clientX, y: e.clientY, onAxis, wasAuto: CH.auto, moved: 0 };
+    if (!onAxis && CH.auto) { try { CH.ch.priceScale('right').applyOptions({ autoScale: false }); } catch { /* */ } }
+  }, true);
+  box.addEventListener('pointermove', (e) => { if (st && (e.buttons & 1)) st.moved = Math.max(st.moved, Math.abs(e.clientY - st.y)); }, true);
+  const end = () => {
+    if (!st) return;
+    const s0 = st; st = null;
+    if (s0.onAxis) { setTimeout(syncAuto, 30); return; }
+    if (s0.wasAuto && s0.moved < 8) { try { CH.ch.priceScale('right').applyOptions({ autoScale: true }); } catch { /* */ } }
+    else if (s0.wasAuto) { CH.auto = false; chartAutoBtn(); }
+  };
+  window.addEventListener('pointerup', end, true); box.addEventListener('pointercancel', end, true);
+  box.addEventListener('dblclick', () => setTimeout(syncAuto, 50));
+}
+function chartSetAuto(on) {
+  CH.auto = on;
+  if (CH.ch) try { CH.ch.priceScale('right').applyOptions({ autoScale: on }); } catch { /* */ }
+  chartAutoBtn();
+}
+function chartAutoBtn() { const b = $('#ch-auto'); if (b) { b.classList.toggle('ghost', !CH.auto); b.setAttribute('aria-pressed', String(CH.auto)); } }
+async function chartRsi(seq, D, c, LWC) {
+  const wrap = $('#ch-rsi-wrap'), el = $('#ch-rsi');
+  if (CH.rch) { try { CH.rch.remove(); } catch { /* */ } [...CHARTS].forEach((r) => { if (r.el === el) CHARTS.delete(r); }); CH.rch = null; CH.rs = null; }
+  if (!el || !wrap) return;
+  wrap.style.display = CH.rsi ? '' : 'none';
+  if (!CH.rsi) return;
+  const { ch: rch } = await makeChart(el, { intraday: CH.intraday, priceFmt: (p) => fmtNum(p, 0, 0) });
+  if (seq !== CH.seq) { try { rch.remove(); } catch { /* */ } return; }
+  rch.applyOptions({
+    crosshair: { mode: (LWC.CrosshairMode && LWC.CrosshairMode.Normal) ?? 0 },
+    rightPriceScale: { minimumWidth: 86, autoScale: false, scaleMargins: { top: 0.08, bottom: 0.08 } },
+    timeScale: { visible: false, rightOffset: 6, barSpacing: 8, minBarSpacing: 0.6 },
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: false } },
+  });
+  const kl = CH.kl, intraday = CH.intraday;
+  const rs = rch.addLineSeries({ color: c.accent, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }) });
+  // pontos vazios onde ainda não há RSI: mantém as velas alinhadas com o gráfico de cima
+  rs.setData(kl.map((k, i) => (isNum(D.rsi[i]) ? { time: ctime(k.t, intraday), value: D.rsi[i] } : { time: ctime(k.t, intraday) })));
+  for (const [lv, col] of [[70, c.down], [50, c.text3], [30, c.up]]) rs.createPriceLine({ price: lv, color: col, lineWidth: 1, lineStyle: 2, axisLabelVisible: lv !== 50, title: '' });
+  CH.rch = rch; CH.rs = rs;
+  // os dois gráficos andam juntos
+  let lock = false;
+  const sync = (a, b) => a.timeScale().subscribeVisibleLogicalRangeChange((r) => { if (lock || !r) return; lock = true; try { b.timeScale().setVisibleLogicalRange(r); } catch { /* */ } lock = false; });
+  sync(CH.ch, rch); sync(rch, CH.ch);
+  rch.subscribeCrosshairMove((pm) => {
+    if (!pm || pm.time === undefined) { try { CH.ch.clearCrosshairPosition(); } catch { /* */ } return; }
+    const i = CH.kl.findIndex((k) => ctime(k.t, intraday) === pm.time);
+    if (i >= 0 && CH.legend) CH.legend(i);
+    if (i >= 0) try { CH.ch.setCrosshairPosition(CH.kl[i].c, pm.time, CH.cs); } catch { /* */ }
   });
 }
+// vela fechou: busca as últimas velas sem cache e acrescenta (no máximo 1 pedido a cada 5 s)
+async function chartRoll() {
+  if (CH.rolling || !CH.kl.length) return;
+  CH.rolling = true; const seq = CH.seq;
+  try {
+    const last = CH.kl[CH.kl.length - 1];
+    const fresh = await klines(CH.s, CH.tf, 5, { startTime: last.t, endTime: Math.ceil(Date.now() / 5000) * 5000 + 60e3 });
+    if (seq !== CH.seq || !fresh.length) return;
+    let added = false;
+    for (const k of fresh) {
+      const i = CH.kl.findIndex((x) => x.t === k.t);
+      if (i >= 0) CH.kl[i] = { ...k }; else if (k.t > CH.kl[CH.kl.length - 1].t) { CH.kl.push({ ...k }); added = true; }
+    }
+    if (added) await chartRender(seq);
+  } catch { /* tenta de novo no próximo preço */ } finally { setTimeout(() => { CH.rolling = false; }, 5000); }
+}
+let _chLiveRsi = 0;
 function chartLive() {
   const q = PX[CH.s]; if (!q || !CH.cs || !CH.kl.length) return;
   const last = CH.kl[CH.kl.length - 1];
-  if (Date.now() > last.ct + 1500) { chartLoad(); return; } // vela fechou: busca a nova
+  if (Date.now() > last.ct + 1500) { chartRoll(); return; } // vela fechou: busca só as novas (mantém o histórico carregado)
   last.c = q.p; last.h = Math.max(last.h, q.p); last.l = Math.min(last.l, q.p);
-  try { CH.cs.update({ time: ctime(last.t, CH.intraday), open: last.o, high: last.h, low: last.l, close: last.c }); } catch { /* gráfico recriado */ }
+  const t = ctime(last.t, CH.intraday);
+  try { CH.cs.update({ time: t, open: last.o, high: last.h, low: last.l, close: last.c }); } catch { /* gráfico recriado */ }
+  if (CH.rs && CH.D && Date.now() - _chLiveRsi > 3000) {
+    _chLiveRsi = Date.now();
+    const r = rsiSeries(CH.kl.map((k) => k.c), 14); CH.D.rsi = r;
+    const v = r[r.length - 1]; if (isNum(v)) try { CH.rs.update({ time: t, value: v }); } catch { /* */ }
+  }
 }
 onPrice((set) => {
-  if (S.page !== 'chart' || !set.has(CH.s)) return;
+  if (S.page !== 'chart' || !(set.has(CH.s) || set.has('FX'))) return;
   setHTML('#ch-head', chartHeadHtml());
-  chartLive();
+  if (set.has(CH.s)) chartLive();
 });
-ACT.seg_chtf = (v) => { CH.tf = v; saveChartPrefs(); CH.cs = null; chartLoad(); };
-ACT.chOv = (el) => { const k = el.dataset.k; CH.ov[k] = !CH.ov[k]; el.setAttribute('aria-pressed', String(CH.ov[k])); el.classList.toggle('ghost', !CH.ov[k]); saveChartPrefs(); chartRender(CH.seq); };
+const chRedrawInd = () => { setHTML('#ch-ind', chartIndHtml()); saveChartPrefs(); chartRender(CH.seq); };
+ACT.seg_chtf = (v) => { CH.tf = v; saveChartPrefs(); CH.cs = null; CH.auto = true; chartAutoBtn(); chartLoad(); };
+ACT.chTog = (el) => { const k = el.dataset.k; CH[k] = !CH[k]; chRedrawInd(); };
+ACT.chLog = (el) => { CH.log = !CH.log; el.classList.toggle('ghost', !CH.log); el.setAttribute('aria-pressed', String(CH.log)); saveChartPrefs(); if (CH.ch) try { CH.ch.priceScale('right').applyOptions({ mode: CH.log ? 1 : 0 }); } catch { /* */ } };
+ACT.chAuto = () => chartSetAuto(true);
+ACT.chFit = () => { if (!CH.ch) return; chartSetAuto(true); CH.ch.timeScale().setVisibleLogicalRange({ from: Math.max(0, CH.kl.length - (CH.intraday ? 160 : 180)), to: CH.kl.length + 4 }); };
+ACT.chMaType = (el) => { const m = CH.mas[+el.dataset.i]; if (!m) return; m.t = m.t === 'ema' ? 'sma' : 'ema'; chRedrawInd(); };
+ACT.chMaDel = (el) => { CH.mas.splice(+el.dataset.i, 1); chRedrawInd(); };
+ACT.chMaAdd = () => {
+  if (CH.mas.length >= 8) return;
+  const used = new Set(CH.mas.map((m) => m.n));
+  const n = [20, 50, 200, 9, 21, 100, 7, 12, 26, 144].find((x) => !used.has(x)) || 30;
+  CH.mas.push({ t: 'sma', n, c: maFreeColor() }); chRedrawInd();
+  setTimeout(() => { const i = $$('#ch-ind .ch-ma-n').pop(); if (i) { i.focus(); i.select(); } }, 30);
+};
+// período da média: aplica ao sair do campo ou com Enter
+const chMaApply = (inp) => {
+  const i = +inp.dataset.i, m = CH.mas[i]; if (!m) return;
+  const n = parseInt(String(inp.value).replace(/\D/g, ''), 10);
+  if (!Number.isInteger(n) || n < 2 || n > 500) { inp.value = m.n; toast(L('Use um período entre 2 e 500.', 'Use a period between 2 and 500.'), { type: 'warn' }); return; }
+  if (n === m.n) return;
+  m.n = n; chRedrawInd();
+};
+document.addEventListener('change', (e) => { if (e.target.matches && e.target.matches('#ch-ind .ch-ma-n')) chMaApply(e.target); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches && e.target.matches('#ch-ind .ch-ma-n')) { e.preventDefault(); chMaApply(e.target); } });
 ACT.chPick = () => openCoinPicker({ title: L('Escolher moeda do gráfico', 'Pick chart coin'), onPick: (p) => {
   if (p.kind !== 'b') { toast(L('Gráfico de velas disponível para moedas com par na Binance. Abrindo a página da moeda no CoinGecko.', 'Candle charts are available for coins with a Binance pair. Opening the CoinGecko page.'), { type: 'warn' }); window.open(`https://www.coingecko.com/pt/moedas/${encodeURIComponent(p.cg)}`, '_blank', 'noopener'); return; }
   go('chart', { s: p.s });
 } });
 page({
   id: 'chart', group: 'mercado', icon: 'chart-candlestick', pt: 'Gráfico', en: 'Chart',
-  sub: 'Velas ao vivo de qualquer moeda da lista, com médias móveis, Bollinger e volume.',
-  subEn: 'Live candles for any listed coin, with moving averages, Bollinger and volume.',
+  sub: 'Velas ao vivo de qualquer moeda, com as médias que você escolher, RSI, volume e Bollinger — arraste em qualquer direção.',
+  subEn: 'Live candles for any coin, with the averages you choose, RSI, volume and Bollinger — drag in any direction.',
   init(el, params) { chartPrefs(); if (params.s && BY_SYM[params.s]) CH.s = params.s; saveChartPrefs(); el.innerHTML = chartHtml(); CH.cs = null; chartLoad(); },
   show(el, params) {
-    if (params.s && BY_SYM[params.s] && params.s !== CH.s) { CH.s = params.s; saveChartPrefs(); setHTML('#ch-head', chartHeadHtml()); CH.cs = null; chartLoad(); }
+    if (params.s && BY_SYM[params.s] && params.s !== CH.s) { CH.s = params.s; saveChartPrefs(); setHTML('#ch-head', chartHeadHtml()); CH.cs = null; CH.auto = true; chartAutoBtn(); chartLoad(); }
     else if (!CH.cs) chartLoad();
   },
 });
@@ -3767,7 +4107,7 @@ function drawT100() {
   const tr = rows.map((r) => `<tr class="${r.sym ? 'click' : ''}" ${r.sym ? `data-act="go" data-to="chart" data-params='${esc(JSON.stringify({ s: r.sym }))}'` : ''} data-id="${esc(r.id)}">
     <td class="r rank">${r.rank || '—'}</td>
     <td><div class="coin">${coinLogo({ b: r.s, logo: r.logo, cg: r.id }, 28)}<div><div class="nm">${esc(r.n)}</div><div class="sy">${esc(r.s)}</div></div></div></td>
-    <td class="r num" data-f="p">${r.live ? '<i class="dot-live" title="Binance ao vivo"></i>' : ''}${esc(usd(r.p))}</td>
+    <td class="r num" data-f="p">${r.live ? '<i class="dot-live" title="Binance ao vivo"></i>' : ''}${esc(usd(r.p))}${toBRL(r.p) ? `<div class="tiny faint">${esc(brl(toBRL(r.p)))}</div>` : ''}</td>
     <td class="r">${chg(r.h1, 2, 'sm')}</td><td class="r" data-f="d1">${chg(r.d1, 2, 'sm')}</td><td class="r">${chg(r.d7, 2, 'sm')}</td><td class="r">${chg(r.d30, 2, 'sm')}</td>
     <td class="r">${esc(fmtCompact(r.mcap))}</td><td class="r">${esc(fmtCompact(r.vol))}</td>
     <td class="r" style="width:120px"><div style="width:110px;margin-left:auto">${sparkSVG(r.spark ? r.spark.filter((_, i) => i % 4 === 0) : [], { w: 110, h: 30 })}</div></td></tr>`).join('');
@@ -3778,7 +4118,7 @@ function updT100Live(set) {
   $$('#t100-box tr[data-id]').forEach((tr) => {
     const u = BY_CG[tr.dataset.id]; if (!u || !set.has(u.s)) return;
     const q = PX[u.s];
-    setHTML($('[data-f=p]', tr), `<i class="dot-live" title="Binance ao vivo"></i>${esc(usd(q.p))}`);
+    setHTML($('[data-f=p]', tr), `<i class="dot-live" title="Binance ao vivo"></i>${esc(usd(q.p))}${toBRL(q.p) ? `<div class="tiny faint">${esc(brl(toBRL(q.p)))}</div>` : ''}`);
     setHTML($('[data-f=d1]', tr), chg(q.chg, 2, 'sm'));
   });
 }
@@ -3857,6 +4197,20 @@ function registerMarketSources() {
     validate: (d) => isNum(d.from) && isNum(d.to) && d.to >= d.from && d.to < 25,
     onData: (d) => { HEALTH.fed.dataTs = parseDate(d.date).getTime(); _markDirty('FED'); },
   });
+  // outras moedas (opcional): um pedido por par, para que um par indisponível não derrube os outros
+  source({
+    id: 'fx2', label: L('Outras moedas', 'Other currencies'), provider: 'AwesomeAPI', every: 5 * 60e3,
+    need: () => S.page === 'markets',
+    run: async () => {
+      const pairs = ['JPY-BRL', 'CNY-BRL', 'CHF-BRL', 'CAD-BRL', 'AUD-BRL', 'ARS-BRL', 'HKD-BRL'];
+      const res = await Promise.allSettled(pairs.map((p) => getJSON('https://economia.awesomeapi.com.br/json/last/' + p, { timeout: 10000 })));
+      const out = {};
+      res.forEach((r, i) => { if (r.status !== 'fulfilled') return; const k = pairs[i].replace('-', ''); const x = r.value && r.value[k]; if (x && num(x.bid) > 0) { out[k.toLowerCase()] = num(x.bid); out['c_' + k.toLowerCase()] = num(x.pctChange); } });
+      if (!Object.keys(out).length) throw new Error('awesomeapi');
+      return out;
+    },
+    onData: (d) => { FX.more = d; _markDirty('FX'); },
+  });
   source({
     id: 'quotes', label: L('Bolsas e índices', 'Indices'), provider: L('robô NEXUS', 'NEXUS bot'), every: 10 * 60e3,
     need: () => ['markets', 'macro'].includes(S.page),
@@ -3868,9 +4222,12 @@ const QUOTE_GROUPS = [
   ['br', 'Brasil', 'Brazil'], ['us', 'Estados Unidos', 'United States'], ['world', 'Europa e Ásia', 'Europe & Asia'],
   ['rates', 'Juros e dólar global', 'Rates & dollar'], ['cmd', 'Commodities', 'Commodities'],
 ];
-function mkCard(title, value, sub, { stampId, foot = '', icon } = {}) {
-  return `<div class="panel"><div class="row between" style="align-items:flex-start;gap:8px"><span class="small muted b">${icon ? ico(icon, 16) + ' ' : ''}${esc(title)}</span>${stampId ? stamp(stampId) : ''}</div><div class="kpi mt" style="margin-top:8px"><span class="v">${value}</span><span class="s">${sub || '&nbsp;'}</span></div>${foot ? `<div class="tiny faint" style="margin-top:6px">${foot}</div>` : ''}</div>`;
+// card: título (pode quebrar linha), valor, valor em reais, variação, rodapé e o selo da fonte embaixo (nunca vaza do card)
+function mkCard(title, value, sub, { stampId, foot = '', icon, brlv = '' } = {}) {
+  return `<div class="panel mk-card"><div class="mk-t">${icon ? ico(icon, 16) : ''}<span>${esc(title)}</span></div><div class="mk-v">${value}</div>${brlv ? `<div class="mk-brl">${brlv}</div>` : ''}<div class="mk-s">${sub || ''}</div>${foot ? `<div class="mk-f">${foot}</div>` : ''}${stampId ? `<div class="mk-st">${stamp(stampId)}</div>` : ''}</div>`;
 }
+// valor convertido em reais pelo câmbio de agora (rótulo explica a conta)
+const inBRL = (v, rate, unit = '') => (isNum(v) && isNum(rate) && rate > 0 ? `<b>${esc(brl(v * rate, [2, 2]))}</b>${unit ? ` <span class="faint">${esc(unit)}</span>` : ''}` : '');
 function marketsHtml() {
   return `${pageHead(PAGES.markets, `<button class="btn sm" data-act="refreshAll">${ico('refresh-cw', 16)}${esc(L('Atualizar', 'Refresh'))}</button>`)}
   <h2 class="panel-t mt">${ico('banknote', 18)}${esc(L('Câmbio', 'FX'))}</h2><div class="grid g-cards mt" id="mk-fx"></div>
@@ -3878,28 +4235,32 @@ function marketsHtml() {
   <h2 class="panel-t mt-lg">${ico('landmark', 18)}${esc(L('Juros e inflação', 'Rates & inflation'))}</h2><div class="grid g-cards mt" id="mk-rates"></div>
   <h2 class="panel-t mt-lg">${ico('globe', 18)}${esc(L('Bolsas, índices e commodities', 'Stocks, indices & commodities'))}</h2><div id="mk-quotes" class="mt"></div>`;
 }
+const FX_MORE = [['jpybrl', 'Iene (JPY/BRL)', 'Yen (JPY/BRL)', 4], ['cnybrl', 'Yuan (CNY/BRL)', 'Yuan (CNY/BRL)', 4], ['chfbrl', 'Franco suíço (CHF/BRL)', 'Swiss franc (CHF/BRL)', 4], ['cadbrl', 'Dólar canadense (CAD/BRL)', 'Canadian dollar (CAD/BRL)', 4], ['audbrl', 'Dólar australiano (AUD/BRL)', 'Australian dollar (AUD/BRL)', 4], ['arsbrl', 'Peso argentino (ARS/BRL)', 'Argentine peso (ARS/BRL)', 5]];
 function drawFx() {
   const r = brlRate(); const u = PX.USDTBRL;
   const prem = r && u && FX.usdbrl ? (u.p / FX.usdbrl - 1) * 100 : null;
   const fxSub = (k) => (isNum(FX.chg[k]) ? chg(FX.chg[k]) + ' <span class="faint">' + esc(L('no dia', 'today')) + '</span>' : '');
+  const X = FX.more || {};
   const html = [
-    mkCard(L('Dólar comercial (USD/BRL)', 'US dollar (USD/BRL)'), FX.usdbrl ? esc(brl(FX.usdbrl, [4, 4])) : '—', fxSub('usdbrl'), { stampId: 'fx' }),
-    mkCard(L('Euro (EUR/BRL)', 'Euro (EUR/BRL)'), FX.eurbrl ? esc(brl(FX.eurbrl, [4, 4])) : '—', fxSub('eurbrl'), { stampId: 'fx' }),
-    mkCard(L('Libra (GBP/BRL)', 'Pound (GBP/BRL)'), FX.gbpbrl ? esc(brl(FX.gbpbrl, [4, 4])) : '—', fxSub('gbpbrl'), { stampId: 'fx' }),
-    mkCard('EUR/USD', FX.eurusd ? esc(fmtNum(FX.eurusd, 4, 4)) : '—', fxSub('eurusd'), { stampId: 'fx' }),
+    mkCard(L('Dólar comercial (USD/BRL)', 'US dollar (USD/BRL)'), FX.usdbrl ? esc(brl(FX.usdbrl, [4, 4])) : '—', fxSub('usdbrl'), { stampId: 'fx', foot: FX.usdbrl ? esc(L(`US$ 100 = ${brl(FX.usdbrl * 100, [2, 2])}`, `US$ 100 = ${brl(FX.usdbrl * 100, [2, 2])}`)) : '' }),
+    mkCard(L('Euro (EUR/BRL)', 'Euro (EUR/BRL)'), FX.eurbrl ? esc(brl(FX.eurbrl, [4, 4])) : '—', fxSub('eurbrl'), { stampId: 'fx', foot: FX.eurbrl ? esc(`€ 100 = ${brl(FX.eurbrl * 100, [2, 2])}`) : '' }),
+    mkCard(L('Libra (GBP/BRL)', 'Pound (GBP/BRL)'), FX.gbpbrl ? esc(brl(FX.gbpbrl, [4, 4])) : '—', fxSub('gbpbrl'), { stampId: 'fx', foot: FX.gbpbrl ? esc(`£ 100 = ${brl(FX.gbpbrl * 100, [2, 2])}`) : '' }),
+    mkCard('EUR/USD', FX.eurusd ? esc(fmtNum(FX.eurusd, 4, 4)) : '—', fxSub('eurusd'), { stampId: 'fx', brlv: FX.eurbrl ? `€ 1 = ${inBRL(1, FX.eurbrl)}` : '' }),
     mkCard(L('Dólar cripto (USDT/BRL)', 'Crypto dollar (USDT/BRL)'), u ? esc(brl(u.p, [3, 3])) : '—', u ? chg(u.chg) + ' <span class="faint">24h</span>' : '', { stampId: 'px-rest', foot: isNum(prem) ? `${esc(L('Ágio sobre o comercial:', 'Premium over spot:'))} <b class="${tone(prem)}">${esc(fmtPct(prem, 2))}</b> ${modelBadge(L('USDT/BRL da Binance dividido pelo dólar comercial, menos 1.', 'Binance USDT/BRL divided by spot USD/BRL, minus 1.'))}` : '' }),
+    ...FX_MORE.filter(([k]) => isNum(X[k])).map(([k, pt, en, d]) => mkCard(L(pt, en), esc(brl(X[k], [d, d])), isNum(X['c_' + k]) ? chg(X['c_' + k]) + ' <span class="faint">' + esc(L('no dia', 'today')) + '</span>' : '', { stampId: 'fx2' })),
   ].join('');
   setHTML('#mk-fx', html);
 }
 function drawMetals() {
-  const OZ = 31.1034768; const r = brlRate();
+  const OZ = 31.1034768; const r = brlRate(); const rv = r ? r.v : null;
   const xau = METAL.xau, xag = METAL.xag, pax = PX.PAXGUSDT;
   const premium = pax && xau ? (pax.p / xau - 1) * 100 : null;
+  const gram = (v) => (isNum(v) && rv ? `${esc(brl(v * rv / OZ, [2, 2]))} ${esc(L('por grama', 'per gram'))}` : '');
   const html = [
-    mkCard(L('Ouro (onça troy)', 'Gold (troy oz)'), xau ? esc(usd(xau, [2, 2])) : '—', r && xau ? `${esc(brl(xau * r.v / OZ, [2, 2]))} ${esc(L('por grama', 'per gram'))}` : '', { stampId: 'metals' }),
-    mkCard(L('Prata (onça troy)', 'Silver (troy oz)'), xag ? esc(usd(xag, [2, 2])) : '—', r && xag ? `${esc(brl(xag * r.v / OZ, [2, 2]))} ${esc(L('por grama', 'per gram'))}` : '', { stampId: 'metals' }),
+    mkCard(L('Ouro (onça troy)', 'Gold (troy oz)'), xau ? esc(usd(xau, [2, 2])) : '—', gram(xau), { stampId: 'metals', brlv: inBRL(xau, rv, L('a onça', 'per oz')) }),
+    mkCard(L('Prata (onça troy)', 'Silver (troy oz)'), xag ? esc(usd(xag, [2, 2])) : '—', gram(xag), { stampId: 'metals', brlv: inBRL(xag, rv, L('a onça', 'per oz')) }),
     mkCard(L('Relação ouro/prata', 'Gold/silver ratio'), xau && xag ? esc(fmtNum(xau / xag, 1, 1)) : '—', `<span class="faint">${esc(L('quantas onças de prata compram 1 de ouro', 'silver ounces per gold ounce'))}</span>`, { foot: modelBadge(L('Ouro ÷ prata, ambos à vista.', 'Gold ÷ silver, both spot.')) }),
-    mkCard(L('PAXG (ouro tokenizado)', 'PAXG (tokenized gold)'), pax ? esc(usd(pax.p, [2, 2])) : '—', pax ? chg(pax.chg) + ' <span class="faint">24h</span>' : '', { stampId: 'px-rest', foot: isNum(premium) ? `${esc(L('Diferença para o ouro à vista:', 'vs spot gold:'))} <b class="${tone(premium)}">${esc(fmtPct(premium, 2))}</b>` : '' }),
+    mkCard(L('PAXG (ouro tokenizado)', 'PAXG (tokenized gold)'), pax ? esc(usd(pax.p, [2, 2])) : '—', pax ? chg(pax.chg) + ' <span class="faint">24h</span>' : '', { stampId: 'px-rest', brlv: inBRL(pax && pax.p, rv), foot: isNum(premium) ? `${esc(L('Diferença para o ouro à vista:', 'vs spot gold:'))} <b class="${tone(premium)}">${esc(fmtPct(premium, 2))}</b>` : '' }),
   ].join('');
   setHTML('#mk-metal', html);
 }
@@ -3916,6 +4277,10 @@ function drawRates() {
   ].join('');
   setHTML('#mk-rates', html);
 }
+// moeda de cada índice para converter em reais (S&P em reais é o que o IVVB11 acompanha)
+const QUOTE_CUR = { '^GSPC': 'usd', '^IXIC': 'usd', '^DJI': 'usd', '^GDAXI': 'eur', '^STOXX50E': 'eur', '^FTSE': 'gbp', '^N225': 'jpy', '^HSI': 'hkd' };
+const QUOTE_UNIT = { 'BZ=F': ['por barril', 'per barrel'], 'CL=F': ['por barril', 'per barrel'], 'NG=F': ['por MMBtu', 'per MMBtu'], 'HG=F': ['por libra-peso', 'per pound'], 'GC=F': ['a onça', 'per oz'], 'SI=F': ['a onça', 'per oz'] };
+function curRate(c) { const X = FX.more || {}; return { usd: FX.usdbrl, eur: FX.eurbrl, gbp: FX.gbpbrl, jpy: X.jpybrl, hkd: X.hkdbrl }[c] || null; }
 function drawQuotes() {
   const box = $('#mk-quotes'); if (!box) return;
   const q = CACHE.get('quotes');
@@ -3924,15 +4289,19 @@ function drawQuotes() {
     return;
   }
   const all = Object.entries(q.v.q).map(([k, x]) => ({ k, ...x }));
+  const usdr = FX.usdbrl;
   box.innerHTML = QUOTE_GROUPS.map(([g, pt, en]) => {
     const items = all.filter((x) => x.g === g); if (!items.length) return '';
     return `<h3 class="small muted b" style="margin:14px 0 8px">${esc(L(pt, en))}</h3><div class="grid g-cards">${items.map((x) => {
       // fmt: 'pts' (índice), 'pct' (rendimento de título), 'usd' (preço em dólar)
       const v = x.fmt === 'pct' ? fmtNum(x.p, 2, 3) + '%' : x.fmt === 'usd' ? usd(x.p, [2, 2]) : fmtNum(x.p, 2, 2);
       const age = x.t ? Date.now() - x.t : null;
-      return `<div class="panel"><div class="small muted b">${esc(L(x.n, x.nEn || x.n))}</div><div class="kpi" style="margin-top:8px"><span class="v sm">${esc(v)}</span><span class="s">${chg(x.chg)}${x.t ? `<span class="faint">${esc(fmtDateTime(x.t))}</span>` : ''}</span></div>${age && age > 3 * 86400e3 ? `<div class="tiny" style="color:var(--stale);margin-top:4px">${esc(L('cotação antiga (mercado fechado?)', 'old quote (market closed?)'))}</div>` : ''}</div>`;
+      let brlv = '';
+      if (x.fmt === 'usd') { const u = QUOTE_UNIT[x.k]; brlv = inBRL(x.p, usdr, u ? L(u[0], u[1]) : ''); }
+      else if (x.fmt === 'pts' && QUOTE_CUR[x.k]) { const rt = curRate(QUOTE_CUR[x.k]); if (isNum(rt) && rt > 0) brlv = `<span class="faint">${esc(L('em reais:', 'in BRL:'))}</span> <b>${esc(fmtNum(x.p * rt, 0, 0))}</b> <span class="faint" title="${esc(L(`Pontos × ${QUOTE_CUR[x.k].toUpperCase()}/BRL de agora — o mesmo que um fundo que acompanha o índice em reais (ex.: IVVB11 para o S&P 500).`, `Points × ${QUOTE_CUR[x.k].toUpperCase()}/BRL now.`))}">pts·R$ ⓘ</span>`; }
+      return `<div class="panel mk-card"><div class="mk-t"><span>${esc(L(x.n, x.nEn || x.n))}</span></div><div class="mk-v sm">${esc(v)}</div>${brlv ? `<div class="mk-brl">${brlv}</div>` : ''}<div class="mk-s">${chg(x.chg)}</div><div class="mk-f">${x.t ? esc(fmtDateTime(x.t)) : ''}${age && age > 3 * 86400e3 ? ` · <span style="color:var(--stale)">${esc(L('cotação antiga (mercado fechado?)', 'old quote (market closed?)'))}</span>` : ''}</div></div>`;
     }).join('')}</div>`;
-  }).join('') + `<div class="row wrap mt" style="gap:8px">${stamp('quotes')}<span class="tiny faint">${esc(L('Cotações com atraso de até 30 min (robô do NEXUS, fonte pública). Fins de semana e feriados mostram o último fechamento.', 'Quotes delayed up to 30 min (NEXUS bot, public source). Weekends and holidays show the last close.'))}</span></div>`;
+  }).join('') + `<div class="row wrap mt" style="gap:8px">${stamp('quotes')}<span class="tiny faint">${esc(L('Cotações com atraso de até 30 min (robô do NEXUS, fonte pública). Fins de semana e feriados mostram o último fechamento. Valores em reais usam o câmbio de agora (AwesomeAPI).', 'Quotes delayed up to 30 min (NEXUS bot, public source). Weekends and holidays show the last close. BRL values use the current FX rate.'))}</span></div>`;
 }
 function marketsDraw() { drawFx(); drawMetals(); drawRates(); drawQuotes(); }
 onPrice((set) => {
@@ -3940,7 +4309,7 @@ onPrice((set) => {
   if (set.has('FX') || set.has('USDTBRL')) drawFx();
   if (set.has('METAL') || set.has('PAXGUSDT') || set.has('FX')) drawMetals();
   if (set.has('BCB') || set.has('FED')) drawRates();
-  if (set.has('QUOTES')) drawQuotes();
+  if (set.has('QUOTES') || set.has('FX')) drawQuotes();
 });
 page({
   id: 'markets', group: 'mercado', icon: 'landmark', pt: 'Índices e câmbio', en: 'Indices & FX',
@@ -3968,6 +4337,12 @@ const rewardAt = (h) => 50 / 2 ** Math.floor(h / HALVING_EVERY);
 const MP = 'https://mempool.space/api';
 function registerOnchainSources() {
   source({
+    id: 'miners', label: L('Mineradoras na bolsa', 'Listed miners'), provider: L('robô NEXUS (Yahoo + companiesmarketcap)', 'NEXUS bot (Yahoo + companiesmarketcap)'), every: 10 * 60e3, persist: false,
+    need: () => S.page === 'onchain',
+    run: async () => { const j = await getPipeline('markets', 6 * 3600e3); if (!Array.isArray(j.miners) || j.miners.length < 3) throw new Error(L('sem mineradoras', 'no miners')); return { list: j.miners, at: Date.parse(j.minersAt || j.generatedAt) }; },
+    onData: (d) => { HEALTH.miners.dataTs = d.at; _markDirty('MINERS'); },
+  });
+  source({
     id: 'mempool', label: L('Rede Bitcoin', 'Bitcoin network'), provider: 'mempool.space', every: 60e3,
     need: () => ['onchain', 'whales'].includes(S.page),
     run: async () => {
@@ -3991,8 +4366,8 @@ function registerOnchainSources() {
       if (b.status !== 'fulfilled') throw b.reason;
       const ex = (x) => x.extras || {};
       return {
-        blocks: b.value.slice(0, 8).map((x) => ({ h: x.height, t: x.timestamp * 1000, n: x.tx_count, size: x.size, fee: num(ex(x).medianFee), range: ex(x).feeRange || [], pool: ex(x).pool && ex(x).pool.name, fees: num(ex(x).totalFees), reward: num(ex(x).reward) })),
-        next: nb.status === 'fulfilled' ? nb.value.slice(0, 3).map((x) => ({ n: x.nTx, vsize: x.blockVSize, fee: num(x.medianFee), range: x.feeRange || [], fees: num(x.totalFees) })) : [],
+        blocks: b.value.slice(0, 10).map((x) => ({ id: String(x.id || ''), h: x.height, t: x.timestamp * 1000, n: x.tx_count, size: x.size, w: num(x.weight), fee: num(ex(x).medianFee), avg: num(ex(x).avgFeeRate), range: ex(x).feeRange || [], pool: ex(x).pool && ex(x).pool.name, fees: num(ex(x).totalFees), reward: num(ex(x).reward) })),
+        next: nb.status === 'fulfilled' ? nb.value.slice(0, 4).map((x) => ({ n: x.nTx, vsize: x.blockVSize, size: num(x.blockSize), fee: num(x.medianFee), range: x.feeRange || [], fees: num(x.totalFees) })) : [],
         rw: rw.status === 'fulfilled' ? { reward: num(rw.value.totalReward), fee: num(rw.value.totalFee), tx: num(rw.value.totalTx), from: rw.value.startBlock, to: rw.value.endBlock } : null,
       };
     },
@@ -4018,6 +4393,7 @@ function onchainHtml() {
   <section class="panel mt" id="oc-thermo"></section>
   <div class="grid oc-g2 mt"><section class="panel" id="oc-ladder"></section><section class="panel" id="oc-flow"></section></div>
   <section class="panel mt" id="oc-mining"></section>
+  <section class="panel mt" id="oc-miners"></section>
   <section class="panel mt" id="oc-links"></section>`;
 }
 function hashFmt(h) { return isNum(h) ? `${fmtNum(h / 1e18, 0, 0)} EH/s` : '—'; }
@@ -4039,22 +4415,64 @@ function drawOcNet() {
 // ---------- blocos: fila (mempool) e minerados ----------
 // cores por faixa de taxa (texto branco legível em todas: contraste ≥ 4,5:1)
 function feeTone(f) { return !isNum(f) ? '#3a4560' : f < 2 ? '#1d6b4f' : f < 5 ? '#2b6e3c' : f < 10 ? '#6e6a1d' : f < 30 ? '#8f5419' : '#9b2c33'; }
+const OCB = { sel: null, top: null };
 function drawOcBlocks() {
   const c = CACHE.get('mp-blocks'); const B = c && c.v;
-  const head = panelHead('square-stack', L('Blocos: fila e minerados', 'Blocks: queue and mined'), { sub: esc(L('À esquerda, os próximos blocos montados com as transações que esperam na fila (taxa mediana em sat/vB). À direita, os últimos blocos minerados e quem minerou.', 'Left: the next blocks assembled from waiting transactions (median fee in sat/vB). Right: the latest mined blocks and who mined them.')), right: stamp('mp-blocks') });
+  const head = panelHead('square-stack', L('Blocos: fila e minerados', 'Blocks: queue and mined'), { sub: esc(L('À esquerda, os próximos blocos montados com as transações que esperam na fila; à direita, os últimos minerados. Clique em qualquer bloco para ver os detalhes. Cor = taxa mediana (verde barata, vermelho cara).', 'Left: next blocks from the waiting queue; right: latest mined. Click any block for details. Color = median fee (green cheap, red expensive).')), right: stamp('mp-blocks') });
   if (!B) { setHTML('#oc-blocks', head + `<div class="oc-chain">${'<div class="skel oc-cube"></div>'.repeat(7)}</div>`); return; }
-  const btc = PX.BTCUSDT && PX.BTCUSDT.p;
   const fd = (v) => fmtNum(v, 0, v < 10 ? 1 : 0);
   const range = (r) => (r && r.length > 1 ? `${fd(r[0])}–${fd(r[r.length - 1])} sat/vB` : '');
-  const next = B.next.slice().reverse().map((x, i, a) => `<div class="oc-cube next" style="--fc:${feeTone(x.fee)}" title="${esc(L('Bloco projetado com as transações da fila', 'Projected block from queued transactions'))}">
-    <span class="h">${esc(L(`em ~${(a.length - i) * 10} min`, `in ~${(a.length - i) * 10} min`))}</span><b>~${esc(fmtNum(x.fee, 0, x.fee < 10 ? 1 : 0))} sat/vB</b><span>${esc(range(x.range))}</span><span>${esc(fmtNum(x.n, 0, 0))} ${esc(L('transações', 'txs'))}</span>${isNum(x.fees) ? `<span>${esc(fmtNum(x.fees / 1e8, 3, 3))} BTC ${esc(L('em taxas', 'in fees'))}</span>` : ''}</div>`).join('');
-  const mined = B.blocks.slice(0, 6).map((x) => `<a class="oc-cube" style="--fc:${feeTone(x.fee)}" href="${esc(safeUrl('https://mempool.space/pt/block/' + x.h))}" target="_blank" rel="noopener noreferrer">
-    <span class="h">${esc(fmtNum(x.h, 0, 0))}</span><b>~${esc(fmtNum(x.fee, 0, x.fee < 10 ? 1 : 0))} sat/vB</b><span>${esc(fmtNum(x.n, 0, 0))} ${esc(L('transações', 'txs'))} · ${esc(fmtNum(x.size / 1e6, 2, 2))} MB</span><span class="p">${esc(x.pool || '—')}</span><span class="t">${esc(ago(x.t))}</span></a>`).join('');
-  const rw = B.rw;
+  // bloco novo minerado: animação de entrada
+  const isNew = OCB.top && B.blocks[0] && B.blocks[0].h > OCB.top;
+  OCB.top = B.blocks[0] ? B.blocks[0].h : OCB.top;
+  if (!OCB.sel || (OCB.sel.k === 'm' && !B.blocks.some((x) => x.h === OCB.sel.h)) || (OCB.sel.k === 'n' && !B.next[OCB.sel.i])) OCB.sel = B.next.length ? { k: 'n', i: 0 } : { k: 'm', h: B.blocks[0].h };
+  const selN = (i) => OCB.sel.k === 'n' && OCB.sel.i === i, selM = (h) => OCB.sel.k === 'm' && OCB.sel.h === h;
+  const next = B.next.map((x, i) => ({ x, i })).reverse().map(({ x, i }) => `<button class="oc-cube next${selN(i) ? ' on' : ''}" style="--fc:${feeTone(x.fee)}" data-act="ocBlk" data-k="n" data-i="${i}" aria-pressed="${selN(i)}">
+    <span class="h">${esc(i === 0 ? L('próximo', 'next') : L(`em ~${(i + 1) * 10} min`, `in ~${(i + 1) * 10} min`))}</span><b>~${esc(fd(x.fee))} sat/vB</b><span>${esc(range(x.range))}</span><span>${esc(fmtNum(x.n, 0, 0))} ${esc(L('transações', 'txs'))}</span>${i === B.next.length - 1 && B.next.length >= 4 ? `<span class="t">${esc(L('e o resto da fila', 'and the rest of the queue'))}</span>` : ''}</button>`).join('');
+  const mined = B.blocks.slice(0, 8).map((x, j) => `<button class="oc-cube${selM(x.h) ? ' on' : ''}${isNew && j === 0 ? ' new' : ''}" style="--fc:${feeTone(x.fee)}" data-act="ocBlk" data-k="m" data-h="${x.h}" aria-pressed="${selM(x.h)}">
+    <span class="h">${esc(fmtNum(x.h, 0, 0))}</span><b>~${esc(fd(x.fee))} sat/vB</b><span>${esc(fmtNum(x.n, 0, 0))} ${esc(L('transações', 'txs'))} · ${esc(fmtNum(x.size / 1e6, 2, 2))} MB</span><span class="p">${esc(x.pool || '—')}</span><span class="t">${esc(ago(x.t))}</span></button>`).join('');
+  const rw = B.rw; const btc = PX.BTCUSDT && PX.BTCUSDT.p;
   const feeShare = rw && rw.reward > 0 ? rw.fee / rw.reward * 100 : null;
-  setHTML('#oc-blocks', head + `<div class="oc-chain"><div class="oc-q">${next}</div><div class="oc-sep" aria-hidden="true"></div><div class="oc-m">${mined}</div></div>
-    ${rw ? `<div class="row wrap mt" style="gap:8px 22px"><span class="small">${esc(L('Últimos 144 blocos (~24 h):', 'Last 144 blocks (~24 h):'))} <b>${esc(fmtNum(rw.tx, 0, 0))}</b> ${esc(L('transações', 'transactions'))}</span><span class="small">${esc(L('mineradores receberam', 'miners earned'))} <b>${esc(fmtNum(rw.reward / 1e8, 2, 2))} BTC</b>${btc ? ` (${esc(fmtCompact(rw.reward / 1e8 * btc))})` : ''}</span><span class="small">${esc(L('taxas foram', 'fees were'))} <b>${esc(fmtPct(feeShare, 1, false))}</b> ${esc(L('disso', 'of it'))}</span></div>` : ''}`);
+  const prevCh = $('#oc-blocks .oc-chain'); const keepX = prevCh && prevCh.querySelector('.oc-cube:not(.skel)') ? prevCh.scrollLeft : null;
+  setHTML('#oc-blocks', head + `<div class="oc-chain"><div class="oc-q">${next}</div><div class="oc-sep" aria-hidden="true"><span>${esc(L('agora', 'now'))}</span></div><div class="oc-m">${mined}</div></div>
+    <div id="oc-bdet" class="oc-bdet">${ocBlockDetail(B)}</div>
+    ${rw ? `<div class="row wrap mt" style="gap:8px 22px"><span class="small">${esc(L('Últimos 144 blocos (~24 h):', 'Last 144 blocks (~24 h):'))} <b>${esc(fmtNum(rw.tx, 0, 0))}</b> ${esc(L('transações', 'transactions'))}</span><span class="small">${esc(L('mineradores receberam', 'miners earned'))} <b>${esc(fmtNum(rw.reward / 1e8, 2, 2))} BTC</b>${btc ? ` (${esc(fmtCompact(rw.reward / 1e8 * btc))}${toBRL(rw.reward / 1e8 * btc) ? ' · ' + esc(fmtCompact(toBRL(rw.reward / 1e8 * btc), 'BRL')) : ''})` : ''}</span><span class="small">${esc(L('taxas foram', 'fees were'))} <b>${esc(fmtPct(feeShare, 1, false))}</b> ${esc(L('disso', 'of it'))}</span></div>` : ''}`);
+  // a fila fica à esquerda e os minerados à direita: começa centrado no "agora" (no celular a tela é estreita)
+  const chn = $('#oc-blocks .oc-chain'), sep = chn && chn.querySelector('.oc-sep');
+  if (chn && sep) chn.scrollLeft = keepX !== null ? keepX : Math.max(0, sep.offsetLeft - chn.clientWidth / 2);
 }
+// detalhe do bloco escolhido (minerado ou ainda na fila)
+function ocBlockDetail(B) {
+  const btc = PX.BTCUSDT && PX.BTCUSDT.p;
+  const money = (sats) => { if (!isNum(sats)) return '—'; const b = sats / 1e8; return `${fmtNum(b, b < 0.1 ? 4 : 3, b < 0.1 ? 4 : 3)} BTC${btc ? ` · ${usd(b * btc, [2, 2])}${toBRL(b * btc) ? ' · ' + brl(toBRL(b * btc), [2, 2]) : ''}` : ''}`; };
+  const fd = (v) => (isNum(v) ? fmtNum(v, 0, v < 10 ? 2 : 1) : '—');
+  // custo de uma transação comum (1 entrada → 2 saídas, ~141 vB) na taxa indicada
+  const txCost = (rate) => (isNum(rate) && btc ? `${usd(rate * 141 / 1e8 * btc, [2, 2])}${toBRL(rate * 141 / 1e8 * btc) ? ' · ' + brl(toBRL(rate * 141 / 1e8 * btc), [2, 2]) : ''}` : '—');
+  const feeBar = (r) => {
+    if (!r || r.length < 2) return '';
+    const mx = Math.log10(Math.max(...r) + 1) || 1;
+    const lbl = [L('mín', 'min'), '10%', '25%', L('mediana', 'median'), '75%', '90%', L('máx', 'max')];
+    return `<div class="oc-fees">${r.map((v, i) => `<div title="${esc(lbl[i] || '')}: ${esc(fd(v))} sat/vB"><i style="height:${Math.max(6, Math.log10(v + 1) / mx * 100)}%;background:${feeTone(v)}"></i><span>${esc(fd(v))}</span><em>${esc(lbl[i] || '')}</em></div>`).join('')}</div>`;
+  };
+  const row = (k, v) => `<div class="oc-dr"><span>${esc(k)}</span><b>${v}</b></div>`;
+  if (OCB.sel && OCB.sel.k === 'n') {
+    const x = B.next[OCB.sel.i]; if (!x) return '';
+    const last = OCB.sel.i === B.next.length - 1 && B.next.length >= 4;
+    return `<div class="oc-dh"><b>${esc(OCB.sel.i === 0 ? L('Próximo bloco (montado com a fila)', 'Next block (built from the queue)') : L(`Bloco projetado nº ${OCB.sel.i + 1} da fila`, `Projected block #${OCB.sel.i + 1}`))}</b><span class="faint small">${esc(last ? L('inclui o restante da fila', 'includes the rest of the queue') : L(`deve sair em ~${(OCB.sel.i + 1) * 10} min (média de um bloco a cada 10 min)`, `expected in ~${(OCB.sel.i + 1) * 10} min`))}</span></div>
+      <div class="oc-dg">${row(L('Transações', 'Transactions'), esc(fmtNum(x.n, 0, 0)))}${row(L('Tamanho virtual', 'Virtual size'), esc(fmtNum(x.vsize / 1e6, 2, 2) + ' MvB'))}${row(L('Taxa mediana', 'Median fee'), esc(fd(x.fee) + ' sat/vB'))}${row(L('Para entrar neste bloco', 'To get into this block'), esc(L(`pagar ≥ ${fd(x.range[0])} sat/vB`, `pay ≥ ${fd(x.range[0])} sat/vB`)))}${row(L('Custo de uma transação comum (~141 vB) na mediana', 'Cost of a typical tx (~141 vB) at median'), esc(txCost(x.fee)))}${row(L('Taxas somadas', 'Total fees'), esc(money(x.fees)))}</div>
+      ${feeBar(x.range)}<p class="panel-note">${esc(L('As barras mostram a faixa de taxas das transações deste bloco (da mais barata à mais cara). Quem paga mais entra antes.', 'Bars show the fee range in this block (cheapest to priciest). Higher fees get in first.'))}</p>`;
+  }
+  const x = B.blocks.find((b) => OCB.sel && b.h === OCB.sel.h) || B.blocks[0]; if (!x) return '';
+  const subsidy = isNum(x.reward) && isNum(x.fees) ? x.reward - x.fees : null;
+  return `<div class="oc-dh"><b>${esc(L('Bloco', 'Block'))} ${esc(fmtNum(x.h, 0, 0))}</b><span class="faint small">${esc(fmtDateTime(x.t))} · ${esc(ago(x.t))}</span><a class="link-btn" href="${esc(safeUrl('https://mempool.space/pt/block/' + (x.id || x.h)))}" target="_blank" rel="noopener noreferrer">${esc(L('ver no mempool.space', 'view on mempool.space'))}${ico('external-link', 14)}</a></div>
+    <div class="oc-dg">${row(L('Minerado por', 'Mined by'), esc(x.pool || '—'))}${row(L('Transações', 'Transactions'), esc(fmtNum(x.n, 0, 0)))}${row(L('Tamanho', 'Size'), esc(fmtNum(x.size / 1e6, 2, 2) + ' MB') + (isNum(x.w) ? ` <span class="faint">(${esc(fmtPct(x.w / 4e6 * 100, 0, false))} ${esc(L('cheio', 'full'))})</span>` : ''))}${row(L('Taxa mediana', 'Median fee'), esc(fd(x.fee) + ' sat/vB'))}${isNum(x.avg) ? row(L('Taxa média', 'Average fee'), esc(fd(x.avg) + ' sat/vB')) : ''}${row(L('Recompensa total', 'Total reward'), esc(money(x.reward)))}${row(L('Subsídio (moedas novas)', 'Subsidy (new coins)'), esc(money(subsidy)))}${row(L('Taxas pagas', 'Fees paid'), esc(money(x.fees)))}</div>
+    ${feeBar(x.range)}${x.id ? `<div class="tiny faint oc-hash" title="hash">${esc(x.id)}</div>` : ''}`;
+}
+ACT.ocBlk = (el) => {
+  OCB.sel = el.dataset.k === 'n' ? { k: 'n', i: +el.dataset.i } : { k: 'm', h: +el.dataset.h };
+  $$('#oc-blocks .oc-cube').forEach((b) => { const on = b === el; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+  const c = CACHE.get('mp-blocks'); if (c) setHTML('#oc-bdet', ocBlockDetail(c.v));
+};
 // ---------- halving e oferta ----------
 function drawOcHalving() {
   const m = CACHE.get('mempool'); const M = m && m.v;
@@ -4202,19 +4620,36 @@ async function drawOcMining() {
   const seen = new Set(); ds.setData(dd.filter((x) => (seen.has(x.time) ? false : seen.add(x.time))).sort((a, b) => a.time - b.time));
   ch.timeScale().fitContent();
 }
+// ---------- mineradoras listadas: cotação e relevância (fatia do valor de mercado do grupo) ----------
+function drawOcMiners() {
+  const box = $('#oc-miners'); if (!box) return;
+  const c = CACHE.get('miners'); const M = c && c.v;
+  const head = panelHead('building-2', L('Maiores empresas de mineração', 'Largest mining companies'), { sub: esc(L('Mineradoras de bitcoin com ações na bolsa dos EUA. Relevância = fatia de cada uma no valor de mercado somado do grupo (quanto o mercado acha que ela vale).', 'Bitcoin miners listed in the US. Relevance = each one’s share of the group’s combined market value.')), right: stamp('miners') });
+  if (!M) { setHTML(box, head + (HEALTH.miners && HEALTH.miners.ok === false ? emptyBox('database', L('Cotações das mineradoras ainda não publicadas', 'Miner quotes not published yet'), esc(L('O robô do NEXUS traz essas cotações; assim que publicar, aparecem aqui.', 'The NEXUS bot brings these quotes; they appear here once published.'))) : skel(6, 18))); return; }
+  const fx = brlRate(); const rv = fx ? fx.v : null;
+  const list = M.list.filter((x) => isNum(x.p)).slice().sort((a, b) => (b.mcap || 0) - (a.mcap || 0) || b.p - a.p);
+  const tot = sum(list.map((x) => x.mcap || 0));
+  const tier = (sh) => (sh >= 15 ? [L('Gigante', 'Giant'), 'up'] : sh >= 8 ? [L('Grande', 'Large'), 'info'] : sh >= 4 ? [L('Média', 'Mid'), 'signal'] : [L('Menor', 'Small'), 'muted']);
+  const mx = Math.max(...list.map((x) => x.mcap || 0), 1);
+  setHTML(box, head + `<div class="tbl-wrap"><table class="tbl oc-mn"><thead><tr><th>#</th><th>${esc(L('Empresa', 'Company'))}</th><th class="r">${esc(L('Cotação', 'Price'))}</th><th class="r">${esc(L('Dia', 'Day'))}</th><th class="r">${esc(L('Valor de mercado', 'Market cap'))}</th><th style="min-width:180px">${esc(L('Relevância', 'Relevance'))}</th></tr></thead><tbody>${list.map((x, i) => {
+    const sh = tot > 0 && x.mcap ? x.mcap / tot * 100 : null; const [tn, tc] = isNum(sh) ? tier(sh) : ['—', 'muted'];
+    return `<tr><td class="faint">${i + 1}</td><td><b>${esc(x.n)}</b> <span class="faint small">${esc(x.s)}</span></td><td class="r num">${esc(usd(x.p, [2, 2]))}${rv ? `<div class="tiny faint">${esc(brl(x.p * rv, [2, 2]))}</div>` : ''}</td><td class="r">${chg(x.chg, 2, 'sm')}</td><td class="r num">${x.mcap ? esc(fmtCompact(x.mcap)) : '—'}${x.mcap && rv ? `<div class="tiny faint">${esc(fmtCompact(x.mcap * rv, 'BRL'))}</div>` : ''}</td><td>${isNum(sh) ? `<div class="oc-rel"><span class="bar"><i style="width:${(x.mcap / mx * 100).toFixed(1)}%"></i></span><b>${esc(fmtPct(sh, 1, false))}</b><span class="badge oc-t-${tc}">${esc(tn)}</span></div>` : '<span class="faint">—</span>'}</td></tr>`;
+  }).join('')}</tbody></table></div>` + note(L(`Cotações da bolsa dos EUA com atraso de até 30 min (Yahoo, pelo robô do NEXUS); valor de mercado pela planilha pública do companiesmarketcap.com. Leitura de ${fmtDateTime(M.at)}. Algumas também alugam data centers para IA — o valor de mercado reflete o negócio todo, não só a mineração.`, `US quotes delayed up to 30 min; market cap from companiesmarketcap.com. Read ${fmtDateTime(M.at)}. Some also host AI data centers — market cap reflects the whole business.`)));
+}
 function drawOcLinks() {
   setHTML('#oc-links', panelHead('link', L('Para ir mais fundo', 'Go deeper')) + `<div class="row wrap" style="gap:8px 18px">${[
     ['https://mempool.space/pt/', 'mempool.space'], ['https://charts.checkonchain.com/', 'Checkonchain'], ['https://www.bitcoinmagazinepro.com/charts/', 'Bitcoin Magazine Pro'],
     ['https://studio.glassnode.com/', 'Glassnode Studio'], ['https://charts.coinmetrics.io/', 'Coin Metrics Charts'], ['https://charts.bgeometrics.com/', 'BGeometrics'],
   ].map(([u, t]) => extLink(u, t)).join('')}</div>`);
 }
-function onchainDraw() { drawOcNet(); drawOcBlocks(); drawOcHalving(); drawOcFees(); drawOcThermo(); drawOcLadder(); drawOcFlow(); drawOcMining(); drawOcLinks(); }
+function onchainDraw() { drawOcNet(); drawOcBlocks(); drawOcHalving(); drawOcFees(); drawOcThermo(); drawOcLadder(); drawOcFlow(); drawOcMining(); drawOcMiners(); drawOcLinks(); }
 let _ocT = 0;
 onPrice((set) => {
   if (S.page !== 'onchain') return;
   if (set.has('MEMPOOL')) { drawOcNet(); drawOcHalving(); drawOcFees(); }
   if (set.has('MPBLK')) drawOcBlocks();
   if (set.has('MPMIN')) drawOcMining();
+  if (set.has('MINERS') || set.has('FX')) drawOcMiners();
   if (set.has('LAB')) { LAB.D = null; drawOcThermo(); drawOcLadder(); drawOcFlow(); }
   if (set.has('BTCUSDT') && Date.now() - _ocT > 15000) { _ocT = Date.now(); LAB.D = null; drawOcFees(); drawOcThermo(); drawOcLadder(); }
 });
@@ -5380,7 +5815,7 @@ const BB_MECH = () => ({
   share: { t: L('Repasse aos detentores', 'Paid to holders'), c: '#a78bfa', ic: 'hand-coins' },
 });
 const BB_FILT = () => [['bb', L('Recompra e queima', 'Buybacks & burns')], ['burn', L('Só queima', 'Burns only')], ['held', L('Recompra e guarda', 'Bought & held')], ['share', L('Repasse a stakers', 'Paid to stakers')], ['all', L('Todos', 'All')]];
-const bbMatch = (type, f) => (f === 'all' ? true : f === 'bb' ? type !== 'share' : f === 'burn' ? type === 'burn' || type === 'buyback-burn' : f === 'held' ? type === 'buyback' : type === 'share');
+const bbMatch = (type, f) => (f === 'all' ? true : f === 'bought' ? type === 'buyback' || type === 'buyback-burn' : f === 'bb' ? type !== 'share' : f === 'burn' ? type === 'burn' || type === 'buyback-burn' : f === 'held' ? type === 'buyback' : type === 'share');
 function registerBuybackSources() {
   source({
     id: 'buybacks', label: 'Burn, Baby, Burn', provider: 'DefiLlama', every: 60 * 60e3, persist: false, kind: 'daily',
@@ -5481,6 +5916,7 @@ function bbHtml() {
   <section class="panel flush mt" id="bb-tbl"><div class="panel-h" style="padding:16px 18px 6px;margin:0"><div class="tt"><h2 class="panel-t"><span class="bb-n">01</span>${esc(L('Quanto chega ao token', 'How much reaches the token'))}</h2><p class="panel-s">${esc(L('Valor que cada protocolo usou para recomprar, queimar ou repassar ao token, e quanto isso representa do valor de mercado e do FDV por ano (no ritmo do período).', 'Value each protocol used to buy back, burn or pass to its token, and what that means as a share of market cap and FDV per year (at the period’s pace).'))}</p></div>${seg('bbp', [['1d', '1D'], ['7d', '7D'], ['30d', '30D'], ['90d', '90D'], ['1y', L('1A', '1Y')]], BB.per)}</div>
     <div class="bb-tools"><div class="bb-filt" role="group" aria-label="${esc(L('Mecanismo', 'Mechanism'))}">${BB_FILT().map(([k, t]) => `<button class="lab-cat" data-act="bbFilt" data-k="${k}" aria-pressed="${BB.filt === k}">${esc(t)}</button>`).join('')}</div><div class="inp-search bb-q">${ico('search', 16)}<input class="inp" type="search" data-inp="bbQ" value="${esc(BB.q)}" placeholder="${esc(L('Buscar token', 'Search token'))}" aria-label="${esc(L('Buscar token', 'Search token'))}"></div></div>
     <div id="bb-tb"></div></section>
+  <div class="grid g-2 mt"><section class="panel" id="bb-burners"></section><section class="panel" id="bb-buyers"></section></div>
   <div class="grid g-2 mt"><section class="panel" id="bb-rank"></section><section class="panel" id="bb-yield"></section></div>
   <section class="panel mt" id="bb-how"></section>`;
 }
@@ -5488,7 +5924,7 @@ function bbEmpty() {
   const h = HEALTH.buybacks;
   return h && h.ok === false ? emptyBox('wifi-off', L('Dados de recompra indisponíveis agora', 'Buyback data unavailable right now'), esc(L('O arquivo do robô não chegou. Tentando de novo; enquanto isso, veja direto na DefiLlama.', 'The robot file did not arrive. Retrying; meanwhile, see it on DefiLlama.')), extLink('https://defillama.com/holders-revenue', 'DefiLlama')) : skel(5, 22);
 }
-function bbDraw() { bbDrawSum(); bbDrawTbl(); bbDrawRank(); bbDrawYield(); bbDrawHow(); }
+function bbDraw() { bbDrawSum(); bbDrawTbl(); bbDrawTop(); bbDrawRank(); bbDrawYield(); bbDrawHow(); }
 function bbDrawSum() {
   const box = $('#bb-sum'); if (!box) return;
   const D = bbData();
@@ -5542,17 +5978,32 @@ function bbBarsPanel(box, title, num_, rows, val, fmt, sub) {
   const mx = Math.max(...rows.map(val).filter(isNum), 0) || 1;
   setHTML(box, `<div class="panel-h"><div class="tt"><h2 class="panel-t"><span class="bb-n">${num_}</span>${esc(title)}</h2><p class="panel-s">${esc(sub)}</p></div></div>` + (rows.length ? '' : `<p class="small faint">${esc(L('Nenhum token com fluxo neste período e filtro.', 'No token with flow in this period and filter.'))}</p>`) + `<div class="bb-bars">${rows.map((r) => { const v = val(r); const col = (BB_MECH()[r.mechs[0]] || BB_MECH().share).c; return `<button class="bb-bar" data-act="bbOpen" data-k="${esc(r.t.k)}"><span class="l">${coinLogo({ b: r.t.sym, logo: r.t.img, cg: r.t.cg }, 22)}<b>${esc(r.t.sym || r.t.n)}</b></span><span class="b"><i style="width:${clamp(v / mx * 100, 1.5, 100)}%;background:${col}"></i></span><span class="v">${esc(fmt(v))}</span></button>`; }).join('')}</div>`);
 }
+// quem mais queima e quem mais recompra no período escolhido (independe do filtro da tabela)
+function bbRowsFor(D, f) { const keep = BB.filt, kq = BB.q; BB.filt = f; BB.q = ''; try { return bbRows(D); } finally { BB.filt = keep; BB.q = kq; } }
+function bbDrawTop() {
+  const D = bbData();
+  const per = { '1d': L('no último dia', 'in the last day'), '7d': L('em 7 dias', 'in 7 days'), '30d': L('em 30 dias', 'in 30 days'), '90d': L('em 90 dias', 'in 90 days'), '1y': L('em 1 ano', 'in 1 year') }[BB.per];
+  for (const [id, f, title, n, sub] of [
+    ['#bb-burners', 'burn', L('Quem mais queima', 'Who burns the most'), '02', L(`Valor queimado ${per} (queima direta ou recompra seguida de queima): moedas que somem para sempre.`, `Value burned ${per} (direct burn or buyback then burn): coins gone for good.`)],
+    ['#bb-buyers', 'bought', L('Quem mais recompra', 'Who buys back the most'), '03', L(`Valor usado para recomprar o próprio token ${per} (depois queima ou guarda no caixa).`, `Value used to buy back its own token ${per} (then burned or held).`)],
+  ]) {
+    const box = $(id); if (!box) continue;
+    if (!D) { setHTML(box, bbEmpty()); continue; }
+    const rows = bbRowsFor(D, f).filter((r) => r.sum > 0).sort((a, b) => b.sum - a.sum).slice(0, 10);
+    bbBarsPanel(box, title, n, rows, (r) => r.sum, (v) => fmtCompact(v), sub);
+  }
+}
 function bbDrawRank() {
   const box = $('#bb-rank'); if (!box) return;
   const D = bbData(); if (!D) { setHTML(box, bbEmpty()); return; }
   const rows = bbRows(D).filter((r) => r.sum > 0).sort((a, b) => b.sum - a.sum).slice(0, 12);
-  bbBarsPanel(box, L('Quem mais devolve ao token', 'Who returns the most to its token'), '02', rows, (r) => r.sum, (v) => fmtCompact(v), L('Valor no período escolhido, com a cor do mecanismo.', 'Value in the chosen period, colored by mechanism.'));
+  bbBarsPanel(box, L('Quem mais devolve ao token', 'Who returns the most to its token'), '04', rows, (r) => r.sum, (v) => fmtCompact(v), L('Valor no período escolhido, com a cor do mecanismo.', 'Value in the chosen period, colored by mechanism.'));
 }
 function bbDrawYield() {
   const box = $('#bb-yield'); if (!box) return;
   const D = bbData(); if (!D) { setHTML(box, bbEmpty()); return; }
   const rows = bbRows(D).filter((r) => isNum(r.yMcap) && r.yMcap > 0 && r.mcap >= 50e6).sort((a, b) => b.yMcap - a.yMcap).slice(0, 12);
-  bbBarsPanel(box, L('Maior rendimento para o detentor', 'Highest yield to holders'), '03', rows, (r) => r.yMcap, (v) => `${fmtNum(v, 2, 2)}%/${L('ano', 'yr')}`, L('% do valor de mercado por ano no ritmo do período (só tokens acima de US$ 50 milhões, para não distorcer).', '% of market cap per year at the period’s pace (only tokens above US$ 50 million, to avoid distortion).'));
+  bbBarsPanel(box, L('Maior rendimento para o detentor', 'Highest yield to holders'), '05', rows, (r) => r.yMcap, (v) => `${fmtNum(v, 2, 2)}%/${L('ano', 'yr')}`, L('% do valor de mercado por ano no ritmo do período (só tokens acima de US$ 50 milhões, para não distorcer).', '% of market cap per year at the period’s pace (only tokens above US$ 50 million, to avoid distortion).'));
 }
 function bbDrawHow() {
   const box = $('#bb-how'); if (!box) return;
@@ -5642,61 +6093,119 @@ page({
 // BALEIAS E TESOURARIAS — empresas que guardam BTC/ETH (CoinGecko),
 // avaliadas pelo preço ao vivo, e links para carteiras gigantes.
 // =====================================================================
-const ETF_LIST = {
-  btc: [
-    ['IBIT', 'iShares Bitcoin Trust', 'BlackRock'], ['FBTC', 'Fidelity Wise Origin Bitcoin Fund', 'Fidelity'],
-    ['GBTC', 'Grayscale Bitcoin Trust', 'Grayscale'], ['BTC', 'Grayscale Bitcoin Mini Trust', 'Grayscale'],
-    ['ARKB', 'ARK 21Shares Bitcoin ETF', 'ARK Invest & 21Shares'], ['BITB', 'Bitwise Bitcoin ETF', 'Bitwise'],
-    ['HODL', 'VanEck Bitcoin ETF', 'VanEck'], ['BTCO', 'Invesco Galaxy Bitcoin ETF', 'Invesco & Galaxy'],
-    ['BTCW', 'WisdomTree Bitcoin Fund', 'WisdomTree'], ['EZBC', 'Franklin Bitcoin ETF', 'Franklin Templeton'],
-    ['BRRR', 'CoinShares Bitcoin ETF', 'CoinShares (ex-Valkyrie)'],
-  ],
-  eth: [
-    ['ETHA', 'iShares Ethereum Trust', 'BlackRock'], ['FETH', 'Fidelity Ethereum Fund', 'Fidelity'],
-    ['ETHE', 'Grayscale Ethereum Trust', 'Grayscale'], ['ETH', 'Grayscale Ethereum Mini Trust', 'Grayscale'],
-    ['ETHW', 'Bitwise Ethereum ETF', 'Bitwise'], ['CETH', '21Shares Core Ethereum ETF', '21Shares'],
-    ['ETHV', 'VanEck Ethereum ETF', 'VanEck'], ['QETH', 'Invesco Galaxy Ethereum ETF', 'Invesco & Galaxy'],
-    ['EZET', 'Franklin Ethereum ETF', 'Franklin Templeton'],
-  ],
-  br: [
-    ['HASH11', 'Hashdex Nasdaq Crypto Index', 'Hashdex'], ['BITH11', 'Hashdex Bitcoin', 'Hashdex'],
-    ['ETHE11', 'Hashdex Ethereum', 'Hashdex'], ['QBTC11', 'QR CME CF Bitcoin Reference Rate', 'QR Asset'],
-    ['QETH11', 'QR CME CF Ether Reference Rate', 'QR Asset'],
-  ],
-};
-const ETF = { tab: 'btc', calc: 1 };
+// ETFs à vista por moeda — lista conferida em out/2026 (sites das gestoras, CoinDesk, TokenPost).
+// [ticker, fundo, gestora, bolsa]; ticker sem cota no Yahoo aparece com "—" (nunca número inventado)
+const ETF_ASSETS = [
+  { k: 'btc', n: 'Bitcoin', b: 'BTC', s: 'BTCUSDT', cg: 'bitcoin', funds: [
+    ['IBIT', 'iShares Bitcoin Trust', 'BlackRock'], ['FBTC', 'Fidelity Wise Origin Bitcoin Fund', 'Fidelity'], ['GBTC', 'Grayscale Bitcoin Trust', 'Grayscale'], ['BTC', 'Grayscale Bitcoin Mini Trust', 'Grayscale'],
+    ['ARKB', 'ARK 21Shares Bitcoin ETF', 'ARK Invest & 21Shares'], ['BITB', 'Bitwise Bitcoin ETF', 'Bitwise'], ['HODL', 'VanEck Bitcoin ETF', 'VanEck'], ['BTCO', 'Invesco Galaxy Bitcoin ETF', 'Invesco & Galaxy'],
+    ['BTCW', 'WisdomTree Bitcoin Fund', 'WisdomTree'], ['EZBC', 'Franklin Bitcoin ETF', 'Franklin Templeton'], ['BRRR', 'CoinShares Bitcoin ETF', 'CoinShares'],
+    ['BITH11', 'Hashdex Bitcoin', 'Hashdex', 'br'], ['QBTC11', 'QR CME CF Bitcoin Reference Rate', 'QR Asset', 'br']] },
+  { k: 'eth', n: 'Ethereum', b: 'ETH', s: 'ETHUSDT', cg: 'ethereum', funds: [
+    ['ETHA', 'iShares Ethereum Trust', 'BlackRock'], ['FETH', 'Fidelity Ethereum Fund', 'Fidelity'], ['ETHE', 'Grayscale Ethereum Trust', 'Grayscale'], ['ETH', 'Grayscale Ethereum Mini Trust', 'Grayscale'],
+    ['ETHW', 'Bitwise Ethereum ETF', 'Bitwise'], ['CETH', '21Shares Core Ethereum ETF', '21Shares'], ['ETHV', 'VanEck Ethereum ETF', 'VanEck'], ['QETH', 'Invesco Galaxy Ethereum ETF', 'Invesco & Galaxy'], ['EZET', 'Franklin Ethereum ETF', 'Franklin Templeton'],
+    ['ETHE11', 'Hashdex Ethereum', 'Hashdex', 'br'], ['QETH11', 'QR CME CF Ether Reference Rate', 'QR Asset', 'br']] },
+  { k: 'sol', n: 'Solana', b: 'SOL', s: 'SOLUSDT', cg: 'solana', funds: [
+    ['BSOL', 'Bitwise Solana Staking ETF', 'Bitwise'], ['GSOL', 'Grayscale Solana Trust ETF', 'Grayscale'], ['FSOL', 'Fidelity Solana Fund', 'Fidelity'], ['VSOL', 'VanEck Solana ETF', 'VanEck'], ['TSOL', '21Shares Solana ETF', '21Shares'], ['QSOL', 'Invesco Galaxy Solana ETF', 'Invesco & Galaxy'],
+    ['SOLH11', 'Hashdex Solana', 'Hashdex', 'br'], ['QSOL11', 'QR Solana', 'QR Asset', 'br']] },
+  { k: 'xrp', n: 'XRP', b: 'XRP', s: 'XRPUSDT', cg: 'ripple', funds: [
+    ['XRP', 'Bitwise XRP ETF', 'Bitwise'], ['XRPC', 'Canary XRP ETF', 'Canary Capital'], ['XRPZ', 'Franklin XRP ETF', 'Franklin Templeton'], ['GXRP', 'Grayscale XRP Trust ETF', 'Grayscale'], ['TOXR', '21Shares XRP ETF', '21Shares'], ['XRPR', 'REX-Osprey XRP ETF', 'REX-Osprey'],
+    ['XRPH11', 'Hashdex XRP', 'Hashdex', 'br']] },
+  { k: 'doge', n: 'Dogecoin', b: 'DOGE', s: 'DOGEUSDT', cg: 'dogecoin', funds: [['GDOG', 'Grayscale Dogecoin Trust ETF', 'Grayscale'], ['BWOW', 'Bitwise Dogecoin ETF', 'Bitwise'], ['TDOG', '21Shares Dogecoin ETF', '21Shares'], ['DOJE', 'REX-Osprey DOGE ETF', 'REX-Osprey']] },
+  { k: 'link', n: 'Chainlink', b: 'LINK', s: 'LINKUSDT', cg: 'chainlink', funds: [['CLNK', 'Bitwise Chainlink ETF', 'Bitwise'], ['GLNK', 'Grayscale Chainlink Trust ETF', 'Grayscale']] },
+  { k: 'ltc', n: 'Litecoin', b: 'LTC', s: 'LTCUSDT', cg: 'litecoin', funds: [['LTCC', 'Canary Litecoin ETF', 'Canary Capital']] },
+  { k: 'hbar', n: 'Hedera', b: 'HBAR', s: 'HBARUSDT', cg: 'hedera-hashgraph', funds: [['HBR', 'Canary HBAR ETF', 'Canary Capital']] },
+  { k: 'dot', n: 'Polkadot', b: 'DOT', s: 'DOTUSDT', cg: 'polkadot', funds: [['TDOT', '21Shares Polkadot ETF', '21Shares']] },
+  { k: 'near', n: 'NEAR', b: 'NEAR', s: 'NEARUSDT', cg: 'near', funds: [['NRR', 'Bitwise NEAR ETF', 'Bitwise']] },
+  { k: 'hype', n: 'Hyperliquid', b: 'HYPE', s: 'HYPEUSDT', cg: 'hyperliquid', funds: [['BHYP', 'Bitwise Hyperliquid ETF', 'Bitwise']] },
+  { k: 'bnb', n: 'BNB', b: 'BNB', s: 'BNBUSDT', cg: 'binancecoin', funds: [['VBNB', 'VanEck BNB ETF', 'VanEck']] },
+  { k: 'trx', n: 'TRON', b: 'TRX', s: 'TRXUSDT', cg: 'tron', funds: [['TRXS', 'Canary TRX ETF', 'Canary Capital']] },
+  { k: 'zec', n: 'Zcash', b: 'ZEC', s: 'ZECUSDT', cg: 'zcash', funds: [['ZCSH', 'Grayscale Zcash Trust ETF', 'Grayscale']] },
+  { k: 'idx', n: L('Cesta (índice)', 'Basket (index)'), b: 'IDX', s: null, cg: null, funds: [['HASH11', 'Hashdex Nasdaq Crypto Index', 'Hashdex', 'br']] },
+];
+const ETF = { asset: LS.get('etf-asset', 'btc'), calc: 1, date: '', view: 'aum' };
 function registerEtfSources() {
   source({
     id: 'etfq', label: L('Cotas dos ETFs', 'ETF quotes'), provider: L('robô NEXUS', 'NEXUS bot'), every: 10 * 60e3,
     need: onPage('etf'),
-    run: async () => { const j = await getPipeline('markets', 3 * 3600e3); if (!j.etfs || !Object.keys(j.etfs).length) throw new Error(L('sem cotas', 'no quotes')); return { q: j.etfs, gen: Date.parse(j.generatedAt) }; },
+    run: async () => { const j = await getPipeline('markets', 3 * 3600e3); if (!j.etfs || !Object.keys(j.etfs).length) throw new Error(L('sem cotas', 'no quotes')); return { q: j.etfs, aum: j.etfAum || null, aumAt: Date.parse(j.etfAumAt || '') || null, gen: Date.parse(j.generatedAt) }; },
     onData: (d) => { HEALTH.etfq.dataTs = d.gen; _markDirty('ETFQ'); },
+  });
+  source({
+    id: 'etfhist', label: L('Histórico das cotas dos ETFs', 'ETF quote history'), provider: 'Yahoo Finance (robô NEXUS)', every: 60 * 60e3, persist: false,
+    need: () => S.page === 'etf' && !!ETF.date,
+    run: async () => { const j = await getPipeline('etfhist', 30 * 3600e3); if (!j.h || !Object.keys(j.h).length) throw new Error(L('sem histórico', 'no history')); return { h: j.h, gen: Date.parse(j.generatedAt) }; },
+    onData: (d) => { HEALTH.etfhist.dataTs = d.gen; _markDirty('ETFQ'); },
   });
 }
 function etfHtml() {
   return `${pageHead(PAGES.etf, '')}
   <section class="panel hero"><div class="grid g-3" style="gap:18px">
-    <div><h2 class="panel-t">${ico('package', 18)}${esc(L('O que é um ETF de bitcoin?', 'What is a bitcoin ETF?'))}</h2><p class="muted small mt" style="line-height:1.6">${esc(L('É um fundo negociado na bolsa, como uma ação. Quem compra uma cota tem exposição ao preço do bitcoin sem precisar guardar a moeda: o fundo compra e custodia os BTC de verdade.', 'An exchange-traded fund, like a stock. Buying a share gives bitcoin price exposure without holding the coin: the fund buys and custodies real BTC.'))}</p></div>
-    <div><h2 class="panel-t">${ico('database', 18)}${esc(L('O que é AUM?', 'What is AUM?'))}</h2><p class="muted small mt" style="line-height:1.6">${esc(L('AUM (Assets Under Management) é o patrimônio sob gestão: quanto vale tudo o que o fundo guarda. Num ETF de bitcoin, AUM ≈ quantidade de BTC do fundo × preço do BTC.', 'AUM (Assets Under Management) is what all of the fund’s holdings are worth. For a bitcoin ETF, AUM ≈ BTC held × BTC price.'))}</p></div>
-    <div><h2 class="panel-t">${ico('arrow-left-right', 18)}${esc(L('O que são entradas e saídas?', 'What are inflows/outflows?'))}</h2><p class="muted small mt" style="line-height:1.6">${esc(L('Entrada = dinheiro novo aplicado no fundo (ele compra BTC). Saída = resgates (ele vende BTC). É o termômetro da demanda institucional.', 'Inflow = new money into the fund (it buys BTC). Outflow = redemptions (it sells BTC). A gauge of institutional demand.'))}</p></div>
+    <div><h2 class="panel-t">${ico('package', 18)}${esc(L('O que é um ETF de cripto?', 'What is a crypto ETF?'))}</h2><p class="muted small mt" style="line-height:1.6">${esc(L('É um fundo negociado na bolsa, como uma ação. Quem compra uma cota tem exposição ao preço da moeda sem precisar guardá-la: o fundo compra e custodia as moedas de verdade.', 'An exchange-traded fund, like a stock. A share gives exposure to the coin without holding it: the fund buys and custodies the real coins.'))}</p></div>
+    <div><h2 class="panel-t">${ico('database', 18)}${esc(L('O que é AUM (patrimônio)?', 'What is AUM?'))}</h2><p class="muted small mt" style="line-height:1.6">${esc(L('AUM (Assets Under Management) é o patrimônio sob gestão: quanto vale tudo o que o fundo guarda. Quanto maior, mais moedas o fundo tem em custódia.', 'AUM (Assets Under Management) is what all of the fund’s holdings are worth.'))}</p></div>
+    <div><h2 class="panel-t">${ico('arrow-left-right', 18)}${esc(L('O que são entradas e saídas?', 'What are inflows/outflows?'))}</h2><p class="muted small mt" style="line-height:1.6">${esc(L('Entrada = dinheiro novo aplicado no fundo (ele compra moedas). Saída = resgates (ele vende). É o termômetro da demanda institucional.', 'Inflow = new money into the fund (it buys coins). Outflow = redemptions (it sells). A gauge of institutional demand.'))}</p></div>
   </div></section>
   <section class="panel mt" id="etf-list"></section>
   <div class="grid g-2 mt"><section class="panel" id="etf-flows"></section><section class="panel" id="etf-calc"></section></div>`;
 }
+const etfAsset = () => ETF_ASSETS.find((a) => a.k === ETF.asset) || ETF_ASSETS[0];
+const etfYahoo = (f) => (f[3] === 'br' ? f[0] + '.SA' : f[0]);
+// cota de um dia (ou do último pregão antes dele)
+function etfCloseOn(sym, iso) {
+  const H = CACHE.get('etfhist'); const h = H && H.v.h && H.v.h[sym]; if (!h || !iso) return null;
+  const day = Math.floor(Date.parse(iso + 'T23:59:59Z') / 86400e3);
+  let k = -1; for (let i = 0; i < h.d.length; i++) { if (h.d[i] <= day) k = i; else break; }
+  return k >= 0 ? { c: h.c[k], day: new Date(h.d[k] * 86400e3).toISOString().slice(0, 10) } : null;
+}
 function drawEtfList() {
   const box = $('#etf-list'); if (!box) return;
-  const q = CACHE.get('etfq'); const Q = q && q.v.q;
-  const rows = ETF_LIST[ETF.tab];
-  const yahoo = (t) => (ETF.tab === 'br' ? t + '.SA' : t);
-  const tbl = `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Ticker</th><th>${esc(L('Fundo', 'Fund'))}</th><th>${esc(L('Gestora', 'Issuer'))}</th><th class="r">${esc(L('Cota', 'Price'))}</th><th class="r">${esc(L('Dia', 'Day'))}</th><th class="r">${esc(L('Volume negociado', 'Traded volume'))}</th><th class="r">${esc(L('Cotação de', 'Quote at'))}</th></tr></thead><tbody>${rows.map(([t, n, i]) => {
-    const x = Q && Q[yahoo(t)];
-    const cur = ETF.tab === 'br' ? 'BRL' : 'USD';
-    return `<tr><td><b>${esc(t)}</b></td><td>${esc(n)}</td><td class="muted">${esc(i)}</td><td class="r num">${x ? esc(fmtMoney(x.p, cur, [2, 2])) : '—'}</td><td class="r">${x ? chg(x.chg, 2, 'sm') : '—'}</td><td class="r">${x && isNum(x.vol) ? esc(fmtCompact(x.vol * x.p, cur)) : '—'}</td><td class="r small faint">${x && x.t ? esc(fmtDateTime(x.t)) : '—'}</td></tr>`;
+  const q = CACHE.get('etfq'); const Q = q && q.v.q, AUM = (q && q.v.aum) || {};
+  const A = etfAsset(); const fxr = brlRate(); const fx = fxr ? fxr.v : null;
+  const rows = A.funds.map((f) => {
+    const x = Q && Q[etfYahoo(f)]; const br = f[3] === 'br'; const cur = br ? 'BRL' : 'USD';
+    const volCur = x && isNum(x.vol) && x.vol > 0 ? x.vol * x.p : null;
+    const volUSD = isNum(volCur) ? (br ? (fx ? volCur / fx : null) : volCur) : null;
+    const aum = !br && isNum(AUM[f[0]]) ? AUM[f[0]] : null;
+    const then = ETF.date ? etfCloseOn(etfYahoo(f), ETF.date) : null;
+    return { f, x, br, cur, volCur, volUSD, aum, then };
+  });
+  const view = ETF.view === 'aum' && rows.filter((r) => r.aum).length >= 1 ? 'aum' : 'vol';
+  const key = view === 'aum' ? 'aum' : 'volUSD';
+  const tot = sum(rows.map((r) => r[key] || 0));
+  const ranked = rows.filter((r) => r[key] > 0).sort((a, b) => b[key] - a[key]);
+  const pal = ['var(--accent)', 'var(--signal)', 'var(--info)', 'var(--up)', '#c084fc', '#2dd4bf', '#fb923c', '#f472b6'];
+  const colOf = (i) => (i < pal.length ? pal[i] : 'var(--text-3)');
+  const totAum = sum(rows.map((r) => r.aum || 0)), totVol = sum(rows.map((r) => r.volUSD || 0));
+  const withQ = rows.filter((r) => r.x).length;
+  const avgChg = withQ ? avg(rows.filter((r) => r.x && isNum(r.x.chg)).map((r) => r.x.chg)) : null;
+  const px = A.s ? priceOf(A.s) : null;
+  const chips = ETF_ASSETS.map((a) => `<button class="btn xs ${a.k === A.k ? 'pri' : 'ghost'}" data-act="etfAsset" data-k="${a.k}">${a.cg ? coinLogo({ b: a.b, cg: a.cg }, 16) : ico('layers', 14)}${esc(a.n)}<span class="faint" style="margin-left:2px">${a.funds.length}</span></button>`).join('');
+  const kpis = `<div class="grid g-4 mt etf-k">
+    ${kpiBox(L('Fundos', 'Funds'), `${A.funds.filter((f) => f[3] !== 'br').length} <span class="small faint">EUA</span>${A.funds.some((f) => f[3] === 'br') ? ` · ${A.funds.filter((f) => f[3] === 'br').length} <span class="small faint">B3</span>` : ''}`, esc(L(`${withQ} com cota agora`, `${withQ} quoted now`)))}
+    ${kpiBox(L('Patrimônio somado (EUA)', 'Combined AUM (US)'), totAum > 0 ? esc(fmtCompact(totAum)) : '—', totAum > 0 && fx ? esc(fmtCompact(totAum * fx, 'BRL')) : esc(L('sem dado de patrimônio', 'no AUM data')))}
+    ${kpiBox(L('Negociado hoje', 'Traded today'), totVol > 0 ? esc(fmtCompact(totVol)) : '—', isNum(avgChg) ? `${chg(avgChg)} <span class="faint">${esc(L('média das cotas', 'avg. share move'))}</span>` : '')}
+    ${kpiBox(L(`${A.b} agora`, `${A.b} now`), px ? esc(usd(px.p)) : '—', px && toBRL(px.p) ? `${esc(brl(toBRL(px.p), toBRL(px.p) >= 1 ? [2, 2] : undefined))} · ${chg(px.chg)}` : '')}
+  </div>`;
+  const stack = ranked.length ? `<div class="etf-stack-h"><span class="small b">${esc(view === 'aum' ? L('Quem guarda mais (patrimônio)', 'Who holds most (AUM)') : L('Quem negociou mais hoje (volume)', 'Most traded today (volume)'))}</span>${rows.some((r) => r.aum) ? seg('etfv', [['aum', L('Patrimônio', 'AUM')], ['vol', L('Volume do dia', 'Day volume')]], view) : ''}</div>
+    <div class="etf-stack" role="img" aria-label="${esc(L('Fatia de cada fundo', 'Share of each fund'))}">${ranked.map((r, i) => `<i style="flex:${(r[key] / tot * 100).toFixed(3)};background:${colOf(i)}" title="${esc(r.f[0])}: ${esc(fmtPct(r[key] / tot * 100, 1, false))}"></i>`).join('')}</div>
+    <div class="etf-bars">${ranked.slice(0, 8).map((r, i) => `<div class="etf-bar"><span class="t"><i style="background:${colOf(i)}"></i><b>${esc(r.f[0])}</b> <span class="faint">${esc(r.f[2])}</span></span><span class="bar"><span style="width:${(r[key] / ranked[0][key] * 100).toFixed(1)}%;background:${colOf(i)}"></span></span><span class="v">${esc(fmtCompact(r[key]))} <span class="faint">${esc(fmtPct(r[key] / tot * 100, 1, false))}</span></span></div>`).join('')}${ranked.length > 8 ? `<div class="tiny faint">+${ranked.length - 8} ${esc(L('fundos menores', 'smaller funds'))}</div>` : ''}</div>
+    ${view === 'aum' && q && q.v.aumAt ? `<div class="tiny faint">${esc(L(`Patrimônio = valor de mercado do fundo (companiesmarketcap.com), lido em ${fmtDateTime(q.v.aumAt)}.`, `AUM = fund market value (companiesmarketcap.com), read ${fmtDateTime(q.v.aumAt)}.`))}</div>` : view === 'vol' ? `<div class="tiny faint">${esc(L('Volume = cotas negociadas × preço, no dia (B3 convertido pelo dólar de agora). Não é entrada de dinheiro no fundo.', 'Volume = shares traded × price that day (B3 converted at today’s USD rate). Not fund inflows.'))}</div>` : ''}` : '';
+  const dateCol = !!ETF.date;
+  const hasHist = !!CACHE.get('etfhist');
+  const tbl = `<div class="tbl-wrap"><table class="tbl etf-tbl"><thead><tr><th>Ticker</th><th>${esc(L('Fundo', 'Fund'))}</th><th class="r">${esc(L('Cota', 'Price'))}</th><th class="r">${esc(L('Dia', 'Day'))}</th><th class="r">${esc(L('Patrimônio', 'AUM'))}</th><th class="r">${esc(L('Negociado', 'Traded'))}</th>${dateCol ? `<th class="r">${esc(L('Cota em', 'Price on'))} ${esc(fmtDate(ETF.date + 'T12:00:00Z', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'UTC' }))}</th><th class="r">${esc(L('Desde então', 'Since then'))}</th>` : ''}<th class="r">${esc(L('Cotação de', 'Quote at'))}</th></tr></thead><tbody>${rows.map((r) => {
+    const x = r.x; const chgSince = r.then && x && r.then.c > 0 ? (x.p / r.then.c - 1) * 100 : null;
+    return `<tr><td><b>${esc(r.f[0])}</b><div class="tiny faint">${r.br ? 'B3' : 'EUA'}</div></td><td style="white-space:normal;min-width:180px">${esc(r.f[1])}<div class="tiny faint">${esc(r.f[2])}</div></td><td class="r num">${x ? esc(fmtMoney(x.p, r.cur, [2, 2])) : '—'}${x && !r.br && fx ? `<div class="tiny faint">${esc(brl(x.p * fx, [2, 2]))}</div>` : ''}</td><td class="r">${x ? chg(x.chg, 2, 'sm') : '—'}</td><td class="r num">${r.aum ? esc(fmtCompact(r.aum)) : '—'}</td><td class="r num">${isNum(r.volCur) ? esc(fmtCompact(r.volCur, r.cur)) : '—'}</td>${dateCol ? `<td class="r num">${r.then ? `${esc(fmtMoney(r.then.c, r.cur, [2, 2]))}${r.then.day !== ETF.date ? `<div class="tiny faint">${esc(L('pregão de', 'session of'))} ${esc(fmtDate(r.then.day + 'T12:00:00Z', { day: '2-digit', month: '2-digit', timeZone: 'UTC' }))}</div>` : ''}` : `<span class="faint">${hasHist ? '—' : '…'}</span>`}</td><td class="r">${isNum(chgSince) ? chg(chgSince, 1, 'sm') : '—'}</td>` : ''}<td class="r small faint">${x && x.t ? esc(fmtDateTime(x.t)) : '—'}</td></tr>`;
   }).join('')}</tbody></table></div>`;
-  box.innerHTML = panelHead('building-2', L('ETFs à vista', 'Spot ETFs'), { sub: esc(L('Lista de fundos conferida em out/2026. Cotas com atraso de até 30 min, trazidas pelo robô do NEXUS.', 'Fund list checked in Oct/2026. Quotes delayed up to 30 min, via the NEXUS bot.')), right: `<div class="row wrap" style="gap:8px">${seg('etft', [['btc', 'Bitcoin (EUA)'], ['eth', 'Ethereum (EUA)'], ['br', L('Brasil (B3)', 'Brazil (B3)')]], ETF.tab)}${stamp('etfq')}</div>` }) + tbl +
-    note(L('"Volume negociado" é quanto as cotas giraram na bolsa no dia — não é entrada nem saída de dinheiro do fundo. Novos fundos podem estrear e emissores podem mudar; confirme nos sites das gestoras.', '"Traded volume" is how much the shares traded that day — not fund inflows/outflows. New funds may launch and issuers may change; confirm on issuer sites.'));
+  const today = todayISO(); const minD = new Date(Date.now() - 365 * 86400e3).toISOString().slice(0, 10);
+  box.innerHTML = panelHead('building-2', L('ETFs à vista', 'Spot ETFs'), { sub: esc(L('Escolha a moeda. Cotas com atraso de até 30 min (robô do NEXUS). Lista de fundos conferida em out/2026.', 'Pick the coin. Quotes delayed up to 30 min (NEXUS bot). Fund list checked Oct/2026.')), right: stamp('etfq') }) +
+    `<div class="row wrap etf-chips" style="gap:6px">${chips}</div>${kpis}<div class="etf-viz mt">${stack || `<div class="small faint">${esc(L('Sem cotas para montar o gráfico desta moeda ainda.', 'No quotes to chart this coin yet.'))}</div>`}</div>
+    <div class="row wrap between mt" style="gap:10px;align-items:flex-end"><div class="fld" style="max-width:260px"><label for="etf-date">${esc(L('Ver a cota de um dia', 'See the price on a day'))}</label><div class="row" style="gap:6px"><input class="inp" id="etf-date" type="date" min="${minD}" max="${today}" value="${esc(ETF.date)}" data-chg="etfDate">${ETF.date ? `<button class="btn sm ghost" data-act="etfDateClear">${esc(L('Limpar', 'Clear'))}</button>` : ''}</div></div>${ETF.date ? stamp('etfhist', 'Yahoo Finance') : ''}</div>` + tbl +
+    note(L('"Negociado" é quanto as cotas giraram na bolsa no dia — não é entrada nem saída de dinheiro do fundo. Novos fundos podem estrear e gestoras podem mudar; confirme nos sites das gestoras. Cota de um dia: fechamento do pregão (até 1 ano).', '"Traded" is how much the shares changed hands that day — not fund flows. Price on a day: session close (up to 1 year).'));
 }
-ACT.seg_etft = (v) => { ETF.tab = v; drawEtfList(); };
+ACT.etfAsset = (el) => { ETF.asset = el.dataset.k; LS.set('etf-asset', ETF.asset); drawEtfList(); };
+ACT.seg_etfv = (v) => { ETF.view = v; drawEtfList(); };
+ACT.etfDate = (el) => { ETF.date = /^\d{4}-\d{2}-\d{2}$/.test(el.value) ? el.value : ''; drawEtfList(); if (ETF.date && !CACHE.get('etfhist')) runSource('etfhist', { force: true }); };
+ACT.etfDateClear = () => { ETF.date = ''; drawEtfList(); };
 function drawEtfFlows() {
   setHTML('#etf-flows', panelHead('chart-column', L('Entradas e saídas diárias', 'Daily inflows & outflows')) + `<div class="callout">${ico('info', 18)}<span>${esc(L('Os fluxos diários só são publicados por empresas especializadas, sem acesso gratuito pelo navegador. Para não mostrar número estimado como se fosse real, deixamos os links de quem mede de verdade:', 'Daily flows are published by specialist firms, without free browser access. Rather than show estimates as real, here are the sources that measure them:'))}</span></div>
     <div class="list mt">${[['https://farside.co.uk/btc/', 'Farside Investors', L('tabela diária por fundo (BTC)', 'daily table per fund (BTC)')], ['https://farside.co.uk/eth/', 'Farside Investors', L('tabela diária por fundo (ETH)', 'daily table per fund (ETH)')], ['https://sosovalue.com/assets/etf/us-btc-spot', 'SoSoValue', L('gráficos de fluxo e patrimônio (AUM)', 'flow and AUM charts')], ['https://www.theblock.co/data/crypto-markets/bitcoin-etf', 'The Block', L('painel de dados dos ETFs', 'ETF data dashboard')]].map(([u, t, s]) => `<a class="li" href="${esc(u)}" target="_blank" rel="noopener noreferrer"><span class="grow"><span class="t" style="display:block">${esc(t)}</span><span class="m">${esc(s)}</span></span>${ico('external-link', 15)}</a>`).join('')}</div>`);
@@ -5705,18 +6214,18 @@ function drawEtfCalc() {
   const btc = PX.BTCUSDT && PX.BTCUSDT.p, r = brlRate();
   const v = ETF.calc;
   setHTML('#etf-calc', panelHead('calculator', L('Quanto vale uma quantidade de BTC hoje', 'What an amount of BTC is worth today'), { sub: esc(L('Útil para estimar o AUM de um fundo a partir dos BTC que ele declara.', 'Handy to estimate a fund’s AUM from the BTC it reports.')), right: stamp('px-rest', 'Binance') }) +
-    `<div class="fld"><label for="etf-q">${esc(L('Quantidade de BTC', 'BTC amount'))}</label><input class="inp" id="etf-q" type="number" min="0" step="any" inputmode="decimal" value="${esc(v)}" data-inp="etfCalc"></div>
+    `<div class="fld"><label for="etf-q">${esc(L('Quantidade de BTC', 'BTC amount'))}</label><input class="inp" id="etf-q" type="text" inputmode="decimal" autocomplete="off" value="${esc(decOut(v, 8))}" data-inp="etfCalc"></div>
     <div class="grid g-2 mt" id="etf-calc-out">${kpiBox(L('Em dólar', 'In USD'), btc ? esc(usd(v * btc, [0, 2])) : '—')}${kpiBox(L('Em reais', 'In BRL'), btc && r ? esc(brl(v * btc * r.v, [0, 2])) : '—')}</div>`);
 }
 ACT.etfCalc = (el) => {
-  ETF.calc = Math.max(0, num(el.value) || 0);
+  ETF.calc = Math.max(0, parseDec(el.value) || 0);
   const btc = PX.BTCUSDT && PX.BTCUSDT.p, r = brlRate();
   setHTML('#etf-calc-out', kpiBox(L('Em dólar', 'In USD'), btc ? esc(usd(ETF.calc * btc, [0, 2])) : '—') + kpiBox(L('Em reais', 'In BRL'), btc && r ? esc(brl(ETF.calc * btc * r.v, [0, 2])) : '—'));
 };
-onPrice((set) => { if (S.page === 'etf' && set.has('ETFQ')) drawEtfList(); });
+onPrice((set) => { if (S.page === 'etf' && (set.has('ETFQ') || set.has('FX'))) drawEtfList(); });
 page({
   id: 'etf', group: 'analise', icon: 'building-2', pt: 'ETFs', en: 'ETFs',
-  sub: 'Os fundos de bitcoin e ethereum negociados em bolsa, explicados em linguagem simples.',
+  sub: 'Os fundos de cripto negociados em bolsa (bitcoin, ethereum, solana, XRP e outras), explicados em linguagem simples.',
   subEn: 'Bitcoin and ether exchange-traded funds, explained in plain language.',
   init(el) { el.innerHTML = etfHtml(); drawEtfList(); drawEtfFlows(); drawEtfCalc(); },
   show() { drawEtfList(); },
@@ -6323,14 +6832,36 @@ function pipelineNews() { // um pedido compartilhado por todas as categorias (va
   _pipeNews = { at: Date.now(), p }; p.catch(() => { _pipeNews = null; });
   return p;
 }
+// resumo útil ou nada: tira entidades (&nbsp;), o "título + nome do veículo" que o Google Notícias repete
+// e os rodapés automáticos ("Fonte: …", "O post … apareceu primeiro em …", "Veja mais notícias…")
+const _normT = (s) => cleanTxt(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+function newsDesc(x, t, src) {
+  let d = cleanTxt(x);
+  if (!d) return '';
+  d = d.replace(/\s*O post .{0,300}? apareceu primeiro em .*$/i, '').replace(/\s*Fonte:\s.*$/i, '').replace(/\s*Veja mais not[íi]cias.*$/i, '').replace(/\s*The post .{0,300}? appeared first on .*$/i, '').replace(/\s*(Leia mais|Continue lendo|Read more)\b.*$/i, '').trim();
+  const nd = _normT(d), nt = _normT(t), ns = _normT(src || '');
+  if (!nd || nd.length < 25) return '';
+  if (nt && (nd === nt || nd.startsWith(nt) || nt.startsWith(nd))) { const rest = nd.slice(nt.length).trim(); if (!rest || rest === ns || rest.length < 25) return ''; }
+  return d;
+}
 function newsClean(items, maxH) {
-  const seen = new Set(), now = Date.now();
-  return items.filter((n) => {
-    if (!n || !n.t || !n.u || !isNum(n.d)) return false;
-    if (n.d > now + 3600e3 || now - n.d > maxH * 3600e3) return false; // nem do futuro nem velha demais
-    const k = n.u.split('?')[0] + '|' + n.t.toLowerCase().slice(0, 60);
-    if (seen.has(k)) return false; seen.add(k); return true;
-  }).sort((a, b) => b.d - a.d).slice(0, 80);
+  const seen = new Set(), now = Date.now(), byT = new Map();
+  const out = [];
+  for (const raw of items) {
+    if (!raw || !raw.t || !raw.u || !isNum(raw.d)) continue;
+    if (raw.d > now + 3600e3 || now - raw.d > maxH * 3600e3) continue; // nem do futuro nem velha demais
+    const t = cleanTxt(raw.t), src = cleanTxt(raw.src || '');
+    if (!t) continue;
+    const n = { ...raw, t, src, x: newsDesc(raw.x, t, src) };
+    const k = n.u.split('?')[0] + '|' + t.toLowerCase().slice(0, 60);
+    if (seen.has(k)) continue; seen.add(k);
+    // a mesma manchete do mesmo veículo (RSS próprio + Google Notícias) aparece uma vez só, com o resumo quando houver
+    const kt = _normT(src) + '|' + _normT(t).slice(0, 80);
+    const prev = byT.get(kt);
+    if (prev) { if (!prev.x && n.x) prev.x = n.x; continue; }
+    byT.set(kt, n); out.push(n);
+  }
+  return out.sort((a, b) => b.d - a.d).slice(0, 80);
 }
 function registerNewsSources() {
   for (const [cat, def] of Object.entries(NEWS_CATS)) {
@@ -6466,7 +6997,7 @@ function registerGeoSource() {
     run: async () => {
       try {
         const j = await getPipeline('news', 12 * 3600e3);
-        if (Array.isArray(j.cats && j.cats.geo) && j.cats.geo.length >= 10) return { items: j.cats.geo, via: 'pipe', gen: Date.parse(j.geoAt || j.generatedAt) };
+        if (Array.isArray(j.cats && j.cats.geo) && j.cats.geo.length >= 10) return { items: j.cats.geo.filter((n) => n && n.t).map((n) => { const t = cleanTxt(n.t), src = cleanTxt(n.src || ''); return { ...n, t, src, x: newsDesc(n.x, t, src), more: Array.isArray(n.more) ? n.more.map((m) => ({ ...m, t: cleanTxt(m.t), src: cleanTxt(m.src || '') })) : n.more }; }), via: 'pipe', gen: Date.parse(j.geoAt || j.generatedAt) };
       } catch { /* robô fora: lê direto */ }
       const res = await Promise.allSettled(NEWS_CATS.mundo.feeds.map(([u, name, lang]) => rssItems(u, 20).then((a) => a.map((n) => ({ ...n, src: name, lang })))));
       const raw = res.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value);
@@ -6636,13 +7167,15 @@ async function vaultLoad(force = false) {
   VAULT.loading = false;
   vaultDraw();
 }
-onAccount(() => { if (!ACCOUNT.user || ACCOUNT.user.id !== VAULT.uid) { VAULT.rows = []; VAULT.loaded = false; VAULT.hist = null; VAULT.uid = null; } });
+onAccount(() => { if (!ACCOUNT.user || ACCOUNT.user.id !== VAULT.uid) { VAULT.rows = []; VAULT.loaded = false; VAULT.hist = null; VAULT.uid = null; VAULT.draft = null; VAULT.dayPrices = null; VAULT.histKey = ''; } });
 
 // ---------- contabilidade (custo médio) ----------
 function fxNow() { const r = brlRate(); return r ? r.v : null; }
+// ordem contábil: por data; no mesmo dia, compras antes das vendas (senão uma venda registrada antes da compra do mesmo dia seria ignorada)
+const vaultSorted = (rows) => [...rows].sort((a, b) => a.date.localeCompare(b.date) || (a.type === b.type ? 0 : a.type === 'buy' ? -1 : 1) || String(a.created_at).localeCompare(String(b.created_at)));
 function holdings() {
   const by = {};
-  const rows = [...VAULT.rows].sort((a, b) => a.date.localeCompare(b.date) || String(a.created_at).localeCompare(String(b.created_at)));
+  const rows = vaultSorted(VAULT.rows);
   for (const e of rows) {
     const h = by[e.asset_id] || (by[e.asset_id] = { id: e.asset_id, sym: e.sym, name: e.name || e.sym, logo: e.logo || LOGOS[e.asset_id], color: e.color || (BY_CG[e.asset_id] && BY_CG[e.asset_id].c) || hashColor(e.asset_id), bsym: e.binance_sym && BY_SYM[e.binance_sym] ? e.binance_sym : (BY_CG[e.asset_id] && BY_CG[e.asset_id].s) || null, qty: 0, costUSD: 0, costBRL: 0, invUSD: 0, invBRL: 0, realUSD: 0, realBRL: 0, buys: 0, sells: 0, first: e.date, list: [] });
     const fx = e.fx_brl || (e.amount_usd > 0 ? e.amount_brl / e.amount_usd : fxNow() || 1);
@@ -6651,6 +7184,7 @@ function holdings() {
       h.qty += e.qty; h.costUSD += e.amount_usd + feeU; h.costBRL += e.amount_brl + feeB;
       h.invUSD += e.amount_usd + feeU; h.invBRL += e.amount_brl + feeB; h.buys++;
     } else {
+      if (e.qty > h.qty + 1e-9) h.over = (h.over || 0) + (e.qty - h.qty);
       const q = Math.min(e.qty, h.qty); const aU = h.qty > 0 ? h.costUSD / h.qty : 0, aB = h.qty > 0 ? h.costBRL / h.qty : 0;
       const part = e.qty > 0 ? q / e.qty : 0;
       h.realUSD += (e.amount_usd - feeU) * part - aU * q; h.realBRL += (e.amount_brl - feeB) * part - aB * q;
@@ -6664,7 +7198,7 @@ function holdings() {
     const q = priceOf(h.bsym || h.id);
     const p = q ? q.p : null;
     const vU = isNum(p) ? h.qty * p : null, vB = isNum(vU) && fxn ? vU * fxn : null;
-    return { ...h, price: p, chg24: q ? q.chg : null, live: q ? q.live : false, valueUSD: vU, valueBRL: vB, avgUSD: h.qty > 0 ? h.costUSD / h.qty : null, avgBRL: h.qty > 0 ? h.costBRL / h.qty : null, plUSD: isNum(vU) ? vU - h.costUSD : null, plBRL: isNum(vB) ? vB - h.costBRL : null };
+    return { ...h, price: p, chg24: q ? q.chg : null, live: q ? q.live : false, valueUSD: vU, valueBRL: vB, avgUSD: h.qty > 0 ? h.costUSD / h.qty : null, avgBRL: h.qty > 0 ? h.costBRL / h.qty : null, plUSD: isNum(vU) ? vU - h.costUSD : null, plBRL: isNum(vB) ? vB - h.costBRL : null, priceBRL: isNum(p) && fxn ? p * fxn : null };
   }).sort((a, b) => (b.valueUSD || 0) - (a.valueUSD || 0));
 }
 function totals(H) {
@@ -6710,6 +7244,7 @@ function vaultDraw() {
     ${VAULT.cur === 'BRL' ? note(L('Em reais, o custo usa o valor pago em R$ (ou o dólar do dia do aporte) e o patrimônio usa o dólar de agora — então a variação do câmbio entra no resultado.', 'In BRL, cost uses what you paid in R$ (or that day’s USD rate) and value uses today’s rate — FX moves are included.')) : ''}
   </section><section class="panel">${panelHead('chart-pie', L('Mapa de acumulação', 'Allocation map'))}<div id="v-donut"></div></section></div>
   <section class="panel mt">${panelHead('chart-line', L('Evolução do patrimônio', 'Portfolio over time'), { sub: esc(L('Quanto sua carteira valia em cada dia, comparado ao custo dos aportes.', 'What your portfolio was worth each day vs. the cost of entries.')), right: seg('vrange', [['1m', '1M'], ['3m', '3M'], ['6m', '6M'], ['1y', '1A'], ['all', L('Tudo', 'All')]], VAULT.range) })}<div id="v-hist" style="height:340px"></div><div id="v-hist-note"></div></section>
+  <div id="v-check"></div>
   <section class="panel flush mt" id="v-hold"></section>
   <section class="panel mt" id="v-asset"></section>
   <div class="grid g-2 mt"><section class="panel" id="v-month"></section><section class="panel" id="v-perf"></section></div>
@@ -6727,10 +7262,13 @@ function vaultDrawParts(H, T) {
   setHTML('#v-donut', held.length ? `<div class="donut-wrap">${donutSVG(held.map((h) => ({ v: h[k] || 0, c: h.color, t: h.sym })), { label: L('Distribuição da carteira', 'Portfolio allocation') })}<div class="legend">${held.slice(0, 8).map((h) => `<div><i style="background:${esc(h.color)}"></i><span>${esc(h.sym)}</span><span class="lv">${tot > 0 ? esc(fmtPct((h[k] || 0) / tot * 100, 1, false)) : '—'}</span></div>`).join('')}${held.length > 8 ? `<div class="faint">+${held.length - 8} ${esc(L('outros', 'others'))}</div>` : ''}</div></div>` : emptyBox('chart-pie', L('Nada em carteira agora', 'Nothing held now')));
   // tabela de posições
   const c = VAULT.cur;
-  setHTML('#v-hold', `<div class="panel-h" style="padding:16px 18px 10px;margin:0"><div class="tt"><h2 class="panel-t">${ico('layers', 18)}${esc(L('Suas posições', 'Your positions'))}</h2></div></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>${esc(L('Ativo', 'Asset'))}</th><th class="r">${esc(L('Quantidade', 'Quantity'))}</th><th class="r">${esc(L('Preço médio', 'Avg. cost'))}</th><th class="r">${esc(L('Preço agora', 'Price now'))}</th><th class="r">${esc(L('Valor', 'Value'))}</th><th class="r">${esc(L('Resultado', 'P/L'))}</th><th class="r">${esc(L('Carteira', 'Weight'))}</th></tr></thead><tbody>${H.map((h) => {
-    const val = c === 'BRL' ? h.valueBRL : h.valueUSD, pl = c === 'BRL' ? h.plBRL : h.plUSD, cost = c === 'BRL' ? h.costBRL : h.costUSD, avgp = c === 'BRL' ? h.avgBRL : h.avgUSD;
-    const pr = isNum(h.price) ? (c === 'BRL' ? toBRL(h.price) : h.price) : null;
-    return `<tr class="click" data-act="vaultAsset" data-id="${esc(h.id)}" style="${h.qty === 0 ? 'opacity:.6' : ''}"><td><div class="coin">${coinLogo({ b: h.sym, logo: h.logo || LOGOS[h.id], c: h.color, cg: h.id }, 28)}<div><div class="nm">${esc(h.name)}</div><div class="sy">${esc(h.sym)}${h.live ? ' · ' + esc(L('ao vivo', 'live')) : ''}</div></div></div></td><td class="r num">${esc(fmtQty(h.qty))}</td><td class="r">${isNum(avgp) ? esc(money(avgp)) : '—'}</td><td class="r">${isNum(pr) ? esc(money(pr)) : '—'}</td><td class="r num">${isNum(val) ? esc(money(val, [2, 2])) : '—'}</td><td class="r">${isNum(pl) ? `<span class="${tone(pl)} b">${esc(money(pl, [2, 2]))}</span><div class="tiny ${tone(pl)}">${cost > 0 ? esc(fmtPct(pl / cost * 100, 1)) : ''}</div>` : '—'}</td><td class="r">${tot > 0 && isNum(val) ? esc(fmtPct(val / tot * 100, 1, false)) : '—'}</td></tr>`;
+  const pr2 = (h) => (c === 'BRL' ? h.priceBRL : h.price);
+  setHTML('#v-hold', `<div class="panel-h" style="padding:16px 18px 10px;margin:0"><div class="tt"><h2 class="panel-t">${ico('layers', 18)}${esc(L('Suas posições', 'Your positions'))}</h2><p class="panel-s">${esc(L('Preço médio = custo do que você ainda tem ÷ quantidade (compras somam; vendas tiram pelo preço médio, sem mudá-lo). Clique numa linha para ver no gráfico.', 'Avg. cost = cost of what you still hold ÷ quantity (buys add; sells remove at average cost without changing it). Click a row to see it on the chart.'))}</p></div></div><div class="tbl-wrap"><table class="tbl v-pos"><thead><tr><th>${esc(L('Ativo', 'Asset'))}</th><th class="r">${esc(L('Quantidade', 'Quantity'))}</th><th class="r">${esc(L('Preço médio', 'Avg. cost'))}</th><th class="r">${esc(L('Preço agora', 'Price now'))}</th><th class="r">${esc(L('Valor', 'Value'))}</th><th class="r">${esc(L('Em aberto', 'Open P/L'))}</th><th class="r">${esc(L('Realizado', 'Realized'))}</th><th class="r">${esc(L('Carteira', 'Weight'))}</th></tr></thead><tbody>${H.map((h) => {
+    const val = c === 'BRL' ? h.valueBRL : h.valueUSD, pl = c === 'BRL' ? h.plBRL : h.plUSD, cost = c === 'BRL' ? h.costBRL : h.costUSD, avgp = c === 'BRL' ? h.avgBRL : h.avgUSD, real = c === 'BRL' ? h.realBRL : h.realUSD;
+    const pr = pr2(h), closed = h.qty === 0;
+    const avgVs = isNum(avgp) && isNum(pr) && avgp > 0 ? (pr / avgp - 1) * 100 : null;
+    return `<tr class="click${closed ? ' closed' : ''}" data-act="vaultAsset" data-id="${esc(h.id)}"><td><div class="coin">${coinLogo({ b: h.sym, logo: h.logo || LOGOS[h.id], c: h.color, cg: h.id }, 28)}<div><div class="nm">${esc(h.name)}</div><div class="sy">${esc(h.sym)}${closed ? ' · ' + esc(L('posição encerrada', 'closed')) : h.live ? ' · ' + esc(L('ao vivo', 'live')) : ''}${h.over ? ` · <span style="color:var(--stale)" title="${esc(L('Há vendas maiores que a quantidade comprada até a data. Confira os lançamentos.', 'Some sells exceed what was bought up to that date. Check the entries.'))}">${esc(L('venda acima do saldo', 'oversold'))}</span>` : ''}</div></div></div></td><td class="r num">${closed ? '0' : esc(fmtQty(h.qty))}</td><td class="r num">${isNum(avgp) ? `<b>${esc(money(avgp))}</b>${isNum(c === 'BRL' ? h.avgUSD : h.avgBRL) ? `<div class="tiny faint" title="${esc(L('Na outra moeda: compras em dólar convertidas pelo PTAX do dia de cada aporte', 'In the other currency: converted at each entry’s PTAX rate'))}">${esc(c === 'BRL' ? usd(h.avgUSD) : brl(h.avgBRL))}</div>` : ''}` : '—'}${isNum(avgVs) ? `<div class="tiny ${tone(avgVs)}" title="${esc(L('Quanto o preço de agora está acima ou abaixo do seu preço médio', 'How far the current price is from your average cost'))}">${esc(fmtPct(avgVs, 1))} ${esc(L('vs. médio', 'vs. avg'))}</div>` : ''}</td><td class="r num">${isNum(pr) ? esc(money(pr)) : '—'}</td><td class="r num">${closed ? '—' : isNum(val) ? esc(money(val, [2, 2])) : '—'}</td><td class="r">${!closed && isNum(pl) ? `<span class="${tone(pl)} b">${esc(money(pl, [2, 2]))}</span><div class="tiny ${tone(pl)}">${cost > 0 ? esc(fmtPct(pl / cost * 100, 1)) : ''}</div>` : '—'}</td><td class="r">${h.sells ? `<span class="${tone(real)} b">${esc(money(real, [2, 2]))}</span><div class="tiny faint">${esc(L(`${h.sells} venda(s)`, `${h.sells} sell(s)`))}</div>` : '<span class="faint">—</span>'}</td><td class="r">${
+tot > 0 && isNum(val) && !closed ? esc(fmtPct(val / tot * 100, 1, false)) : '—'}</td></tr>`;
   }).join('')}</tbody></table></div>`);
   vaultDrawAsset(H); vaultDrawMonth(); vaultDrawPerf(H); vaultDrawList();
 }
@@ -6738,27 +7276,88 @@ function vaultDrawParts(H, T) {
 async function vaultDrawAsset(H) {
   const box = $('#v-asset'); if (!box) return;
   const h = H.find((x) => x.id === VAULT.asset); if (!h) { box.innerHTML = ''; return; }
+  const cur = VAULT.cur;
   const chips = H.map((x) => `<button class="btn xs ${x.id === h.id ? 'pri' : 'ghost'}" data-act="vaultAsset" data-id="${esc(x.id)}">${esc(x.sym)}</button>`).join('');
-  box.innerHTML = panelHead('chart-candlestick', L(`${h.name}: suas compras e vendas no gráfico`, `${h.name}: your buys and sells on the chart`), { sub: esc(L('Setas verdes = compras, vermelhas = vendas. A linha tracejada é o seu preço médio (em US$).', 'Green arrows = buys, red = sells. Dashed line is your average cost (USD).')) }) + `<div class="row wrap" style="gap:6px;margin-bottom:10px">${chips}</div><div id="v-asset-ch" style="height:320px"></div>`;
+  const avgNow = cur === 'BRL' ? h.avgBRL : h.avgUSD;
+  box.innerHTML = panelHead('chart-candlestick', L(`${h.name}: suas compras e vendas no gráfico`, `${h.name}: your buys and sells on the chart`), { sub: esc(L(`Pontos verdes = compras, vermelhos = vendas (o tamanho acompanha o valor). A linha âmbar em degraus é o seu preço médio ao longo do tempo, em ${cur === 'BRL' ? 'reais' : 'dólares'}. Passe o mouse para ver os detalhes do dia.`, `Green dots = buys, red = sells (size follows the amount). The amber step line is your average cost over time (${cur}). Hover for the day’s details.`)) }) +
+    `<div class="row wrap" style="gap:6px;margin-bottom:10px">${chips}</div>
+    <div class="row wrap v-asset-k" style="gap:6px 22px;margin-bottom:8px">${kpiBox(L('Seu preço médio', 'Your avg. cost'), isNum(avgNow) ? `<span style="color:var(--signal)">${esc(money(avgNow))}</span>` : '—')}${kpiBox(L('Preço agora', 'Price now'), isNum(cur === 'BRL' ? h.priceBRL : h.price) ? esc(money(cur === 'BRL' ? h.priceBRL : h.price)) : '—')}${kpiBox(L('Compras / vendas', 'Buys / sells'), `${h.buys} / ${h.sells}`)}</div>
+    <div id="v-asset-ch" style="height:340px;position:relative"></div>`;
   const el = $('#v-asset-ch');
   try {
     const first = Date.parse(h.first + 'T00:00:00Z') - 30 * 86400e3;
     let pts;
     if (h.bsym && VALID.has(h.bsym)) pts = (await klinesSince(h.bsym, '1d', first)).map((k) => ({ t: k.t, v: k.c }));
     else pts = await cgDaily(h.id, first);
+    const fxm = cur === 'BRL' ? await fxHistory(first).catch(() => null) : null;
     if (!$('#v-asset-ch')) return;
     if (!pts.length) throw new Error(L('sem histórico de preço para este ativo', 'no price history for this asset'));
+    // preço diário na moeda escolhida (em reais, pelo dólar PTAX de cada dia)
+    let lastFx = null; const fxKeys = fxm ? Object.keys(fxm).sort() : [];
+    let fi = 0;
+    const series = pts.map((p) => {
+      const d = new Date(p.t).toISOString().slice(0, 10);
+      if (fxm) { while (fi < fxKeys.length && fxKeys[fi] <= d) lastFx = fxm[fxKeys[fi++]]; }
+      const v = cur === 'BRL' ? (lastFx || fxNow() ? p.v * (lastFx || fxNow()) : null) : p.v;
+      return { t: p.t, d, v };
+    }).filter((p) => isNum(p.v));
     const { ch, c } = await makeChart(el, { onTheme: () => vaultDrawAsset(holdings()) });
-    const s = ch.addAreaSeries({ lineColor: h.color, topColor: h.color + '33', bottomColor: h.color + '00', lineWidth: 2, priceLineVisible: false });
-    s.setData(pts.map((p) => ({ time: ctime(p.t, false), value: p.v })));
-    const t0 = pts[0].t;
-    const markers = h.list.filter((e) => Date.parse(e.date + 'T00:00:00Z') >= t0).map((e) => {
-      const unit = e.qty > 0 ? e.amount_usd / e.qty : null;
-      return { time: ctime(Date.parse(e.date + 'T00:00:00Z'), false), position: e.type === 'buy' ? 'belowBar' : 'aboveBar', color: e.type === 'buy' ? c.up : c.down, shape: e.type === 'buy' ? 'arrowUp' : 'arrowDown', text: `${e.type === 'buy' ? L('C', 'B') : L('V', 'S')} ${fmtQty(e.qty)}${isNum(unit) ? ' @ ' + fmtNum(unit, ...priceDigits(unit)) : ''}` };
-    }).sort((a, b) => a.time - b.time);
-    s.setMarkers(markers);
-    if (isNum(h.avgUSD) && h.qty > 0) s.createPriceLine({ price: h.avgUSD, color: c.signal, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: L('seu preço médio', 'your avg. cost') });
+    ch.applyOptions({ crosshair: { mode: 0 } });
+    // preço em azul-lavanda (destaque) e preço médio em âmbar: nunca se confundem, qualquer que seja a cor da moeda
+    const s = ch.addAreaSeries({ lineColor: c.accent, topColor: 'rgba(142,152,255,.28)', bottomColor: 'rgba(142,152,255,0)', lineWidth: 2, priceLineVisible: false, crosshairMarkerRadius: 4 });
+    s.setData(series.map((p) => ({ time: ctime(p.t, false), value: p.v })));
+    // preço médio passo a passo (mesma contabilidade da tabela)
+    const t0 = series[0].t, byDay = {};
+    let q = 0, cost = 0; const avgPts = [];
+    for (const e of vaultSorted(h.list)) {
+      const efx = e.fx_brl || (e.amount_usd > 0 ? e.amount_brl / e.amount_usd : fxNow() || 1);
+      const amt = (cur === 'BRL' ? e.amount_brl : e.amount_usd) + (!e.fee ? 0 : e.currency === cur ? e.fee : cur === 'BRL' ? e.fee * efx : e.fee / efx);
+      if (e.type === 'buy') { q += e.qty; cost += amt; } else { const sq = Math.min(e.qty, q); const a = q > 0 ? cost / q : 0; cost -= a * sq; q -= sq; if (q < 1e-12) { q = 0; cost = 0; } }
+      const tt = Math.max(t0, Date.parse(e.date + 'T00:00:00Z'));
+      const last = avgPts[avgPts.length - 1];
+      const val = q > 0 ? cost / q : null;
+      if (last && last.t === tt) last.v = val; else avgPts.push({ t: tt, v: val });
+      (byDay[e.date] = byDay[e.date] || []).push(e);
+    }
+    const avgLine = [];
+    for (let i = 0; i < avgPts.length; i++) {
+      if (!isNum(avgPts[i].v)) { avgLine.push({ time: ctime(avgPts[i].t, false) }); continue; } // sem posição: a linha some até a próxima compra
+      avgLine.push({ time: ctime(avgPts[i].t, false), value: avgPts[i].v });
+      const nextT = avgPts[i + 1] ? avgPts[i + 1].t - 86400e3 : series[series.length - 1].t;
+      if (nextT > avgPts[i].t) avgLine.push({ time: ctime(nextT, false), value: avgPts[i].v });
+    }
+    if (avgLine.length) {
+      const al = ch.addLineSeries({ color: c.signal, lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+      al.setData(avgLine);
+    }
+    // marcadores: um por dia e tipo, tamanho pelo valor
+    const vals = h.list.map((e) => (cur === 'BRL' ? e.amount_brl : e.amount_usd)); const mx = Math.max(...vals, 1);
+    const markers = [];
+    for (const [d, list] of Object.entries(byDay)) {
+      const tm = Date.parse(d + 'T00:00:00Z'); if (tm < t0) continue;
+      for (const type of ['buy', 'sell']) {
+        const es = list.filter((e) => e.type === type); if (!es.length) continue;
+        const tot = sum(es.map((e) => (cur === 'BRL' ? e.amount_brl : e.amount_usd)));
+        markers.push({ time: ctime(tm, false), position: type === 'buy' ? 'belowBar' : 'aboveBar', color: type === 'buy' ? c.up : c.down, shape: 'circle', size: 0.6 + 1.4 * Math.sqrt(tot / mx), text: es.length > 1 ? `${type === 'buy' ? L('C', 'B') : L('V', 'S')}×${es.length}` : '' });
+      }
+    }
+    s.setMarkers(markers.sort((a, b) => a.time - b.time));
+    if (isNum(avgNow) && h.qty > 0) s.createPriceLine({ price: avgNow, color: c.signal, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: L('preço médio', 'avg. cost') });
     ch.timeScale().fitContent();
+    // dica ao passar o mouse
+    const tip = document.createElement('div'); tip.className = 'ch-tip'; el.appendChild(tip);
+    const avgAt = (d) => { let v = null; for (const p of avgPts) { if (new Date(p.t).toISOString().slice(0, 10) <= d) v = p.v; else break; } return v; };
+    ch.subscribeCrosshairMove((pm) => {
+      if (!pm || pm.time === undefined || !pm.point) { tip.style.display = 'none'; return; }
+      const d = new Date(pm.time * 1000).toISOString().slice(0, 10);
+      const p = series.find((x) => x.d === d); if (!p) { tip.style.display = 'none'; return; }
+      const es = byDay[d] || []; const a = avgAt(d);
+      tip.innerHTML = `<b>${esc(fmtDate(d + 'T12:00:00Z', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b><div>${esc(L('Fechamento', 'Close'))}: <b>${esc(money(p.v))}</b></div>${isNum(a) ? `<div style="color:var(--signal)">${esc(L('Seu preço médio', 'Your avg.'))}: ${esc(money(a))}</div>` : ''}${es.map((e) => { const amt = cur === 'BRL' ? e.amount_brl : e.amount_usd; return `<div class="${e.type === 'buy' ? 'up' : 'down'}">${esc(e.type === 'buy' ? L('Compra', 'Buy') : L('Venda', 'Sell'))} ${esc(fmtQty(e.qty))} ${esc(h.sym)} · ${esc(money(amt, [2, 2]))} (${esc(money(amt / e.qty))}/${esc(L('un.', 'unit'))})</div>`; }).join('')}`;
+      tip.style.display = 'block';
+      const w = el.clientWidth, tw = tip.offsetWidth;
+      tip.style.left = Math.min(w - tw - 8, Math.max(8, pm.point.x + 14)) + 'px';
+      tip.style.top = Math.max(8, Math.min(el.clientHeight - tip.offsetHeight - 30, pm.point.y - 20)) + 'px';
+    });
   } catch (e) { el.innerHTML = emptyBox('wifi-off', L('Gráfico indisponível', 'Chart unavailable'), esc(String(e.message || e))); }
 }
 const _cgDaily = {};
@@ -6767,7 +7366,9 @@ async function cgDaily(id, fromMs) {
   if (hit && Date.now() - hit.ts < 30 * 60e3) return hit.v.filter((p) => p.t >= fromMs);
   const days = Math.min(365, Math.max(30, Math.ceil((Date.now() - fromMs) / 86400e3) + 2));
   const j = await getJSON(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/market_chart?vs_currency=usd&days=${days}&interval=daily`, { timeout: 15000 });
-  const v = (j.prices || []).map(([t, p]) => ({ t: Math.floor(t / 86400e3) * 86400e3, v: p })).filter((p) => isNum(p.v));
+  // o CoinGecko manda os dias às 00:00 UTC e mais um ponto "agora": um ponto por dia (o último vale)
+  const byDay = new Map(); (j.prices || []).forEach(([t, p]) => { if (isNum(p)) byDay.set(Math.floor(t / 86400e3) * 86400e3, p); });
+  const v = [...byDay.entries()].sort((a, b) => a[0] - b[0]).map(([t, p]) => ({ t, v: p }));
   _cgDaily[key] = { v, ts: Date.now() };
   return v.filter((p) => p.t >= fromMs);
 }
@@ -6809,7 +7410,7 @@ async function vaultHist() {
         prices[id] = Object.fromEntries(pts.map((p) => [new Date(p.t).toISOString().slice(0, 10), p.v]));
       }));
       const fxm = VAULT.cur === 'BRL' ? await fxHistory(first).catch(() => ({})) : null;
-      const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date));
+      const sorted = vaultSorted(rows);
       const out = []; const qty = {}; const cost = { v: 0 }; const lastP = {}; let j = 0;
       const d0 = new Date(first).toISOString().slice(0, 10);
       let lastFx = fxm ? (Object.keys(fxm).filter((k) => k < d0).sort().map((k) => fxm[k]).pop() || null) : null;
@@ -6836,8 +7437,9 @@ async function vaultHist() {
       // hoje: preço ao vivo
       const H = holdings(), T = totals(H);
       if (out.length && isNum(T.value)) { out[out.length - 1].v = T.value; }
-      VAULT.hist = { pts: out, partial }; VAULT.histKey = key;
+      VAULT.hist = { pts: out, partial }; VAULT.histKey = key; VAULT.dayPrices = prices;
     }
+    vaultDrawCheck();
     const from = { '1m': 30, '3m': 91, '6m': 182, '1y': 365, all: 1e5 }[VAULT.range] * 86400e3;
     const pts = VAULT.hist.pts.filter((p) => p.t >= Date.now() - from);
     if (pts.length < 2) { box.innerHTML = emptyBox('chart-line', L('Ainda há poucos dias de histórico', 'Not enough days of history yet'), esc(L('O gráfico aparece a partir do segundo dia de carteira.', 'The chart appears from the second day.'))); return; }
@@ -6850,6 +7452,38 @@ async function vaultHist() {
     setHTML('#v-hist-note', note(L(`Preços diários de fechamento (Binance; CoinGecko para moedas fora da Binance)${VAULT.cur === 'BRL' ? ' convertidos pelo dólar PTAX do dia (Banco Central)' : ''}. Linha tracejada: custo dos aportes ainda em carteira. O último ponto usa os preços ao vivo.${VAULT.hist.partial ? ' Atenção: algum ativo tem histórico incompleto (o CoinGecko gratuito vai só até 1 ano).' : ''}`, `Daily closes (Binance; CoinGecko for others)${VAULT.cur === 'BRL' ? ' converted at that day’s PTAX rate' : ''}. Dashed: cost of current holdings. Last point uses live prices.`)));
   } catch (e) { box.innerHTML = emptyBox('wifi-off', L('Não foi possível montar o histórico', 'Could not build history'), esc(String(e.message || e)), `<button class="btn sm" data-act="vaultHistRetry">${ico('refresh-cw', 16)}${esc(L('Tentar de novo', 'Try again'))}</button>`); }
 }
+// ---------- conferência dos lançamentos contra o preço de mercado do dia ----------
+// Pega erro de digitação (ex.: "1.432,17" gravado como 1,43217 na versão antiga), que distorce o preço médio.
+function vaultSuspects() {
+  const P = VAULT.dayPrices || {}; const out = [];
+  for (const r of VAULT.rows) {
+    const ref = P[r.asset_id] && P[r.asset_id][r.date]; if (!isNum(ref) || !(r.qty > 0) || !(r.amount_usd > 0)) continue;
+    const unit = r.amount_usd / r.qty, k = unit / ref;
+    if (k > 0.6 && k < 1.6) continue;
+    out.push({ r, unit, ref, k, fix: k > 250 && k < 4000 ? 'qty' : k < 1 / 250 && k > 1 / 4000 ? 'amt' : null });
+  }
+  return out.sort((a, b) => b.r.date.localeCompare(a.r.date));
+}
+function vaultDrawCheck() {
+  const box = $('#v-check'); if (!box) return;
+  const list = vaultSuspects();
+  if (!list.length) { box.innerHTML = ''; return; }
+  const pro = hasPro();
+  box.innerHTML = `<section class="panel mt v-check">${panelHead('triangle-alert', L(`${list.length} lançamento(s) com preço muito diferente do mercado no dia`, `${list.length} entr(ies) far from that day’s market price`), { sub: esc(L('Isso costuma ser erro de digitação (ponto no lugar de vírgula) e deixa o preço médio e o resultado errados. Confira e corrija:', 'Usually a typo (dot vs comma); it skews average cost and P/L. Check and fix:')) })}
+    <div class="list">${list.slice(0, 12).map((x) => {
+      const r = x.r, cur = r.currency === 'USD' ? 'USD' : 'BRL', amt = cur === 'USD' ? r.amount_usd : r.amount_brl;
+      const sug = x.fix === 'qty' ? L(`Quantidade provável: ${decOut(r.qty * 1000, 12)} ${r.sym}`, `Likely quantity: ${r.qty * 1000}`) : x.fix === 'amt' ? L(`Valor provável: perto de ${fmtMoney(amt * 1000, cur, [2, 2])}`, `Likely amount: about ${fmtMoney(amt * 1000, cur, [2, 2])}`) : L('Confira quantidade e valor.', 'Check quantity and amount.');
+      return `<div class="li"><span class="grow"><span class="t" style="display:block">${esc(r.type === 'buy' ? L('Compra', 'Buy') : L('Venda', 'Sell'))} · ${esc(fmtQty(r.qty))} ${esc(r.sym)} · ${esc(fmtMoney(amt, cur, [2, 2]))} · ${esc(fmtDate(r.date + 'T12:00:00Z', { timeZone: 'UTC' }))}</span><span class="m">${esc(L('Você registrou', 'You recorded'))} ${esc(usd(x.unit))} ${esc(L('por unidade; o mercado fechou o dia em', 'per unit; market closed the day at'))} ${esc(usd(x.ref))}. <b>${esc(sug)}</b></span></span>${pro ? `<button class="btn xs pri" data-act="vaultFix" data-id="${esc(r.id)}" data-fix="${esc(x.fix || '')}">${ico('pencil', 14)}${esc(L('Corrigir', 'Fix'))}</button>` : ''}</div>`;
+    }).join('')}</div>${note(L('Referência: fechamento diário (Binance; CoinGecko para moedas fora da Binance). Nada é alterado sem você salvar.', 'Reference: daily close (Binance; CoinGecko otherwise). Nothing changes until you save.'))}</section>`;
+}
+// abre o lançamento já com a correção sugerida preenchida (você confere e salva)
+ACT.vaultFix = (el) => {
+  const r = VAULT.rows.find((x) => x.id === el.dataset.id); if (!r) return;
+  const e = { ...r };
+  if (el.dataset.fix === 'qty') e._qty = decOut(r.qty * 1000, 12);
+  if (el.dataset.fix === 'amt') e._amt = decOut((r.currency === 'USD' ? r.amount_usd : r.amount_brl) * 1000, 2);
+  vaultForm(e, { focus: el.dataset.fix === 'amt' ? 'vf-amt' : 'vf-qty' });
+};
 ACT.vaultHistRetry = () => { VAULT.histKey = ''; vaultHist(); };
 ACT.seg_vrange = (v) => { VAULT.range = v; vaultHist(); };
 ACT.seg_vcur = (v) => { VAULT.cur = v; LS.set('vault-cur', v); VAULT.histKey = ''; vaultDraw(); };
@@ -6890,91 +7524,207 @@ ACT.vaultQ = debounce((el) => { VL.q = el.value; vaultDrawList(); const i = $('#
 ACT.vaultMore = () => { VL.n += 60; vaultDrawList(); };
 // ---------- formulário de aporte ----------
 const EXCHANGES = ['Binance', 'Mercado Bitcoin', 'Foxbit', 'NovaDAX', 'Bitso', 'Coinbase', 'OKX', 'Bybit', 'Kraken', 'Nubank', 'Inter', 'XP', 'BTG', 'Bitpreço', 'Ripio', 'Carteira própria'];
-function vaultForm(entry) {
+// preço de mercado de um dia (vela diária da Binance ou CoinGecko) — referência para conferir o aporte
+const _dayPx = {};
+async function marketDay(coin, date) {
+  if (!coin || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const key = (coin.s || coin.cg) + '|' + date; if (_dayPx[key]) return _dayPx[key];
+  const t0 = Date.parse(date + 'T00:00:00Z');
+  let r = null;
+  try {
+    if (coin.s && VALID.has(coin.s)) {
+      const k = (await klines(coin.s, '1d', 1, { startTime: t0 }))[0];
+      if (k && k.t === t0) r = { o: k.o, h: k.h, l: k.l, c: k.c, src: 'Binance' };
+    }
+    if (!r && coin.cg) {
+      const pts = await cgDaily(coin.cg, t0 - 86400e3);
+      const p = pts.find((x) => x.t === t0) || pts.find((x) => Math.abs(x.t - t0) <= 86400e3);
+      if (p) r = { o: null, h: p.v, l: p.v, c: p.v, src: 'CoinGecko' };
+    }
+  } catch { r = null; }
+  if (r) _dayPx[key] = r;
+  return r;
+}
+// confere o preço unitário (US$) contra a faixa do dia; sugere a correção quando o erro é de casa decimal (×1000)
+function priceCheck(unitUSD, day) {
+  if (!isNum(unitUSD) || unitUSD <= 0 || !day) return null;
+  const lo = Math.min(day.l, day.c), hi = Math.max(day.h, day.c), ref = day.c;
+  if (unitUSD >= lo * 0.85 && unitUSD <= hi * 1.15) return { ok: true };
+  const r = unitUSD / ref;
+  const fix = r > 250 && r < 4000 ? 'qty' : r < 1 / 250 && r > 1 / 4000 ? 'amt' : null;
+  return { ok: false, pct: (r - 1) * 100, fix, hard: unitUSD < lo * 0.5 || unitUSD > hi * 1.5 };
+}
+function vaultForm(entry, opts = {}) {
   const ed = !!(entry && entry.id);
-  const st = { type: entry ? entry.type : 'buy', cur: entry ? entry.currency : VAULT.cur, coin: entry ? { kind: entry.binance_sym ? 'b' : 'g', s: entry.binance_sym, b: entry.sym, n: entry.name || entry.sym, cg: entry.asset_id, c: entry.color, logo: entry.logo || LOGOS[entry.asset_id] } : null };
-  const amt0 = entry ? (entry.currency === 'USD' ? entry.amount_usd : entry.amount_brl) : '';
-  const body = `<form id="vf" class="stack" style="gap:12px" novalidate>
+  const orig = ed ? entry._orig || { type: entry.type, asset_id: entry.asset_id, qty: num(entry.qty) || 0 } : null;
+  const st = { type: entry ? entry.type : 'buy', cur: entry ? entry.currency || VAULT.cur : VAULT.cur, coin: entry && entry.asset_id ? { kind: entry.binance_sym ? 'b' : 'g', s: entry.binance_sym, b: entry.sym, n: entry.name || entry.sym, cg: entry.asset_id, c: entry.color, logo: entry.logo || LOGOS[entry.asset_id] } : null, anchor: entry && entry._anchor ? entry._anchor : 'amt', day: null, dayFx: null, confirm: false, dirty: !!(entry && entry._draft) };
+  const amt0 = entry ? (entry._amt !== undefined ? entry._amt : decOut(entry.currency === 'USD' ? entry.amount_usd : entry.amount_brl, 2)) : '';
+  const qty0 = entry ? (entry._qty !== undefined ? entry._qty : decOut(entry.qty, 12)) : '';
+  const unit0 = entry && entry._unit !== undefined ? entry._unit : '';
+  const fee0 = entry ? (entry._fee !== undefined ? entry._fee : entry.fee ? decOut(entry.fee, 2) : '') : '';
+  const txt = (id, val, ph, extra = '') => `<input class="inp" id="${id}" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="${esc(ph)}" value="${esc(val)}" ${extra}>`;
+  const body = `<form id="vf" class="stack" style="gap:12px" novalidate autocomplete="off">
     ${seg('vft', [['buy', L('Compra', 'Buy'), 'plus'], ['sell', L('Venda', 'Sell'), 'arrow-down-right']], st.type, 'lg')}
     <div class="fld"><span class="lbl-t">${esc(L('Moeda', 'Coin'))}</span><button type="button" class="btn block" id="vf-coin" style="justify-content:flex-start;height:46px"></button></div>
-    <div class="grid g-2" style="gap:12px"><div class="fld"><label for="vf-date">${esc(L('Data', 'Date'))}</label><input class="inp" id="vf-date" type="date" max="${todayISO()}" min="2009-01-03" value="${esc(entry ? entry.date : todayISO())}" required></div>
-    <div class="fld"><label for="vf-qty">${esc(L('Quantidade', 'Quantity'))}</label><input class="inp" id="vf-qty" type="number" inputmode="decimal" step="any" min="0" placeholder="0,005" value="${esc(entry ? entry.qty : '')}" required></div></div>
-    <div class="fld"><label for="vf-amt">${esc(L('Valor total', 'Total amount'))} <span class="faint" id="vf-amt-l"></span></label><div class="inp-group"><input class="inp" id="vf-amt" type="number" inputmode="decimal" step="any" min="0" placeholder="500,00" value="${esc(amt0)}" required>${seg('vfc', [['BRL', 'R$'], ['USD', 'US$']], st.cur)}</div><span class="hint">${esc(L('Quanto você pagou (compra) ou recebeu (venda), sem a taxa.', 'What you paid (buy) or received (sell), excluding fees.'))}</span></div>
-    <div class="grid g-2" style="gap:12px"><div class="fld"><label for="vf-fee">${esc(L('Taxa (opcional)', 'Fee (optional)'))}</label><input class="inp" id="vf-fee" type="number" inputmode="decimal" step="any" min="0" value="${esc(entry && entry.fee ? entry.fee : '')}"></div>
-    <div class="fld"><label for="vf-ex">${esc(L('Corretora (opcional)', 'Exchange (optional)'))}</label><input class="inp" id="vf-ex" list="vf-exl" maxlength="40" value="${esc(entry ? entry.exchange || '' : '')}"><datalist id="vf-exl">${EXCHANGES.map((x) => `<option value="${esc(x)}">`).join('')}</datalist></div></div>
-    <div class="fld"><label for="vf-note">${esc(L('Observação (opcional)', 'Note (optional)'))}</label><input class="inp" id="vf-note" maxlength="200" value="${esc(entry ? entry.notes || '' : '')}"></div>
-    <div class="callout" id="vf-prev">${ico('calculator', 18)}<span>${esc(L('Preencha quantidade e valor para ver o preço unitário.', 'Fill quantity and amount to see the unit price.'))}</span></div>
+    <div class="grid g-2" style="gap:12px"><div class="fld"><label for="vf-date">${esc(L('Data', 'Date'))}</label><input class="inp" id="vf-date" type="date" max="${todayISO()}" min="2009-01-03" value="${esc(entry && entry.date ? entry.date : todayISO())}" required></div>
+    <div class="fld"><label for="vf-qty">${esc(L('Quantidade', 'Quantity'))}</label>${txt('vf-qty', qty0, '0,005')}<span class="hint" id="vf-qty-h"></span></div></div>
+    <div class="grid g-2" style="gap:12px"><div class="fld"><label for="vf-unit">${esc(L('Preço por unidade', 'Price per unit'))} <span class="faint vf-cl"></span></label>${txt('vf-unit', unit0, L('opcional', 'optional'))}<span class="hint" id="vf-unit-h">${esc(L('Preencha este OU o valor total — o outro é calculado.', 'Fill this OR the total — the other is calculated.'))}</span></div>
+    <div class="fld"><label for="vf-amt">${esc(L('Valor total', 'Total amount'))} <span class="faint vf-cl"></span></label><div class="inp-group">${txt('vf-amt', amt0, '500,00')}${seg('vfc', [['BRL', 'R$'], ['USD', 'US$']], st.cur)}</div><span class="hint" id="vf-amt-h">${esc(L('Quanto pagou (compra) ou recebeu (venda), sem a taxa.', 'What you paid (buy) or received (sell), excluding fees.'))}</span></div></div>
+    <div class="grid g-2" style="gap:12px"><div class="fld"><label for="vf-fee">${esc(L('Taxa (opcional)', 'Fee (optional)'))} <span class="faint vf-cl"></span></label>${txt('vf-fee', fee0, '0,00')}</div>
+    <div class="fld"><label for="vf-ex">${esc(L('Corretora (opcional)', 'Exchange (optional)'))}</label><input class="inp" id="vf-ex" list="vf-exl" maxlength="40" autocomplete="off" value="${esc(entry ? entry.exchange || '' : '')}"><datalist id="vf-exl">${EXCHANGES.map((x) => `<option value="${esc(x)}">`).join('')}</datalist></div></div>
+    <div class="fld"><label for="vf-note">${esc(L('Observação (opcional)', 'Note (optional)'))}</label><input class="inp" id="vf-note" maxlength="200" autocomplete="off" value="${esc(entry ? entry.notes || '' : '')}"></div>
+    <div class="callout" id="vf-prev">${ico('calculator', 18)}<span>${esc(L('Preencha moeda, quantidade e valor para ver o preço unitário.', 'Fill coin, quantity and amount to see the unit price.'))}</span></div>
     <div class="form-msg" id="vf-msg" role="alert"></div>
   </form>`;
-  const foot = `<button class="btn ghost" data-act="closeModal">${esc(L('Cancelar', 'Cancel'))}</button>${ed ? '' : `<button class="btn" id="vf-again">${esc(L('Salvar e registrar outro', 'Save & add another'))}</button>`}<button class="btn pri" id="vf-save">${ico('check', 17)}${esc(ed ? L('Salvar alterações', 'Save changes') : L('Salvar aporte', 'Save entry'))}</button>`;
-  openModal({ title: ed ? L('Editar lançamento', 'Edit entry') : L('Registrar aporte', 'Add entry'), body, foot, onOpen: (m) => {
-    const coinBtn = m.querySelector('#vf-coin');
+  const foot = `<button class="btn ghost" id="vf-cancel">${esc(L('Cancelar', 'Cancel'))}</button>${ed ? '' : `<button class="btn" id="vf-again">${esc(L('Salvar e registrar outro', 'Save & add another'))}</button>`}<button class="btn pri" id="vf-save">${ico('check', 17)}${esc(ed ? L('Salvar alterações', 'Save changes') : L('Salvar aporte', 'Save entry'))}</button>`;
+  openModal({ title: ed ? L('Editar lançamento', 'Edit entry') : L('Registrar aporte', 'Add entry'), body, foot, guard: () => st.dirty, onOpen: (m) => {
+    const $f = (id) => m.querySelector('#' + id);
+    const coinBtn = $f('vf-coin');
+    const vals = () => ({ date: $f('vf-date').value, qty: $f('vf-qty').value, unit: $f('vf-unit').value, amt: $f('vf-amt').value, fee: $f('vf-fee').value, ex: $f('vf-ex').value, note: $f('vf-note').value });
+    // rascunho em memória: se a janela fechar sem querer, "Registrar aporte" volta com tudo preenchido
+    const snapshot = () => { const v = vals(); return { ...(ed ? { id: entry.id, created_at: entry.created_at, _orig: orig } : {}), type: st.type, currency: st.cur, date: v.date, _qty: v.qty, _unit: v.unit, _amt: v.amt, _fee: v.fee, _anchor: st.anchor, exchange: v.ex, notes: v.note, asset_id: st.coin && st.coin.cg, sym: st.coin && st.coin.b, name: st.coin && st.coin.n, binance_sym: st.coin && st.coin.s, logo: st.coin && st.coin.logo, color: st.coin && st.coin.c, _draft: true }; };
+    const keepDraft = () => { st.dirty = true; if (!ed) VAULT.draft = snapshot(); };
     const drawCoin = () => { coinBtn.innerHTML = st.coin ? `${coinLogo({ b: st.coin.b, logo: st.coin.logo, c: st.coin.c, cg: st.coin.cg }, 28)}<span><b>${esc(st.coin.n)}</b> <span class="faint">${esc(st.coin.b)}</span></span><span style="margin-left:auto" class="small faint">${esc(L('trocar', 'change'))}</span>` : `${ico('search', 17)}<span>${esc(L('Escolher moeda (qualquer cripto)', 'Pick a coin (any crypto)'))}</span>`; };
     drawCoin();
-    coinBtn.onclick = () => { const keep = { type: st.type, cur: st.cur, vals: ['vf-date', 'vf-qty', 'vf-amt', 'vf-fee', 'vf-ex', 'vf-note'].map((i) => m.querySelector('#' + i).value) }; openCoinPicker({ title: L('Moeda do aporte', 'Entry coin'), onPick: (p) => { const draft = { ...(entry || {}), type: keep.type, currency: keep.cur, date: keep.vals[0], qty: keep.vals[1], fee: keep.vals[3], exchange: keep.vals[4], notes: keep.vals[5], asset_id: p.cg, sym: p.b, name: p.n, binance_sym: p.kind === 'b' ? p.s : null, logo: p.logo, color: p.c, _amt: keep.vals[2], _draft: true }; if (p.kind === 'g') trackExtra(p.cg); vaultForm(draft); } }); };
-    if (entry && entry._draft) { m.querySelector('#vf-amt').value = entry._amt || ''; }
+    coinBtn.onclick = () => {
+      const draft = snapshot();
+      openCoinPicker({ title: L('Moeda do aporte', 'Entry coin'), onPick: (p) => { if (p.kind === 'g') trackExtra(p.cg); vaultForm({ ...draft, asset_id: p.cg, sym: p.b, name: p.n, binance_sym: p.kind === 'b' ? p.s : null, logo: p.logo, color: p.c }); }, onCancel: () => vaultForm(draft) });
+    };
+    // a roda do mouse não muda data nem número (antes ela alterava o valor sem você perceber)
+    m.querySelectorAll('input').forEach((i) => i.addEventListener('wheel', (e) => { if (document.activeElement === i) { e.preventDefault(); i.blur(); } }, { passive: false }));
+    // Enter passa para o próximo campo (não salva sem querer ao escolher a corretora na lista)
+    const order = ['vf-date', 'vf-qty', 'vf-unit', 'vf-amt', 'vf-fee', 'vf-ex', 'vf-note'];
+    m.querySelector('#vf').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+      e.preventDefault(); const i = order.indexOf(e.target.id); const nx = i >= 0 && order[i + 1] ? $f(order[i + 1]) : $f('vf-save'); if (nx) nx.focus();
+    });
+    m.querySelector('#vf').addEventListener('submit', (e) => e.preventDefault());
+    const curSym = () => (st.cur === 'BRL' ? 'R$' : 'US$');
+    const init = { 'vf-qty-h': $f('vf-qty').value, 'vf-amt-h': $f('vf-amt').value, 'vf-unit-h': $f('vf-unit').value };
+    const hint = (id, info, unitTxt) => {
+      const el = $f(id); if (!el) return;
+      const inp = $f(id.replace(/-h$/, ''));
+      if (info.amb && ed && inp && inp.value === init[id]) info = { ...info, amb: false }; // valor que veio do próprio lançamento
+      if (info.bad) { el.innerHTML = `<span style="color:var(--down)">${esc(L('Use só números, ponto e vírgula (ex.: 1.432,17).', 'Use digits, dot and comma only (e.g. 1,432.17).'))}</span>`; return; }
+      if (!isNum(info.v)) return;
+      el.innerHTML = `${esc(L('Entendido:', 'Read as:'))} <b>${esc(decOut(info.v, 12))}</b> ${esc(unitTxt)}${info.amb ? ` <span style="color:var(--stale)">· ${esc(info.alt >= info.v ? L(`se quis dizer ${decOut(info.alt, 12)} (mil…), digite ${decOut(info.alt, 12)} com ponto ou ${info.alt} sem vírgula`, `if you meant ${info.alt}, type it without the comma`) : L(`se quis dizer ${decOut(info.alt, 12)}, digite com vírgula (${String(info.alt).replace('.', ',')})`, `if you meant ${info.alt}, type it with a comma`))}</span>` : ''}`;
+    };
+    const read = () => { const v = vals(); return { qi: parseDecInfo(v.qty), ui: parseDecInfo(v.unit), ai: parseDecInfo(v.amt), fi: parseDecInfo(v.fee) }; };
     const preview = () => {
-      const qty = num(m.querySelector('#vf-qty').value), amt = num(m.querySelector('#vf-amt').value);
-      m.querySelector('#vf-amt-l').textContent = st.cur === 'BRL' ? '(R$)' : '(US$)';
-      const box = m.querySelector('#vf-prev');
-      if (!st.coin || !(qty > 0) || !(amt >= 0) || amt === null) { box.innerHTML = `${ico('calculator', 18)}<span>${esc(L('Preencha moeda, quantidade e valor para ver o preço unitário.', 'Fill coin, quantity and amount to see the unit price.'))}</span>`; return; }
+      m.querySelectorAll('.vf-cl').forEach((x) => { x.textContent = `(${curSym()})`; });
+      const { qi, ui, ai } = read();
+      const sym = st.coin ? st.coin.b : '';
+      hint('vf-qty-h', qi, sym);
+      if (st.anchor === 'unit') hint('vf-unit-h', ui, curSym()); else if (isNum(ai.v)) hint('vf-amt-h', ai, curSym());
+      const box = $f('vf-prev');
+      const qty = qi.v, amt = ai.v;
+      if (!st.coin || !(qty > 0) || !isNum(amt) || amt < 0) { box.className = 'callout'; box.innerHTML = `${ico('calculator', 18)}<span>${esc(L('Preencha moeda, quantidade e valor (ou preço por unidade) para conferir.', 'Fill coin, quantity and amount (or unit price) to check.'))}</span>`; return; }
       const unit = amt / qty;
+      const fx = st.dayFx || fxNow();
+      const unitUSD = st.cur === 'USD' ? unit : fx ? unit / fx : null;
+      const conv = (u) => (st.cur === 'USD' ? u : fx ? u * fx : null);
+      const held = holdings().find((h) => h.id === st.coin.cg);
+      const heldQty = (held ? held.qty : 0) + (orig && orig.asset_id === st.coin.cg ? (orig.type === 'sell' ? orig.qty : -orig.qty) : 0);
+      const warnSell = st.type === 'sell' && qty > heldQty + 1e-9 ? `<div class="tiny" style="color:var(--stale);margin-top:4px">${esc(L(`Atenção: você tem ${fmtQty(Math.max(0, heldQty))} ${sym} registrados — a venda não pode ser maior.`, `Note: you have ${fmtQty(Math.max(0, heldQty))} ${sym} recorded.`))}</div>` : '';
+      const chk = priceCheck(unitUSD, st.day);
+      let dayTxt = '';
+      if (st.day) {
+        const lo = conv(Math.min(st.day.l, st.day.c)), hi = conv(Math.max(st.day.h, st.day.c));
+        dayTxt = `<div class="tiny faint" style="margin-top:4px">${esc(L(`Mercado em ${fmtDate($f('vf-date').value + 'T12:00:00Z', { timeZone: 'UTC' })}`, `Market on ${$f('vf-date').value}`))}: ${isNum(lo) && isNum(hi) && Math.abs(hi - lo) > 1e-12 ? `${esc(fmtMoney(lo, st.cur))} – ${esc(fmtMoney(hi, st.cur))}` : esc(fmtMoney(conv(st.day.c), st.cur))} (${esc(st.day.src)}${st.cur === 'BRL' && st.dayFx ? ', ' + esc(L('dólar PTAX do dia', 'PTAX rate of the day')) : ''})</div>`;
+      }
+      let warnPx = '';
+      if (chk && !chk.ok) {
+        const sug = chk.fix === 'qty' ? L(`Parece erro de casa decimal: a quantidade seria ${decOut(qty * 1000, 12)} ${sym}?`, `Looks like a decimal slip: quantity ${qty * 1000}?`) : chk.fix === 'amt' ? L(`Parece erro de casa decimal: o valor seria ${curSym()} ${decOut(amt * 1000, 2)}?`, `Looks like a decimal slip: amount ${amt * 1000}?`) : L('Confira a quantidade e o valor.', 'Check quantity and amount.');
+        warnPx = `<div class="vf-warn${chk.hard ? '' : ' soft'}">${ico('triangle-alert', 16)}<span>${esc(L(`O preço por unidade está ${fmtPct(Math.abs(chk.pct), 0, false)} ${chk.pct > 0 ? 'acima' : 'abaixo'} do mercado nesse dia.`, `Unit price is ${fmtPct(Math.abs(chk.pct), 0, false)} ${chk.pct > 0 ? 'above' : 'below'} the market that day.`))} ${esc(sug)}${chk.fix ? ` <button type="button" class="btn xs" id="vf-fix">${esc(L('Corrigir', 'Fix'))}</button>` : ''}</span></div>`;
+      }
       const q = priceOf(st.coin.s || st.coin.cg); const nowCur = q ? (st.cur === 'BRL' ? toBRL(q.p) : q.p) : null;
       const diff = isNum(nowCur) && unit > 0 ? (nowCur / unit - 1) * 100 : null;
-      const held = holdings().find((h) => h.id === st.coin.cg);
-      const warn = st.type === 'sell' && (!held || qty > held.qty + 1e-12) ? `<div class="tiny" style="color:var(--stale);margin-top:4px">${esc(L(`Atenção: você tem ${held ? fmtQty(held.qty) : 0} ${st.coin.b} registrados.`, `Note: you have ${held ? fmtQty(held.qty) : 0} ${st.coin.b} recorded.`))}</div>` : '';
-      box.innerHTML = `${ico('calculator', 18)}<span>${esc(L('Preço unitário:', 'Unit price:'))} <b>${esc(fmtMoney(unit, st.cur))}</b>${isNum(nowCur) ? ` · ${esc(L('agora:', 'now:'))} ${esc(fmtMoney(nowCur, st.cur))} <span class="${tone(diff)}">(${esc(fmtPct(diff, 1))})</span>` : ''}${warn}</span>`;
+      box.className = 'callout' + (chk && !chk.ok && chk.hard ? ' warn' : '');
+      box.innerHTML = `${ico('calculator', 18)}<span style="flex:1;min-width:0">${esc(L('Preço por unidade:', 'Unit price:'))} <b>${esc(fmtMoney(unit, st.cur))}</b>${isNum(nowCur) ? ` · ${esc(L('agora:', 'now:'))} ${esc(fmtMoney(nowCur, st.cur))} <span class="${tone(diff)}">(${esc(fmtPct(diff, 1))})</span>` : ''}${dayTxt}${warnPx}${warnSell}</span>`;
+      const fixB = $f('vf-fix');
+      if (fixB) fixB.onclick = () => { if (chk.fix === 'qty') { $f('vf-qty').value = decOut(qty * 1000, 12); if (st.anchor === 'unit') st.anchor = 'amt'; } else { $f('vf-amt').value = decOut(amt * 1000, 2); st.anchor = 'amt'; } sync('fix'); keepDraft(); };
     };
-    ['vf-qty', 'vf-amt'].forEach((i) => m.querySelector('#' + i).addEventListener('input', preview));
-    ACT.seg_vft = (v) => { st.type = v; preview(); };
-    ACT.seg_vfc = (v) => { st.cur = v; preview(); };
-    preview();
+    // preço por unidade × quantidade = total (o último campo que você mexeu manda)
+    const sync = (from) => {
+      const { qi, ui, ai } = read();
+      // nunca reescreve o campo que você está digitando
+      if (from === 'unit') st.anchor = 'unit';
+      if (from === 'amt') st.anchor = 'amt';
+      if (st.anchor === 'unit') { if (isNum(ui.v) && qi.v > 0) $f('vf-amt').value = decOut(ui.v * qi.v, 2); else if (from === 'unit') $f('vf-amt').value = ''; }
+      else if (isNum(ai.v) && qi.v > 0) { if (from !== 'unit') $f('vf-unit').value = decOut(ai.v / qi.v, 8); } else if (from === 'amt') $f('vf-unit').value = '';
+      st.confirm = false; preview();
+    };
+    $f('vf-qty').addEventListener('input', () => { sync('qty'); keepDraft(); });
+    $f('vf-unit').addEventListener('input', () => { sync('unit'); keepDraft(); });
+    $f('vf-amt').addEventListener('input', () => { sync('amt'); keepDraft(); });
+    ['vf-fee', 'vf-ex', 'vf-note'].forEach((i) => $f(i).addEventListener('input', keepDraft));
+    const loadDay = async () => {
+      const date = $f('vf-date').value; st.day = null; st.dayFx = null;
+      if (!st.coin || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { preview(); return; }
+      const [d, fx] = await Promise.all([marketDay(st.coin, date), st.cur === 'BRL' ? fxOn(date) : Promise.resolve(null)]);
+      if (!$f('vf-date') || $f('vf-date').value !== date) return;
+      st.day = d; st.dayFx = fx ? fx.v : null; preview();
+    };
+    $f('vf-date').addEventListener('change', () => { keepDraft(); loadDay(); });
+    ACT.seg_vft = (v) => { st.type = v; st.confirm = false; keepDraft(); preview(); };
+    ACT.seg_vfc = (v) => { st.cur = v; st.confirm = false; keepDraft(); loadDay(); };
+    if (!unit0 && !ed) sync('amt'); else if (ed && !unit0) sync('amt'); else preview();
+    loadDay();
+    if (opts.focus && $f(opts.focus)) setTimeout(() => { const el = $f(opts.focus); el.focus(); el.select && el.select(); }, 60);
+    $f('vf-cancel').onclick = () => { if (!ed) VAULT.draft = null; st.dirty = false; closeModal(); };
     const save = async (again) => {
-      const msg = m.querySelector('#vf-msg'); msg.className = 'form-msg err';
-      const date = m.querySelector('#vf-date').value, qty = num(m.querySelector('#vf-qty').value), amt = num(m.querySelector('#vf-amt').value), fee = num(m.querySelector('#vf-fee').value) || 0;
+      const msg = $f('vf-msg'); msg.className = 'form-msg err'; msg.textContent = '';
+      const v = vals(); const { qi, ai, fi } = read();
+      const date = v.date, qty = qi.v, amt = ai.v, fee = fi.v || 0;
       if (!st.coin) { msg.textContent = L('Escolha a moeda.', 'Pick the coin.'); return; }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > todayISO() || date < '2009-01-03') { msg.textContent = L('Confira a data (não pode ser no futuro).', 'Check the date (cannot be in the future).'); return; }
-      if (!(qty > 0)) { msg.textContent = L('Informe a quantidade (maior que zero).', 'Enter the quantity (above zero).'); return; }
-      if (amt === null || amt < 0) { msg.textContent = L('Informe o valor total.', 'Enter the total amount.'); return; }
-      const btns = [m.querySelector('#vf-save'), m.querySelector('#vf-again')].filter(Boolean); btns.forEach((b) => b.classList.add('busy'));
+      if (qi.bad || !(qty > 0)) { msg.textContent = L('Informe a quantidade (maior que zero).', 'Enter the quantity (above zero).'); $f('vf-qty').focus(); return; }
+      if (ai.bad || !isNum(amt) || amt < 0) { msg.textContent = L('Informe o valor total ou o preço por unidade.', 'Enter the total amount or the unit price.'); $f('vf-amt').focus(); return; }
+      if (fi.bad || fee < 0) { msg.textContent = L('Confira a taxa.', 'Check the fee.'); return; }
+      const fxGuess = st.dayFx || fxNow();
+      const chk = priceCheck(st.cur === 'USD' ? amt / qty : fxGuess ? amt / qty / fxGuess : null, st.day);
+      if (chk && !chk.ok && chk.hard && !st.confirm) { st.confirm = true; msg.className = 'form-msg warn'; msg.textContent = L('O preço por unidade está muito longe do mercado nesse dia (veja o aviso acima). Corrija, ou clique em salvar de novo para gravar assim mesmo.', 'Unit price is far from that day’s market (see above). Fix it, or click save again to keep it.'); return; }
+      const btns = [$f('vf-save'), $f('vf-again')].filter(Boolean); btns.forEach((b) => b.classList.add('busy'));
       try {
         // dólar do dia do aporte (PTAX); sem ele, o dólar de agora
         const fx = (await fxOn(date)) || (fxNow() ? { v: fxNow(), src: 'agora' } : null);
         if (!fx) throw new Error(L('Sem cotação do dólar para converter. Tente de novo em instantes.', 'No USD rate to convert. Try again shortly.'));
+        const r6 = (x) => Math.round(x * 1e6) / 1e6;
         const row = {
           type: st.type, asset_id: st.coin.cg, sym: String(st.coin.b).toUpperCase().slice(0, 15), name: String(st.coin.n).slice(0, 60),
           binance_sym: st.coin.s && /^[A-Z0-9]{2,20}$/.test(st.coin.s) ? st.coin.s : null,
           logo: st.coin.logo && /^https:\/\//.test(st.coin.logo) && st.coin.logo.length <= 300 ? st.coin.logo : null,
           color: /^#[0-9a-fA-F]{6}$/.test(st.coin.c || '') ? st.coin.c : null,
           date, qty, currency: st.cur, fee: round2(fee),
-          amount_usd: round2(st.cur === 'USD' ? amt : amt / fx.v), amount_brl: round2(st.cur === 'BRL' ? amt : amt * fx.v), fx_brl: Math.round(fx.v * 1e6) / 1e6,
-          exchange: m.querySelector('#vf-ex').value.trim().slice(0, 40) || null, notes: m.querySelector('#vf-note').value.trim().slice(0, 200) || null,
+          // o valor digitado é gravado como está; o convertido guarda mais casas para não distorcer o preço médio de aportes pequenos
+          amount_usd: st.cur === 'USD' ? round2(amt) : r6(amt / fx.v), amount_brl: st.cur === 'BRL' ? round2(amt) : r6(amt * fx.v), fx_brl: r6(fx.v),
+          exchange: v.ex.trim().slice(0, 40) || null, notes: v.note.trim().slice(0, 200) || null,
         };
         const sb = await sbClient();
-        const q = entry && entry.id ? sb.from('vault_entries').update(row).eq('id', entry.id).select().single() : sb.from('vault_entries').insert(row).select().single();
+        const q = ed ? sb.from('vault_entries').update(row).eq('id', entry.id).select().single() : sb.from('vault_entries').insert(row).select().single();
         const { data, error } = await q;
         if (error) throw error;
         const r = vNorm(data);
         const i = VAULT.rows.findIndex((x) => x.id === r.id);
         if (i >= 0) VAULT.rows[i] = r; else VAULT.rows.push(r);
-        VAULT.histKey = ''; VAULT.asset = r.asset_id;
+        VAULT.histKey = ''; VAULT.asset = r.asset_id; VAULT.draft = null; st.dirty = false;
         if (!r.binance_sym) trackExtra(r.asset_id);
-        toast(entry && entry.id ? L('Lançamento atualizado.', 'Entry updated.') : L('Aporte salvo.', 'Entry saved.'), { type: 'ok' });
-        if (again) { vaultDraw(); vaultForm({ type: st.type, currency: st.cur, date, asset_id: st.coin.cg, sym: st.coin.b, name: st.coin.n, binance_sym: st.coin.s, logo: st.coin.logo, color: st.coin.c, _draft: true }); }
+        toast(ed ? L('Lançamento atualizado.', 'Entry updated.') : L('Aporte salvo.', 'Entry saved.'), { type: 'ok' });
+        if (again) { vaultDraw(); vaultForm({ type: st.type, currency: st.cur, date, asset_id: st.coin.cg, sym: st.coin.b, name: st.coin.n, binance_sym: st.coin.s, logo: st.coin.logo, color: st.coin.c, exchange: row.exchange, _draft: false }); }
         else { closeModal(); vaultDraw(); }
       } catch (e) {
         const t = String((e && e.message) || e);
+        msg.className = 'form-msg err';
         msg.textContent = /row-level security|permission|42501/i.test(t) ? L('Seu plano não permite novos lançamentos. Veja os planos PRO.', 'Your plan does not allow new entries. See PRO plans.') : t;
         btns.forEach((b) => b.classList.remove('busy'));
       }
     };
-    m.querySelector('#vf-save').onclick = () => save(false);
-    const ag = m.querySelector('#vf-again'); if (ag) ag.onclick = () => save(true);
-    m.querySelector('#vf').addEventListener('submit', (e) => { e.preventDefault(); save(false); });
+    $f('vf-save').onclick = () => save(false);
+    const ag = $f('vf-again'); if (ag) ag.onclick = () => save(true);
   } });
 }
-ACT.vaultAdd = () => { if (!hasPro()) { go('plans'); return; } vaultForm(null); };
-ACT.vaultEdit = (el) => { const r = VAULT.rows.find((x) => x.id === el.dataset.id); if (r) vaultForm(r); };
+ACT.vaultAdd = () => { if (!hasPro()) { go('plans'); return; } vaultForm(VAULT.draft || null); };
+ACT.vaultEdit = (el) => { const r = VAULT.rows.find((x) => x.id === el.dataset.id); if (r) vaultForm(r, { focus: el.dataset.focus }); };
 ACT.vaultDel = async (el) => {
   const r = VAULT.rows.find((x) => x.id === el.dataset.id); if (!r) return;
   if (!(await confirmBox(L(`Excluir o lançamento de ${fmtQty(r.qty)} ${r.sym} de ${fmtDate(r.date + 'T12:00:00Z', { timeZone: 'UTC' })}?`, `Delete the ${fmtQty(r.qty)} ${r.sym} entry of ${fmtDate(r.date + 'T12:00:00Z', { timeZone: 'UTC' })}?`), { ok: L('Excluir', 'Delete'), danger: true }))) return;

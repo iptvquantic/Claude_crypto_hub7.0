@@ -172,12 +172,12 @@ function toast(msg, { type = 'info', ms = 4200, action } = {}) {
 
 // ---------- janelas (modal) ----------
 let _modal = null;
-function openModal({ title, body, foot = '', wide = false, onOpen, onClose, label }) {
+function openModal({ title, body, foot = '', wide = false, onOpen, onClose, label, guard }) {
   closeModal();
   const sc = $('#scrim');
   sc.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(label || title)}"><div class="modal-h"><h2 class="modal-t">${esc(title)}</h2><button class="icon-btn" data-act="closeModal" aria-label="${esc(L('Fechar', 'Close'))}">${ico('x', 18)}</button></div><div class="modal-b">${body}</div>${foot ? `<div class="modal-f">${foot}</div>` : ''}</div>`;
   sc.classList.add('open');
-  _modal = { el: sc.firstElementChild, onClose, prevFocus: document.activeElement };
+  _modal = { el: sc.firstElementChild, onClose, guard, prevFocus: document.activeElement };
   setTimeout(() => { const f = sc.querySelector('[autofocus], input:not([type=hidden]):not(.hp), select, textarea, .btn.pri'); if (f) f.focus(); }, 30);
   if (onOpen) onOpen(_modal.el);
   return _modal.el;
@@ -190,7 +190,14 @@ function closeModal() {
   if (m && m.prevFocus && m.prevFocus.focus) m.prevFocus.focus();
 }
 ACT.closeModal = closeModal;
-document.addEventListener('mousedown', (e) => { if (e.target.id === 'scrim' && !e.target.dataset.static) closeModal(); });
+// janela com dados digitados (guard) não fecha por clique fora nem por Esc — só por Cancelar/Salvar/X
+function modalGuarded() {
+  if (!_modal || !_modal.guard) return false;
+  let g = false; try { g = !!_modal.guard(); } catch { g = false; }
+  if (g) { const m = _modal.el; m.classList.remove('nudge'); void m.offsetWidth; m.classList.add('nudge'); toast(L('Você tem dados não salvos: use Salvar ou Cancelar.', 'You have unsaved data: use Save or Cancel.'), { type: 'warn', ms: 2600 }); }
+  return g;
+}
+document.addEventListener('mousedown', (e) => { if (e.target.id === 'scrim' && !e.target.dataset.static && !modalGuarded()) closeModal(); });
 function confirmBox(msg, { ok = L('Confirmar', 'Confirm'), danger = false, title = L('Confirmar', 'Confirm') } = {}) {
   return new Promise((res) => {
     let done = false;
@@ -250,10 +257,11 @@ ACT.cmdk = openCmdk;
 
 // ---------- escolher moeda (qualquer cripto) ----------
 let _pick = { cb: null, results: [], exclude: new Set() };
-function openCoinPicker({ title = L('Escolher moeda', 'Pick a coin'), exclude = [], onPick }) {
-  _pick = { cb: onPick, results: [], exclude: new Set(exclude) };
+function openCoinPicker({ title = L('Escolher moeda', 'Pick a coin'), exclude = [], onPick, onCancel }) {
+  _pick = { cb: onPick, results: [], exclude: new Set(exclude), picked: false };
   openModal({
     title,
+    onClose: () => { if (!_pick.picked && onCancel) setTimeout(onCancel, 0); },
     body: `<div class="inp-search">${ico('search', 18)}<input class="inp" id="cp-q" placeholder="${esc(L('Nome ou símbolo (ex.: Bitcoin, SOL)', 'Name or symbol (e.g. Bitcoin, SOL)'))}" autocomplete="off" spellcheck="false"></div>
       <div class="list mt" id="cp-list" style="max-height:52vh;overflow-y:auto"></div>
       <p class="panel-note">${esc(L('Moedas da lista principal atualizam em tempo real (Binance). As outras vêm do CoinGecko e atualizam a cada minuto.', 'Main-list coins update in real time (Binance). Others come from CoinGecko and refresh every minute.'))}</p>`,
@@ -289,7 +297,7 @@ function openCoinPicker({ title = L('Escolher moeda', 'Pick a coin'), exclude = 
         let pick;
         if (b.dataset.k === 'b') { const c = cur[+b.dataset.i]; pick = { kind: 'b', s: c.s, b: c.b, n: c.n, cg: c.cg, c: c.c, logo: LOGOS[c.cg] || '' }; }
         else { const c = _pick.results[+b.dataset.i]; pick = { kind: 'g', s: null, b: (c.symbol || '').toUpperCase().slice(0, 12), n: c.name, cg: c.id, c: hashColor(c.id), logo: c.large || c.thumb || '' }; }
-        const cb = _pick.cb; closeModal(); if (cb) cb(pick);
+        const cb = _pick.cb; _pick.picked = true; closeModal(); if (cb) cb(pick);
       });
       draw();
     },
@@ -375,7 +383,7 @@ document.addEventListener('change', (e) => { const el = e.target.closest('[data-
 document.addEventListener('input', (e) => { const el = e.target.closest('[data-inp]'); if (el && ACT[el.dataset.inp]) ACT[el.dataset.inp](el, e); });
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if ($('#scrim.open')) closeModal(); else openCmdk(); return; }
-  if (e.key === 'Escape') { if ($('#scrim.open')) { closeModal(); return; } if ($('#ai.open')) { aiOpen(false); return; } closeMenus(); document.body.classList.remove('sb-open'); }
+  if (e.key === 'Escape') { if ($('#scrim.open')) { if (!modalGuarded()) closeModal(); return; } if ($('#ai.open')) { aiOpen(false); return; } closeMenus(); document.body.classList.remove('sb-open'); }
   if (e.key === 'Enter' && e.target.id === 'ai-in' && !e.shiftKey) { e.preventDefault(); ACT.aiSend(); }
   // seções com abas: setas trocam a aba
   if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && e.target.matches('.seg button')) {
