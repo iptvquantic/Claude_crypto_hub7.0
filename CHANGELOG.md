@@ -1,6 +1,6 @@
 # Mudanças
 
-## 3.4.0 — 22/10/2026 · Portfolio Vault ampliado
+## 3.4.0 — 22/10/2026 · Portfolio Vault ampliado (publicada na raiz)
 - **Lançamentos sem limite:** o Vault lê os aportes de 1000 em 1000 (o servidor entrega no máximo 1000 por vez; antes, quem passasse disso via só parte e o preço médio saía errado). Vale também para "Baixar meus dados" (Configurações). Testado com 2.500 lançamentos.
 - **E se fosse em outro investimento?** Os mesmos valores, nas mesmas datas das suas compras e vendas, aplicados no **CDI** (100%), no **dólar**, em **Bitcoin**, no **Ibovespa** e no **S&P 500** (em reais): gráfico, valor de hoje, resultado, % sobre o aplicado e **taxa ao ano (TIR)**. Simulação com dados históricos reais (Banco Central, Binance, Yahoo pelo robô), marcada como "modelo"; não inclui imposto nem taxas desses investimentos.
 - **Apoio para o Imposto de Renda:** por ano, vendas por mês (total vendido e lucro ou prejuízo pelo custo médio, já com as taxas) e o que você tinha em 31/12 (quantidade, custo de aquisição em reais e onde comprou), com **CSV** para o contador. O NEXUS HUB não calcula imposto.
