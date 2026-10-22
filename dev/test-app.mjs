@@ -326,6 +326,75 @@ console.log('\n[3] Conta (teste grátis) · Portfolio Vault');
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
   await browser.close();
 }
+// ---------- 3b. Vault: 2.500 lançamentos (sem limite) e contas conferidas por fora ----------
+console.log('\n[3b] Vault: 2.500 lançamentos, contas conferidas, comparação e IR');
+{
+  const { seedVault, expectedBook, fxAt } = await import('./vault-fixtures.mjs');
+  const supa = makeSupabase({ plan: 'trial' });
+  const seed = seedVault(2500, supa.uid); supa.db.entries.push(...seed);
+  const { browser, page, errors } = await open({ supa, hash: '#/vault' });
+  await sleep(2500);
+  await page.click('#acct .acct-btn'); await sleep(400);
+  await page.type('#au-email', 'cliente@teste.com'); await page.type('#au-pass', 'senha1234'); await page.click('#au-go');
+  await page.waitForFunction(() => typeof VAULT !== 'undefined' && VAULT.loaded, { timeout: 15000 }).catch(() => {});
+  await sleep(1500);
+  ok(await page.evaluate((n) => VAULT.rows.length === n, seed.length) && supa.db.pages >= 3, `todos os ${seed.length} lançamentos carregados (de 1000 em 1000: ${supa.db.pages} pedidos)`);
+  // conta independente (custo médio em reais) × o que o site calcula
+  const exp = expectedBook(seed);
+  const got = await page.evaluate(() => { const H = holdings(); const L2 = vaultLedger(); return { H: H.map((h) => ({ id: h.id, qty: h.qty, costBRL: h.costBRL, realBRL: h.realBRL, invBRL: h.invBRL })), sales: L2.sales.length }; });
+  const near = (a, b, tol) => Math.abs(a - b) <= tol;
+  const bad = got.H.filter((h) => { const e = exp.by[h.id]; return !e || !near(h.qty, e.qty, 1e-6 * Math.max(1, e.qty)) || !near(h.costBRL, e.costB, 0.05) || !near(h.realBRL, e.realB, 0.05); });
+  ok(!bad.length && got.H.length === Object.keys(exp.by).length, `quantidade, custo e lucro realizado de cada moeda batem com a conta feita por fora ${bad.map((h) => h.id).join(',')}`);
+  ok(near(got.H.reduce((s, h) => s + h.invBRL, 0), exp.putB, 0.05), 'total aportado (com taxas) bate');
+  // evolução e comparação
+  await page.waitForFunction(() => VCMP.data && VAULT.hist, { timeout: 30000 }).catch(() => {});
+  const cmp = await page.evaluate(() => ({ put: VCMP.data.out.mine.put, took: VCMP.data.out.mine.took, end: VCMP.data.out.mine.end, res: VCMP.data.out.mine.res, T: totals(holdings()), cur: VAULT.cur, n: VCMP.data.days.length, bench: Object.fromEntries(['usd', 'btc', 'cdi', 'ibov', 'spx'].map((k) => [k, !VCMP.data.out[k].na])) }));
+  ok(near(cmp.put, exp.putB, 0.05) && near(cmp.took, exp.tookB, 0.05), 'comparação: aplicado e resgatado batem com os lançamentos');
+  ok(cmp.cur === 'BRL' && near(cmp.res, cmp.T.total, 1) && near(cmp.end, cmp.T.value, 1), `comparação: resultado da sua carteira = resultado total do Vault (${Math.round(cmp.res)} × ${Math.round(cmp.T.total)})`);
+  ok(Object.values(cmp.bench).every(Boolean), `comparação com dólar, Bitcoin, CDI, Ibovespa e S&P 500 ${JSON.stringify(cmp.bench)}`);
+  ok(await page.$$eval('#v-cmp .v-cmp-t tbody tr', (a) => a.length === 6).catch(() => false) && await page.$('#v-cmp-ch canvas') !== null, 'comparação: gráfico e tabela desenhados');
+  // IR: vendas do ano passado e posição em 31/12
+  const y = new Date().getUTCFullYear() - 1;
+  const expY = expectedBook(seed, `${y}-12-31`);
+  const salesY = expY.sales.filter((s) => s.date.startsWith(String(y)));
+  const ir = await page.evaluate((yy) => { const D = vaultIrData(yy); return { gross: D.months.reduce((s, m) => s + m.gross, 0), gain: D.months.reduce((s, m) => s + m.gain, 0), n: D.sales.length, pos: D.pos.map((p) => ({ id: p.id, qty: p.qty, cost: p.costBRL })) }; }, y);
+  ok(ir.n === salesY.length && near(ir.gross, salesY.reduce((s, x) => s + x.gross, 0), 0.05) && near(ir.gain, salesY.reduce((s, x) => s + x.gain, 0), 0.05), `IR ${y}: vendas, total vendido e lucro do ano batem (${ir.n} vendas)`);
+  ok(ir.pos.length && ir.pos.every((p) => { const e = expY.by[p.id]; return e && near(p.qty, e.qty, 1e-6 * Math.max(1, e.qty)) && near(p.cost, e.costB, 0.05); }), `IR ${y}: posição e custo em 31/12 batem`);
+  ok(await page.$eval('#v-ir', (e) => /Apoio para o Imposto de Renda/.test(e.innerText) && /31\/12\//.test(e.innerText)).catch(() => false), 'painel de apoio ao IR aparece');
+  // filtros do histórico
+  await page.select('#v-list select[data-k="type"]', 'sell'); await sleep(400);
+  const nSell = seed.filter((e) => e.type === 'sell').length;
+  ok(await page.$eval('#v-list .v-ftot', (e, n) => e.innerText.replace(/\D/g, '').startsWith(String(n)), nSell).catch(() => false) && await page.$$eval('#v-list tbody .badge', (a) => a.every((b) => /venda/.test(b.textContent))).catch(() => false), `filtro "só vendas" (${nSell}) e totais do filtrado`);
+  await page.click('[data-act=vaultFClear]'); await sleep(300);
+  // desenho: nada quebrado, sem rolagem lateral
+  const vr = await inspect(page); ok(!vr.bad.length && !vr.overflow, `Vault com 2.500 lançamentos sem número quebrado nem rolagem lateral ${vr.bad.join(',')} ${vr.wide.join(' ')}`);
+  await shot(page, 'v-vault-2500');
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true }); await sleep(2000);
+  ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Vault com 2.500 lançamentos no celular sem rolagem lateral');
+  await page.setViewport({ width: 1280, height: 860, deviceScaleFactor: 1 }); await sleep(800);
+  // caso de resposta conhecida: contas na mão
+  const d = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+  const base = { user_id: supa.uid, asset_id: 'bitcoin', sym: 'BTC', name: 'Bitcoin', binance_sym: 'BTCUSDT', currency: 'BRL', fee: 0, removed_at: null, updated_at: new Date().toISOString() };
+  const d1 = d(400), fx1 = fxAt(Date.parse(d1 + 'T12:00:00Z'));
+  supa.db.entries = [
+    { ...base, id: 'k1', type: 'buy', date: d1, qty: 1, amount_brl: 100000, amount_usd: +(100000 / fx1).toFixed(2), fx_brl: fx1, created_at: d1 + 'T10:00:00Z' },
+    { ...base, id: 'k2', type: 'buy', date: d(300), qty: 1, amount_brl: 200000, amount_usd: 40000, fx_brl: 5, created_at: d(300) + 'T10:00:00Z' },
+    { ...base, id: 'k3', type: 'sell', date: d(200), qty: 1, amount_brl: 300000, amount_usd: 60000, fx_brl: 5, fee: 100, created_at: d(200) + 'T10:00:00Z' },
+  ];
+  await page.evaluate(() => vaultLoad(true)); await page.waitForFunction(() => VAULT.rows.length === 3 && VCMP.data && VCMP.data.out.mine.put === 300000, { timeout: 30000 }).catch(() => {});
+  const k = await page.evaluate(() => { const h = holdings()[0]; const s = vaultLedger().sales[0]; return { qty: h.qty, cost: h.costBRL, real: h.realBRL, gain: s.gainBRL, put: VCMP.data.out.mine.put, took: VCMP.data.out.mine.took, cdi: VCMP.data.out.cdi, usd: VCMP.data.out.usd, days: VCMP.data.days.length }; });
+  ok(k.qty === 1 && near(k.cost, 150000, 0.01) && near(k.real, 149900, 0.01) && near(k.gain, 149900, 0.01) && k.put === 300000 && k.took === 299900, `contas na mão: 2 compras (R$ 100 mil e R$ 200 mil) e 1 venda (R$ 300 mil, taxa R$ 100) → preço médio R$ 150 mil, lucro R$ 149.900 (${k.real})`);
+  // CDI: 100% do CDI diário (0,050788% ao dia útil) nos mesmos fluxos, conferido aqui fora
+  const busy = (from, to) => { let n = 0; for (let t = Date.parse(from + 'T00:00:00Z'); t < Date.parse(to + 'T00:00:00Z'); t += 864e5) { const w = new Date(t).getUTCDay(); if (w && w < 6) n++; } return n; };
+  const today = new Date().toISOString().slice(0, 10), r = 1 + 0.050788 / 100;
+  let units = 100000 / 1; let idx = Math.pow(r, busy(d1, d(300))); units += 200000 / idx; idx *= Math.pow(r, busy(d(300), d(200))); units -= 299900 / idx; idx *= Math.pow(r, busy(d(200), today));
+  ok(!k.cdi.na && near(k.cdi.end, units * idx, 0.5) && near(k.cdi.took, 299900, 0.01), `CDI: valor de hoje conferido por fora (${k.cdi.end && k.cdi.end.toFixed(2)} × ${(units * idx).toFixed(2)})`);
+  ok(!k.usd.na && k.usd.put === 300000, 'dólar: mesmos aportes');
+  const xr = await page.evaluate(() => xirr([{ t: 0, v: -1000 }, { t: 365.25 * 864e5, v: 1100 }]));
+  ok(near(xr, 0.10, 1e-6), `taxa anual (TIR) de 1000 → 1100 em 1 ano = 10% (${xr})`);
+  ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
+  await browser.close();
+}
 // ---------- 4. teste vencido: Vault só leitura, Lab bloqueado ----------
 console.log('\n[4] Conta com teste vencido');
 {

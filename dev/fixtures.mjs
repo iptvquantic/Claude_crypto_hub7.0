@@ -23,6 +23,18 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 const chg = (s) => { const h = [...s].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 1000; return (h / 1000 - 0.45) * 12; };
 const price = (s) => BASE[s] * (1 + chg(s) / 300);
 
+// preço "histórico" contínuo e determinístico em função do tempo (termina no preço atual): usado nas
+// velas pedidas a partir de uma data (histórico longo, em páginas) e nas moedas só do CoinGecko,
+// para que páginas emendadas não tenham degraus e os testes do Vault tenham números plausíveis
+const EXTRA_PX = { kaspa: 0.07 };
+const hsh = (s) => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return ((h >>> 0) % 100000) / 100000; };
+export function pricePath(key, t, end) {
+  const k = hsh(key) * 6.28, yrs = (NOW() - t) / (365 * DAY);
+  const wave = (x) => 0.18 * Math.sin(x / (120 * DAY) + k) + 0.07 * Math.sin(x / (23 * DAY) + 2 * k);
+  return end * Math.exp(-0.32 * yrs) * (1 + wave(t) - wave(NOW())) * (1 + 0.012 * (hsh(key + Math.floor(t / DAY)) - 0.5));
+}
+export const livePrice = (sym) => price(sym);
+export const cgPrice = (id) => (BY_ID[id] ? price(BY_ID[id]) : EXTRA_PX[id]);
 // velas: passeio aleatório determinístico que termina no preço atual
 const IV = { '1m': 60e3, '5m': 300e3, '15m': 900e3, '1h': 3600e3, '4h': 14400e3, '1d': DAY, '1w': 7 * DAY };
 function candles(sym, interval, limit, startTime) {
@@ -39,6 +51,10 @@ function candles(sym, interval, limit, startTime) {
   }
   if (!startTime) ts = ts.slice(-limit);
   const end = price(sym);
+  if (startTime && interval !== '1M') { // histórico a partir de uma data: preço contínuo entre as páginas
+    const iv = IV[interval] || DAY;
+    return ts.map((t) => { const o = pricePath(sym, t, end), c = pricePath(sym, Math.min(t + iv, NOW()), end); const h = Math.max(o, c) * 1.006, l = Math.min(o, c) * 0.994; return [t, o.toPrecision(8), h.toPrecision(8), l.toPrecision(8), c.toPrecision(8), '1000', t + iv - 1, String(o * 1000 * 8), 100, '500', '500', '0']; });
+  }
   let p = end; const out = [];
   seed = [...sym + interval].reduce((a, c) => (a * 33 + c.charCodeAt(0)) % 2147483647, 11) || 1;
   for (let i = ts.length - 1; i >= 0; i--) {
@@ -52,7 +68,7 @@ function candles(sym, interval, limit, startTime) {
 }
 function cgMarket(id, i) {
   const s = BY_ID[id];
-  const p = s ? price(s) : id === 'tether' || id === 'usd-coin' ? 1 : 0.5 + i / 10;
+  const p = s ? price(s) : id === 'tether' || id === 'usd-coin' ? 1 : EXTRA_PX[id] !== undefined ? EXTRA_PX[id] : 0.5 + i / 10;
   const sup = SUPPLY[id] || 1e9 / (i + 1);
   return {
     id, symbol: (s ? s.replace('USDT', '') : id.slice(0, 4)).toLowerCase(), name: id.replace(/-/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase()), image: `https://assets.test/logo/${id}.png`,
@@ -116,6 +132,11 @@ function pipeline(name) {
   const real = realPipeline(name, gen); if (real) return real;
   if (name === 'lab') return labFixture(gen);
   if (name === 'tokens') return TOKENS_FIXTURE();
+  if (name === 'bench') { // Ibovespa e S&P 500: dias úteis dos últimos ~10 anos
+    const d0 = Math.floor(NOW() / DAY) - 3650; const d = []; for (let x = d0; x <= Math.floor(NOW() / DAY) - 1; x++) { const wd = new Date(x * DAY).getUTCDay(); if (wd && wd < 6) d.push(x); }
+    const mk = (a, b) => ({ d, c: d.map((x, i) => +(a * Math.pow(b, i / d.length) * (1 + 0.05 * Math.sin(i / 40))).toFixed(2)) });
+    return { generatedAt: gen, src: 'Yahoo Finance', h: { '^BVSP': mk(60000, 2.2), '^GSPC': mk(2100, 3.2) } };
+  }
   if (name === 'buybacks') {
     const day0 = Math.floor(NOW() / DAY) * DAY - DAY; // último dia completo (UTC); o de hoje vem pela metade
     const T = [['hyperliquid', 'Hyperliquid', 'HYPE', 'buyback-burn', 3.4e6, 18e9, 77e9, 38], ['pump-fun', 'Pump', 'PUMP', 'buyback-burn', 9e5, 2.1e9, 3.7e9, 0.005], ['tron', 'Tron', 'TRX', 'burn', 1e6, 31e9, 31e9, 0.3], ['uniswap', 'Uniswap', 'UNI', 'buyback-burn', 3e5, 4.6e9, 6.5e9, 7.5], ['ethereum', 'Ethereum', 'ETH', 'burn', 1e5, 3e11, 3e11, 3100], ['sky', 'Sky', 'SKY', 'buyback', 1.8e5, 1.6e9, 1.7e9, 0.07], ['chainlink', 'Chainlink', 'LINK', 'buyback', 0, 9.5e9, 16e9, 16], ['solana', 'Solana', 'SOL', 'burn', 1.1e5, 6.2e10, 7e10, 145], ['raydium', 'Raydium', 'RAY', 'buyback', 6e4, 4.9e8, 1e9, 1.9], ['aerodrome-finance', 'Aerodrome', 'AERO', 'share', 3e5, 9.3e8, 1.5e9, 0.9], ['pons', 'Pons', 'PONS', 'buyback-burn', 3.5e4, 2.3e8, 2.3e8, 0.3], ['stonk-3', 'StonkFun', 'STONK', 'buyback', 5e4, 9e7, 9e7, 0.12]];
@@ -182,7 +203,14 @@ export function makeSupabase({ plan = 'trial', admin = false } = {}) {
     if (p === '/rest/v1/rpc/my_profile') { const pr = db.profile; const pro = pr.active && (['admin', 'master'].includes(pr.plan) || Date.parse(pr.plan_expiry) > NOW()); return json({ ...pr, pro, admin: ['admin', 'master'].includes(pr.plan), server_time: new Date().toISOString() }); }
     if (p === '/rest/v1/profiles') return { status: 204, contentType: 'application/json', body: '' };
     if (p === '/rest/v1/vault_entries') {
-      if (method === 'GET') return json(db.entries.filter((e) => !e.removed_at));
+      if (method === 'GET') {
+        // como o PostgREST do Supabase: no máximo 1000 linhas por pedido (offset/limit) e total com "Prefer: count=exact"
+        const all = db.entries.filter((e) => !e.removed_at).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.created_at).localeCompare(String(b.created_at)) || String(a.id).localeCompare(String(b.id)));
+        const off = Math.max(0, +(u.searchParams.get('offset') || 0)); const lim = Math.min(1000, +(u.searchParams.get('limit') || 1000));
+        const page = all.slice(off, off + lim); db.pages = (db.pages || 0) + 1;
+        const cnt = /count=exact/.test((headers && headers.prefer) || '') ? all.length : '*';
+        return json(page, 200, { 'content-range': page.length ? `${off}-${off + page.length - 1}/${cnt}` : `*/${cnt}` });
+      }
       if (method === 'POST') {
         const rows = [].concat(JSON.parse(body)); const out = [];
         for (const r of rows) { if (r.legacy_id && db.entries.some((e) => e.legacy_id === r.legacy_id)) continue; const row = { id: `v-${++n}`, user_id: uid, fee: 0, created_at: new Date(NOW() + n).toISOString(), updated_at: new Date().toISOString(), removed_at: null, ...r }; db.entries.push(row); out.push(row); }
@@ -235,7 +263,7 @@ export function respond(url, method = 'GET', body = '', opts = {}) {
     if (p === '/api/v3/search') return json({ coins: [{ id: 'kaspa', name: 'Kaspa', symbol: 'KAS', market_cap_rank: 40, thumb: 'https://assets.test/logo/kaspa.png', large: 'https://assets.test/logo/kaspa.png' }] });
     if (p.startsWith('/api/v3/companies/public_treasury/')) return json({ total_holdings: 1302063, total_value_usd: 1.06e11, market_cap_dominance: 6.2, companies: [{ name: 'Strategy', symbol: 'MSTR.US', country: 'US', total_holdings: 848250, total_entry_value_usd: 64536394091, total_current_value_usd: 6.9e10, percentage_of_total_supply: 4.039 }, { name: 'Metaplanet', symbol: '3350.T', country: 'JP', total_holdings: 44000, total_entry_value_usd: 3896249023, total_current_value_usd: 3.6e9, percentage_of_total_supply: 0.21 }, { name: 'Twenty One', symbol: 'XXI.US', country: 'US', total_holdings: 43514, total_entry_value_usd: 0, total_current_value_usd: 3.5e9, percentage_of_total_supply: 0.207 }, { name: 'Empresa BR', symbol: 'MELI.US', country: 'BR', total_holdings: 570, total_entry_value_usd: 4.0e7, total_current_value_usd: 4.6e7, percentage_of_total_supply: 0.003 }] });
     const mc = p.match(/^\/api\/v3\/coins\/([^/]+)\/market_chart$/);
-    if (mc) { const days = +q.get('days') || 30; return json({ prices: Array.from({ length: days }, (_, i) => [NOW() - (days - i) * DAY, 0.07 * (1 + Math.sin(i / 5) * 0.1)]) }); }
+    if (mc) { const days = +q.get('days') || 30; const end = cgPrice(mc[1]) || 0.07; return json({ prices: Array.from({ length: days }, (_, i) => { const t = Math.floor((NOW() - (days - i) * DAY) / DAY) * DAY; return [t, pricePath(mc[1], t, end)]; }) }); }
     const co = p.match(/^\/api\/v3\/coins\/([^/]+)$/);
     if (co) { const m = cgMarket(co[1], 30); return json({ id: co[1], symbol: m.symbol, name: m.name, market_cap_rank: 30, image: { large: m.image }, market_data: { current_price: { usd: m.current_price }, market_cap: { usd: m.market_cap }, fully_diluted_valuation: { usd: m.current_price * 1e10 }, total_volume: { usd: m.total_volume }, circulating_supply: 3.1e9, total_supply: 1e10, max_supply: 1e10, ath: { usd: m.current_price * 2.5 }, ath_date: { usd: '2024-12-16T00:00:00.000Z' }, price_change_percentage_24h: 2.1 } }); }
   }
@@ -286,6 +314,7 @@ export function respond(url, method = 'GET', body = '', opts = {}) {
     else { from = parseBr(q.get('dataInicial')); to = parseBr(q.get('dataFinal')); }
     const out = [];
     if (n === '13522') { for (let t = from; t <= to; t += 30 * DAY) { const d = new Date(t); out.push({ data: `01/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`, valor: (4.2 + Math.sin(t / 1e9) * 0.4).toFixed(2) }); } }
+    else if (n === '12') { for (let t = from; t <= to; t += DAY) { const wd = new Date(t).getUTCDay(); if (wd === 0 || wd === 6) continue; out.push({ data: br(t), valor: '0.050788' }); } } // CDI diário (% ao dia), só dias úteis
     else for (let t = from; t <= to; t += DAY) out.push({ data: br(t), valor: n === '432' ? selicOn(iso(t)).toFixed(2) : n === '4389' ? '13.65' : (5.3 + Math.sin(t / 5e9) * 0.3).toFixed(4) });
     return json(out);
   }

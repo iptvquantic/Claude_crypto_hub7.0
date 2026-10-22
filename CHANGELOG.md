@@ -1,5 +1,16 @@
 # Mudanças
 
+## 3.4.0 — 22/10/2026 · Portfolio Vault ampliado
+- **Lançamentos sem limite:** o Vault lê os aportes de 1000 em 1000 (o servidor entrega no máximo 1000 por vez; antes, quem passasse disso via só parte e o preço médio saía errado). Vale também para "Baixar meus dados" (Configurações). Testado com 2.500 lançamentos.
+- **E se fosse em outro investimento?** Os mesmos valores, nas mesmas datas das suas compras e vendas, aplicados no **CDI** (100%), no **dólar**, em **Bitcoin**, no **Ibovespa** e no **S&P 500** (em reais): gráfico, valor de hoje, resultado, % sobre o aplicado e **taxa ao ano (TIR)**. Simulação com dados históricos reais (Banco Central, Binance, Yahoo pelo robô), marcada como "modelo"; não inclui imposto nem taxas desses investimentos.
+- **Apoio para o Imposto de Renda:** por ano, vendas por mês (total vendido e lucro ou prejuízo pelo custo médio, já com as taxas) e o que você tinha em 31/12 (quantidade, custo de aquisição em reais e onde comprou), com **CSV** para o contador. O NEXUS HUB não calcula imposto.
+- **Resultado por moeda** (em aberto + realizado, em barras), **compras e vendas por mês** (12 meses, 24 meses ou tudo — por ano quando o período é longo) e **onde você comprou** (por corretora).
+- **Histórico com filtros:** compras/vendas, moeda, corretora e ano, além da busca, com os totais do que está filtrado.
+- **Gráfico do ativo** com muitos lançamentos junta os pontos por semana ou por mês (sem poluir); eixo dos gráficos em reais sem casas desnecessárias.
+- **Evolução do patrimônio:** calculada nas duas moedas de uma vez (trocar R$/US$ ou o período não recalcula); moeda sem preço em parte do período (o CoinGecko grátis só tem 1 ano) fica fora do valor e do custo nesses dias, com aviso — antes, ela apagava o gráfico inteiro nesse trecho. Cotação nova não redesenha filtros nem tabelas.
+- **Robô:** `bench.json` com 10 anos de Ibovespa e S&P 500 (renova a cada ~12 h).
+- Números grandes do Vault não quebram mais no meio.
+
 ## 3.3.1 — 22/10/2026
 - **Agendador do robô (Painel do administrador):** o GitHub está rodando o robô de dados só de 6 a 8 vezes por dia (deveria ser a cada 20 min), e cotas de ETFs, bolsas e notícias podiam ficar horas paradas. Novo agendador no próprio banco (Supabase pg_cron + pg_net) pede uma execução ao GitHub a cada 20 min com um token que o dono cola no painel — guardado criptografado no Vault do Supabase, nunca mostrado de novo e fora do código do site. O painel mostra se o token está salvo, o agendamento, o último pedido e a resposta do GitHub em português (token vencido, sem permissão, sem acesso ao repositório…), com "Testar agora" e o passo a passo para criar o token. Instalação no banco: `dev/supabase/migrations/03_agendador_robo.sql` (o painel explica como aplicar pelo SQL Editor; sem ela, nada muda).
 - **Robô mais gentil com as fontes:** patrimônio dos ETFs e valor de mercado das mineradoras são lidos no máximo a cada 2 h e o ranking mundial a cada 1 h (as cotações continuam a cada execução); `status.json` registra como a execução começou (agendamento do GitHub ou pedido).

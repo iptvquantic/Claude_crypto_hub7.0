@@ -1,5 +1,5 @@
 // Captura de tela de uma página com as APIs simuladas (para revisar o visual).
-// Uso: node dev/shot.mjs <página> [--admin|--user] [--mobile] [--theme light] [--vault N] [--robot ok|notoken|missing] [--sel CSS] [--root]
+// Uso: node dev/shot.mjs <página> [--admin|--user] [--mobile] [--theme light] [--vault N] [--robot ok|notoken|missing] [--sel CSS] [--tall 8000] [--wait ms] [--root]
 // Saída: dev/out/shot-<página>[-mobile][-tema].png
 import puppeteer from 'puppeteer-core';
 import { readFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
@@ -22,7 +22,8 @@ if (supa && arg('--vault')) { const { seedVault } = await import('./vault-fixtur
 const browser = await puppeteer.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--lang=pt-BR'] });
 const page = await browser.newPage();
 await page.emulateTimezone('America/Sao_Paulo');
-await page.setViewport(mobile ? { width: 390, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true } : { width: 1280, height: 900 });
+const tall = +(arg('--tall') || 0); // altura da janela (para capturar a página inteira de uma vez)
+await page.setViewport(mobile ? { width: 390, height: tall || 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true } : { width: 1280, height: tall || 900 });
 await page.setRequestInterception(true);
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));

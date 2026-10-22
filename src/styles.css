@@ -1694,3 +1694,67 @@ button.oc-cube:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .adm-tok .inp-group .inp { min-width: 0; flex: 1; }
 .adm-how { margin-top: 12px; }
 @media (max-width: 640px) { .adm-tok .inp-group { flex-wrap: wrap; } .adm-tok .inp-group .btn { width: 100%; } }
+
+/* ---------- Portfolio Vault 3.4: comparação, resultado por moeda, compras/vendas, corretoras, IR, filtros ---------- */
+/* cores fixas por investimento na comparação (validadas: daltonismo e contraste, nos 4 temas) */
+:root, [data-theme="dark"] { --cmp-1: #3987e5; --cmp-2: #d95926; --cmp-3: #199e70; --cmp-4: #c98500; --cmp-5: #d55181; }
+[data-theme="light"] { --cmp-1: #2a78d6; --cmp-2: #eb6834; --cmp-3: #1baf7a; --cmp-4: #eda100; --cmp-5: #e87ba4; }
+.v-cmp-k { gap: 8px 26px; margin-bottom: 12px; }
+.v-cmp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.v-cmp-chip { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); font: inherit; font-size: 13.5px; font-weight: 650; cursor: pointer; }
+.v-cmp-chip i { width: 14px; height: 4px; border-radius: 2px; background: var(--text-3); }
+.v-cmp-chip i.ink, .v-cmp-sw.ink { background: var(--text); }
+.v-cmp-chip.on { color: var(--text); background: var(--panel-2); border-color: var(--line-2); }
+.v-cmp-chip:not(.on) i { opacity: .35; }
+.v-cmp-chip.mine { cursor: default; }
+.v-cmp-chip[disabled] { opacity: .45; cursor: not-allowed; }
+.v-cmp-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.v-cmp-sw { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; flex: none; }
+.v-cmp-nm { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; }
+.v-cmp-t { margin-top: 12px; }
+.v-cmp-t tr.mine td { font-weight: 750; background: var(--panel-2); }
+.v-cmp-tr { display: flex; align-items: center; gap: 7px; }
+.v-cmp-tr span { flex: 1; }
+.v-legend { display: flex; gap: 16px; font-size: 13px; color: var(--text-2); margin: -2px 0 6px; }
+.v-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.v-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.v-legend i.up, .v-mb i.up { background: var(--up); }
+.v-legend i.down, .v-mb i.down { background: var(--down); }
+.v-mb { display: flex; align-items: stretch; gap: 4px; height: 190px; padding-top: 6px; }
+.v-mb > div { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; outline: none; }
+.v-mb > div:focus-visible .v-mb-bars { box-shadow: 0 0 0 2px var(--accent); border-radius: 4px; }
+.v-mb-bars { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; border-bottom: 1px solid var(--line-2); }
+.v-mb-bars i { width: 45%; max-width: 12px; border-radius: 4px 4px 0 0; }
+.v-mb > div > span { font-size: 11px; color: var(--text-3); white-space: nowrap; height: 16px; }
+.v-mb.dense > div > span { transform: rotate(-45deg); transform-origin: top center; height: 28px; font-size: 10px; }
+.v-plb { display: grid; gap: 4px; }
+.v-plb-r { display: grid; grid-template-columns: 74px minmax(0, 1fr) minmax(96px, auto); align-items: center; gap: 10px; padding: 5px 6px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.v-plb-r:hover, .v-plb-r:focus-visible { background: var(--panel-2); outline: none; }
+.v-plb-n { font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-plb-t { height: 14px; background: var(--panel-2); border-radius: 0 4px 4px 0; overflow: hidden; }
+.v-plb-t i { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+.v-plb-t i.up { background: var(--up); } .v-plb-t i.down { background: var(--down); } .v-plb-t i.acc { background: var(--accent); }
+.v-plb-v { font-size: 13.5px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v-plb-gap { text-align: center; color: var(--text-3); font-size: 12px; line-height: 1; }
+.v-exl { display: grid; gap: 8px; }
+.v-exr { display: grid; grid-template-columns: minmax(90px, 140px) minmax(0, 1fr) minmax(110px, auto); align-items: center; gap: 10px; }
+.v-exn { font-weight: 650; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-exv { font-size: 13.5px; font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v-h3 { font-size: 14.5px; font-weight: 750; margin: 0 0 8px; color: var(--text); }
+.v-ir-g { align-items: start; }
+#v-ir .sel { width: auto; height: 36px; padding: 0 10px; }
+.v-filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 18px 10px; }
+.v-filters .sel { width: auto; max-width: 260px; height: 38px; font-size: 14px; }
+.v-ftot { display: flex; flex-wrap: wrap; gap: 4px 18px; padding: 0 18px 12px; color: var(--text-2); }
+@media (max-width: 640px) {
+  .v-filters .sel { flex: 1 1 140px; max-width: none; }
+  .v-plb-r { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 8px; }
+  .v-exr { grid-template-columns: minmax(70px, 100px) minmax(0, 1fr) auto; gap: 8px; }
+  .v-mb { height: 160px; }
+  .v-cmp-k { gap: 8px 18px; }
+}
+/* números grandes do Vault não quebram no meio (a grade passa para 2 colunas quando falta espaço) */
+.v-hero .grid.g-3 { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.v-hero .kpi .v, .v-cmp-k .kpi .v, #v-ir .kpi .v { overflow-wrap: break-word; font-size: clamp(19px, 1.8vw, 25px); }
+.v-ir-g { display: grid; gap: 18px; }
+.v-ir-g > div { min-width: 0; } /* a tabela rola dentro do quadro no celular, sem empurrar a página */
