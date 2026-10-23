@@ -289,11 +289,31 @@ console.log('\n[3] Conta (teste grátis) · Portfolio Vault');
   // conferência: lançamento com casa decimal errada (como os gravados pela versão antiga)
   supa.db.entries.push({ id: 'v-bad', user_id: supa.uid, type: 'buy', asset_id: 'bitcoin', sym: 'BTC', name: 'Bitcoin', binance_sym: 'BTCUSDT', date: new Date(Date.now() - 20 * 864e5).toISOString().slice(0, 10), qty: 0.01487, currency: 'USD', amount_usd: 1.21, amount_brl: 6.5, fx_brl: 5.4, fee: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), removed_at: null });
   await page.evaluate(() => vaultLoad(true)); await sleep(3500);
-  ok(await page.$eval('#v-check', (e) => /muito diferente do mercado/.test(e.innerText) && /Valor provável/.test(e.innerText)).catch(() => false), 'Vault aponta o lançamento com preço fora do mercado e sugere a correção');
-  await page.click('#v-check [data-act=vaultFix]'); await sleep(800);
+  ok(await page.$eval('#v-check', (e) => /diferente do mercado no dia/.test(e.innerText) && /valor provável é perto de/.test(e.innerText)).catch(() => false), 'Vault aponta o lançamento com preço fora do mercado e sugere a correção');
+  ok(await page.evaluate(() => { const c = document.querySelector('#v-check'), h = document.querySelector('.v-hero'); return !!(c && h && c.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_FOLLOWING); }), 'o aviso fica no topo, antes do patrimônio');
+  await page.click('#v-check [data-act=vaultFix][data-id="v-bad"]'); await sleep(800);
   ok(await page.$eval('#vf-amt', (e) => e.value === '1.210').catch(() => false), 'Corrigir abre o lançamento com o valor sugerido');
   await page.click('#vf-cancel'); await sleep(300);
-  supa.db.entries = supa.db.entries.filter((e) => e.id !== 'v-bad'); await page.evaluate(() => vaultLoad(true)); await sleep(1500);
+  // lançamento antigo gravado com o preço do MOMENTO do cadastro (bug da versão antiga): reconhecido e com estimativa pelo fechamento do dia
+  {
+    const { pricePath, livePrice } = await import('./fixtures.mjs');
+    const live = livePrice('BTCUSDT'); let dd = null;
+    for (let n = 300; n < 1200 && !dd; n += 7) { const t = Math.floor((Date.now() - n * 864e5) / 864e5) * 864e5; const hi = Math.max(pricePath('BTCUSDT', t, live), pricePath('BTCUSDT', t + 864e5, live)) * 1.006; if (live > hi * 1.25) dd = new Date(t).toISOString().slice(0, 10); }
+    supa.db.entries.push({ id: 'v-now', user_id: supa.uid, type: 'buy', asset_id: 'bitcoin', sym: 'BTC', name: 'Bitcoin', binance_sym: 'BTCUSDT', date: dd, qty: 0.01, currency: 'BRL', amount_usd: +(0.01 * live).toFixed(2), amount_brl: +(0.01 * live * 5.4).toFixed(2), fx_brl: 5.4, fee: 0, created_at: new Date(Date.now() - 30 * 60e3).toISOString(), updated_at: new Date().toISOString(), removed_at: null });
+    await page.evaluate(() => vaultLoad(true)); await page.waitForFunction(() => VAULT.hist && vaultSuspects().some((x) => x.kind === 'now'), { timeout: 20000 }).catch(() => {}); await sleep(600);
+    ok(!!dd && await page.$eval('#v-check', (e) => /gravado com o preço do momento/.test(e.innerText) && /quando o lançamento foi cadastrado/.test(e.innerText)).catch(() => false), `lançamento gravado com o preço do momento do cadastro é reconhecido (${dd})`);
+    await page.click('#v-check [data-act=vaultFixEst][data-id="v-now"]'); await sleep(900);
+    const est = await page.evaluate(() => { const r = VAULT.rows.find((x) => x.id === 'v-now'); const close = VAULT.dayPrices.bitcoin[r.date]; const fxm = VAULT.hist.fxm; let fx = null; for (const d of Object.keys(fxm).sort()) { if (d <= r.date) fx = fxm[d]; else break; } return { want: r.qty * close * fx, got: parseDec(document.querySelector('#vf-amt').value), note: document.querySelector('#vf-note').value }; });
+    ok(Math.abs(est.got - est.want) < 0.02 && /estimado pelo fechamento do dia/.test(est.note), `"Usar o fechamento do dia" preenche quantidade × fechamento × dólar do dia e anota a estimativa (${est.got} × ${est.want && est.want.toFixed(2)})`);
+    await page.click('#vf-cancel'); await sleep(300);
+    // o mesmo erro quando o preço do cadastro fica só um pouco acima da faixa do dia (dentro da folga de 12%)
+    let d2 = null;
+    for (let n = 30; n < 1200 && !d2; n += 3) { const t = Math.floor((Date.now() - n * 864e5) / 864e5) * 864e5; const hi = Math.max(pricePath('BTCUSDT', t, live), pricePath('BTCUSDT', t + 864e5, live)) * 1.006; if (live > hi * 1.03 && live < hi * 1.09) d2 = new Date(t).toISOString().slice(0, 10); }
+    supa.db.entries.push({ id: 'v-now2', user_id: supa.uid, type: 'buy', asset_id: 'bitcoin', sym: 'BTC', name: 'Bitcoin', binance_sym: 'BTCUSDT', date: d2, qty: 0.002, currency: 'USD', amount_usd: +(0.002 * live).toFixed(2), amount_brl: +(0.002 * live * 5.4).toFixed(2), fx_brl: 5.4, fee: 0, created_at: new Date(Date.now() - 20 * 60e3).toISOString(), updated_at: new Date().toISOString(), removed_at: null });
+    await page.evaluate(() => vaultLoad(true)); await page.waitForFunction(() => VAULT.hist && vaultSuspects().some((x) => x.r.id === 'v-now2'), { timeout: 20000 }).catch(() => {}); await sleep(400);
+    ok(!!d2 && await page.evaluate(() => { const x = vaultSuspects().find((y) => y.r.id === 'v-now2'); return !!x && x.kind === 'now'; }), `preço do cadastro só um pouco acima da faixa do dia também é reconhecido (${d2})`);
+  }
+  supa.db.entries = supa.db.entries.filter((e) => !['v-bad', 'v-now', 'v-now2'].includes(e.id)); await page.evaluate(() => vaultLoad(true)); await sleep(1500);
   // excluir e desfazer
   page.on('dialog', (d) => d.accept());
   await page.click('[data-act=vaultDel]'); await sleep(500);

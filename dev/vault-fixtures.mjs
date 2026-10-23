@@ -5,10 +5,11 @@
 import { pricePath, livePrice, cgPrice } from './fixtures.mjs';
 const DAY = 86400e3;
 const COINS = [
-  { asset_id: 'bitcoin', sym: 'BTC', name: 'Bitcoin', binance_sym: 'BTCUSDT', usd: [40, 400] },
-  { asset_id: 'ethereum', sym: 'ETH', name: 'Ethereum', binance_sym: 'ETHUSDT', usd: [25, 250] },
-  { asset_id: 'solana', sym: 'SOL', name: 'Solana', binance_sym: 'SOLUSDT', usd: [20, 200] },
-  { asset_id: 'kaspa', sym: 'KAS', name: 'Kaspa', binance_sym: null, usd: [10, 80] },
+  // valores de quem aporta pouco e sempre (2.500 lançamentos em 4 anos ≈ R$ 300 mil no total)
+  { asset_id: 'bitcoin', sym: 'BTC', name: 'Bitcoin', binance_sym: 'BTCUSDT', usd: [8, 60] },
+  { asset_id: 'ethereum', sym: 'ETH', name: 'Ethereum', binance_sym: 'ETHUSDT', usd: [6, 40] },
+  { asset_id: 'solana', sym: 'SOL', name: 'Solana', binance_sym: 'SOLUSDT', usd: [4, 30] },
+  { asset_id: 'kaspa', sym: 'KAS', name: 'Kaspa', binance_sym: null, usd: [2, 12] },
 ];
 const EX = ['Binance', 'Mercado Bitcoin', 'Foxbit', 'Carteira própria', ''];
 // mesmo dólar do Banco Central simulado em dev/fixtures.mjs (série 1)

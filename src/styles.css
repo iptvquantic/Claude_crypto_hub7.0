@@ -1758,3 +1758,7 @@ button.oc-cube:focus-visible { outline: 2px solid var(--accent); outline-offset:
 .v-hero .kpi .v, .v-cmp-k .kpi .v, #v-ir .kpi .v { overflow-wrap: break-word; font-size: clamp(19px, 1.8vw, 25px); }
 .v-ir-g { display: grid; gap: 18px; }
 .v-ir-g > div { min-width: 0; } /* a tabela rola dentro do quadro no celular, sem empurrar a página */
+/* conferência dos lançamentos (no topo do Vault) */
+#v-check .v-check { margin-bottom: 16px; }
+.v-chk-i { flex-wrap: wrap; }
+.v-chk-b { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }

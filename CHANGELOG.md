@@ -1,5 +1,12 @@
 # Mudanças
 
+## 3.4.1 — 23/10/2026 · Conferência dos lançamentos do Vault
+- **Aviso no topo do Vault** (antes do patrimônio) quando um lançamento tem preço diferente do mercado no dia — porque isso muda o preço médio, o patrimônio e o resultado. Mostra a faixa do dia (mínima e máxima na Binance) e o motivo provável.
+- **Reconhece o lançamento gravado com o preço do momento do cadastro** (a versão antiga do formulário trocava o valor digitado pelo preço daquela hora): compara com o preço da moeda na hora em que o lançamento foi cadastrado — inclusive quando fica só um pouco fora da faixa do dia.
+- **"Usar o fechamento do dia":** preenche o valor com quantidade × fechamento do dia (em reais, pelo dólar do dia) e anota na observação que é estimativa; nada muda sem você salvar. "Corrigir" continua abrindo o lançamento para conferir com o extrato.
+- **Carteira do dono conferida:** 3 erros de digitação (BTC 01/02, ENA 05/08 e ENA 28/08) e 23 compras de BTC e ETH gravadas com o preço da hora do cadastro (16/10) foram corrigidos no banco com a autorização do dono; o valor antigo e o aviso "valor estimado pelo fechamento do dia" ficaram na observação de cada um.
+- Dados de teste do Vault realistas (quem aporta pouco e sempre) e conta independente nos testes: preço médio, lucro de cada venda, vendas por mês, posição em 31/12 e a comparação conferidos por fora.
+
 ## 3.4.0 — 22/10/2026 · Portfolio Vault ampliado (publicada na raiz)
 - **Lançamentos sem limite:** o Vault lê os aportes de 1000 em 1000 (o servidor entrega no máximo 1000 por vez; antes, quem passasse disso via só parte e o preço médio saía errado). Vale também para "Baixar meus dados" (Configurações). Testado com 2.500 lançamentos.
 - **E se fosse em outro investimento?** Os mesmos valores, nas mesmas datas das suas compras e vendas, aplicados no **CDI** (100%), no **dólar**, em **Bitcoin**, no **Ibovespa** e no **S&P 500** (em reais): gráfico, valor de hoje, resultado, % sobre o aplicado e **taxa ao ano (TIR)**. Simulação com dados históricos reais (Banco Central, Binance, Yahoo pelo robô), marcada como "modelo"; não inclui imposto nem taxas desses investimentos.
