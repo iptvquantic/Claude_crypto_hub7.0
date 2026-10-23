@@ -1,6 +1,6 @@
 # Mudanças
 
-## 3.4.1 — 23/10/2026 · Conferência dos lançamentos do Vault
+## 3.4.1 — 23/10/2026 · Conferência dos lançamentos do Vault (publicada na raiz)
 - **Aviso no topo do Vault** (antes do patrimônio) quando um lançamento tem preço diferente do mercado no dia — porque isso muda o preço médio, o patrimônio e o resultado. Mostra a faixa do dia (mínima e máxima na Binance) e o motivo provável.
 - **Reconhece o lançamento gravado com o preço do momento do cadastro** (a versão antiga do formulário trocava o valor digitado pelo preço daquela hora): compara com o preço da moeda na hora em que o lançamento foi cadastrado — inclusive quando fica só um pouco fora da faixa do dia.
 - **"Usar o fechamento do dia":** preenche o valor com quantidade × fechamento do dia (em reais, pelo dólar do dia) e anota na observação que é estimativa; nada muda sem você salvar. "Corrigir" continua abrindo o lançamento para conferir com o extrato.
