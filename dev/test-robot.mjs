@@ -44,7 +44,8 @@ function tkMcResult(n, dec) { // resposta do Multicall3.aggregate3 com n resulta
   return '0x' + head + offs + body;
 }
 let calls = 0;
-let pingFails = false; let pings = [];
+let pingFails = false; let pings = []; let mcPings = []; let appPings = [];
+let cg429 = 1; // páginas do CoinGecko respondidas com "429" (limite por minuto) antes de responder normalmente
 let prevDir = null, cmcCalls = 0; // 3ª execução: arquivos da 1ª servidos como "anteriores" (ramo data)
 const failing = new Set(['https://www.criptofacil.com/feed/', 'https://nfs.faireconomy.media/ff_calendar_nextweek.json']);
 globalThis.fetch = async (url, opts = {}) => {
@@ -54,13 +55,15 @@ globalThis.fetch = async (url, opts = {}) => {
   const res = (body, ok = true, status = 200, ct = null) => { const txt = typeof body === 'string' ? body : JSON.stringify(body); return { ok, status, headers: { get: (h) => (h.toLowerCase() === 'content-type' ? ct : null) }, text: async () => txt, json: async () => (typeof body === 'string' ? JSON.parse(body) : body), arrayBuffer: async () => (body instanceof Uint8Array ? body : new TextEncoder().encode(txt)).buffer }; };
   if (u.includes('feeds.folha.uol.com.br/mundo')) { const xml = `<?xml version="1.0" encoding="ISO-8859-1"?><rss><channel><title>Folha</title><item><title>Papa faz oração pela paz em Gaza e pede cessar-fogo</title><link>https://folha.test/1</link><pubDate>${new Date(now - 2 * 3600e3).toUTCString()}</pubDate></item></channel></rss>`; return res(Uint8Array.from(xml, (c) => c.charCodeAt(0)), true, 200, 'text/xml; charset=ISO-8859-1'); }
   if (u.includes('.supabase.co/rest/v1/rpc/ping')) { pings.push({ u, method: opts.method, key: (opts.headers || {}).apikey }); return pingFails ? res('paused', false, 540) : res({ ok: true, server_time: new Date().toISOString() }); }
+  if (u.includes('.onrender.com/')) { appPings.push(u); return pingFails ? res('Service Suspended', false, 503) : res({ status: 'ok', db: 'ok' }); }
+  if (u.includes('.supabase.co/functions/v1/whatsapp?health=1')) { mcPings.push(u); return pingFails ? res('paused', false, 540) : res({ db: true, configured: true }); }
   if (failing.has(u)) return res('erro', false, 503);
   if (u.includes('community-api.coinmetrics.io/v4/timeseries')) return res({ data: cmRows() });
   if (u.startsWith('https://bitcoin-data.com/v1/')) { const name = u.split('/v1/')[1]; if (name === 'reserve-risk') return res({ status: 404 }, false, 404); const key = { cvdd: 'cvdd', 'sth-realized-price': 'sthRealizedPrice', 'lth-realized-price': 'lthRealizedPrice', aviv: 'aviv' }[name] || 'x'; return res(bdRows(key)); }
   if (u.startsWith('https://api.alternative.me/fng/')) return res({ data: Array.from({ length: 900 }, (_, i) => ({ value: String(20 + (i % 60)), timestamp: String(Math.floor((now - i * DAY) / 1000)) })) });
   if (u.startsWith('https://api.llama.fi/overview/fees')) return res(llamaOverview);
   if (u.startsWith('https://api.llama.fi/summary/fees/')) { const slug = decodeURIComponent(u.split('/summary/fees/')[1].split('?')[0]); if (slug === 'papertrade') return res({ name: 'Papertrade', gecko_id: null }); const g = { hyperliquid: ['Hyperliquid', 'HYPE', 'hyperliquid'], tron: ['Tron', 'TRX', 'tron'] }[slug] || [slug, slug.toUpperCase().replace('-', ''), slug]; return res({ name: g[0], displayName: g[0], symbol: g[1], gecko_id: g[2], logo: 'https://icons.test/' + slug, category: 'Dexs', methodology: slug === 'tron' ? 'Burned TRX fees' : undefined, total24h: null, totalDataChart: Array.from({ length: 220 }, (_, i) => [Math.floor((now - (220 - i) * DAY) / 1000), 1000 + i]) }); }
-  if (u.startsWith('https://api.coingecko.com/api/v3/coins/markets') && u.includes('order=market_cap_desc') && !u.includes('ids=')) return res(TK_MARKETS(Number(u.match(/[?&]page=(\d+)/)[1])));
+  if (u.startsWith('https://api.coingecko.com/api/v3/coins/markets') && u.includes('order=market_cap_desc') && !u.includes('ids=')) { const pg = Number(u.match(/[?&]page=(\d+)/)[1]); if (pg === 4 && cg429 > 0) { cg429--; return res('{"status":{"error_code":429}}', false, 429); } return res(TK_MARKETS(pg)); }
   if (u.startsWith('https://api.coingecko.com/api/v3/coins/list?include_platform=true')) return res(TK_LIST);
   if (u.startsWith('https://coins.llama.fi/prices/current/')) {
     const keys = u.split('/prices/current/')[1].split('?')[0].split(',');
@@ -157,18 +160,24 @@ ok((tk.chains.trx || []).some(([a]) => a === 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t
 ok((tk.chains.ton || []).some(([a]) => a === '0:b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe'), 'tokens: TON convertido para o formato bruto (0:…)');
 ok(tk.coins.tether && tk.coins.tether[0] === 'TETH' && tk.coins.bitcoin && /^1\/small\/bitcoin\.png/.test(tk.coins.bitcoin[3]) && !tk.chains['unknown-chain'], 'tokens: nomes, logo (caminho curto) e redes desconhecidas ignoradas');
 ok(st.sources.tokens && st.sources.tokens.ok && st.sources.tokens.n === tk.n, 'status registra a lista de tokens');
+ok(cg429 === 0 && st.sources.tokens.ok, 'tokens: CoinGecko no limite (429) numa página → espera o minuto e tenta de novo');
 const bj = read('bench');
 ok(bj.h['^BVSP'] && bj.h['^GSPC'] && bj.h['^BVSP'].d.length === 299 && bj.h['^BVSP'].d.length === bj.h['^BVSP'].c.length && bj.h['^BVSP'].c.every(Number.isFinite) && st.sources.bench.ok, 'índices para a comparação do Vault: 10 anos de Ibovespa e S&P 500 (dia sem fechamento fica de fora)');
 ok(st.sources.db && st.sources.db.ok && pings.length === 1 && pings[0].method === 'POST' && /^sb_publishable_/.test(pings[0].key), 'banco mantido ativo (ping com a chave publicável da configuração)');
-// 2ª execução: banco pausado não derruba o robô
-pingFails = true;
+ok(st.sources.dbMc && st.sources.dbMc.ok && mcPings.length === 1, 'banco do Meu Caixa mantido ativo (função de saúde, sem chave)');
+ok(st.sources.appLicitafacil && st.sources.appLicitafacil.ok && st.sources.appCredix && st.sources.appCredix.ok && appPings.length === 2 && appPings.some((u) => u.endsWith('licitafacil-api-kxks.onrender.com/api/health')) && Date.parse(st.sources.appCredix.at) > 0, 'APIs do LicitaFácil e do CREDIX acordadas (saúde, sem chave)');
+// 2ª execução: bancos pausados e CoinGecko sempre no limite não derrubam o robô
+pingFails = true; cg429 = 99;
 const out2 = mkdtempSync(join(tmpdir(), 'nx-robot-'));
 process.argv[2] = out2;
 await import(pathToFileURL(new URL('../scripts/atualizar-dados.mjs', import.meta.url).pathname).href + '?run=2');
 const st2 = JSON.parse(readFileSync(join(out2, 'status.json'), 'utf8'));
 ok(st2.sources.db && !st2.sources.db.ok && /pausado/.test(st2.sources.db.err) && st2.sources.news.ok && existsSync(join(out2, 'news.json')), 'banco pausado: avisa no status e o resto continua');
+ok(st2.sources.dbMc && !st2.sources.dbMc.ok && /pausado/.test(st2.sources.dbMc.err), 'banco do Meu Caixa pausado: avisa no status');
+ok(st2.sources.appLicitafacil && !st2.sources.appLicitafacil.ok && st2.sources.appLicitafacil.err === 'HTTP 503' && !st2.sources.appCredix.ok && appPings.length === 4 && st2.sources.news.ok, 'API no Render suspensa: avisa no status e o robô segue');
+ok(st2.sources.tokens && !st2.sources.tokens.ok && /CoinGecko markets p4: HTTP 429/.test(st2.sources.tokens.err) && cg429 === 95 && st2.sources.bench.ok, 'tokens: CoinGecko sempre no limite → 4 tentativas, falha avisada e o robô segue');
 // 3ª execução, 20 min depois da 1ª (pedida pelo agendador): o que muda devagar não é lido de novo
-pingFails = false; prevDir = out; cmcCalls = 0; process.env.GITHUB_EVENT_NAME = 'workflow_dispatch';
+pingFails = false; cg429 = 0; prevDir = out; cmcCalls = 0; process.env.GITHUB_EVENT_NAME = 'workflow_dispatch';
 const out3 = mkdtempSync(join(tmpdir(), 'nx-robot-'));
 process.argv[2] = out3;
 await import(pathToFileURL(new URL('../scripts/atualizar-dados.mjs', import.meta.url).pathname).href + '?run=3');
@@ -178,5 +187,6 @@ ok(cmcCalls === 0 && st3.sources.etfAum.cached && st3.sources.world.cached && st
 ok(mk3.quotes['^GSPC'] && mk3.etfs.IBIT && Date.parse(mk3.generatedAt) > Date.parse(mk.generatedAt) - 1, 'cotações lidas de novo a cada execução');
 ok(st3.sources.bench.cached && JSON.parse(readFileSync(join(out3, 'bench.json'), 'utf8')).generatedAt === bj.generatedAt, 'índices de 10 anos reaproveitados (renovam a cada ~12 h)');
 ok(st.event === 'local' && st3.event === 'workflow_dispatch', 'status registra como a execução começou (agendamento, pedido ou local)');
+ok(st3.sources.appCredix && st3.sources.appCredix.cached && st3.sources.appCredix.ok && st3.sources.appCredix.at === st.sources.appCredix.at && appPings.length === 4, 'APIs dos outros apps: no máximo a cada ~5 h (20 min depois, reaproveita a última conferência)');
 console.log(`\n${fails.length ? '✗ ' + fails.length + ' falha(s)' : '✓ robô: tudo certo'} (${calls} pedidos simulados)`);
 process.exit(fails.length ? 1 : 0);

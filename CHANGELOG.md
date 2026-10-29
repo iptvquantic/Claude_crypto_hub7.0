@@ -1,5 +1,12 @@
 # Mudanças
 
+## 3.4.2 — 29/10/2026 · Manutenção: bancos ativos e robô mais firme
+- **Banco do Meu Caixa:** o Supabase tinha pausado o projeto `meu-caixa-br` por falta de uso (o app Meu Caixa ficava sem login, sincronização e robô do WhatsApp). Ele voltou a ficar ativo em 29/10 e, a partir de agora, o robô de dados do NEXUS também o mantém ativo a cada execução (função de saúde do Meu Caixa, sem chave). O Painel do administrador mostra "Banco do Meu Caixa ativo" e avisa, com o link do painel, se ele parar de responder.
+- **Outros apps do dono no Render (LicitaFácil e CREDIX):** os serviços grátis foram suspensos em 26/10 porque o monitor de 5 em 5 min deixava as duas APIs acordadas 24 h e as 750 h do mês acabaram (voltam em 01/11). O robô agora confere a saúde de cada API no máximo a cada ~5 h — o suficiente para os bancos delas não pausarem — e o Painel do administrador mostra a situação de cada uma. Com isso, os monitores de 5 em 5 min podem ser pausados: cada API passa a gastar ~40 h por mês em vez de ~744 h (decisão do dono).
+- **Robô — tokens do Wallet Watch:** o CoinGecko grátis respondia "429" (limite de pedidos por minuto) no meio das 6 páginas e a lista não renovava. Agora há pausa maior entre as páginas e, no 429, o robô espera o minuto virar e tenta de novo (até 4 vezes, com teto de 4 min). Se ainda assim falhar, a lista anterior continua valendo.
+- **Agenda e Juros:** datas do payroll (relatório de emprego dos EUA) de 2027 e do CPI de novembro e dezembro de 2027, conferidas no calendário oficial do BLS em 29/10 — a lista do payroll acabava em dezembro de 2026.
+- **Baleias:** o BitInfoCharts passou a recusar o robô (HTTP 403) desde 19/10. O site continua mostrando a última leitura com a data; nada é inventado.
+
 ## 3.4.1 — 23/10/2026 · Conferência dos lançamentos do Vault (publicada na raiz)
 - **Aviso no topo do Vault** (antes do patrimônio) quando um lançamento tem preço diferente do mercado no dia — porque isso muda o preço médio, o patrimônio e o resultado. Mostra a faixa do dia (mínima e máxima na Binance) e o motivo provável.
 - **Reconhece o lançamento gravado com o preço do momento do cadastro** (a versão antiga do formulário trocava o valor digitado pelo preço daquela hora): compara com o preço da moeda na hora em que o lançamento foi cadastrado — inclusive quando fica só um pouco fora da faixa do dia.

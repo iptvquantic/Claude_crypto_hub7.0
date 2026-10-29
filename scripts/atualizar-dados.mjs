@@ -14,7 +14,8 @@
 //   tokens.json    contratos e decimais dos tokens reconhecidos por rede (Wallet Watch; renova a cada ~20 h)
 //   bench.json     10 anos de fechamentos diários do Ibovespa e do S&P 500 (comparação do Vault; renova a cada ~12 h)
 //   (news.json também traz cats.geo: geopolítica por conflito, 7 dias)
-// E mantém o banco (Supabase grátis) ativo: o plano grátis pausa o projeto após ~7 dias sem consultas.
+// E mantém ativos os bancos (Supabase grátis) do NEXUS e do Meu Caixa (o plano grátis pausa o projeto após
+// ~7 dias com pouco uso) e acorda as APIs do LicitaFácil e do CREDIX no Render a cada ~5 h.
 // Regra de ouro: NUNCA quebrar o site. Se uma fonte falhar, o arquivo anterior é mantido
 // com o horário antigo (o site percebe que está velho e busca direto na fonte).
 // Uso: node scripts/atualizar-dados.mjs <pasta-de-saída>
@@ -75,6 +76,40 @@ async function db() {
     if (!j || j.ok !== true) throw new Error('resposta inesperada do ping');
     return { ms: Date.now() - t };
   } finally { clearTimeout(to); }
+}
+// Banco do Meu Caixa (outro app do dono, projeto meu-caixa-br): também pausou por falta de uso em 10/2026.
+// A função "whatsapp" do Meu Caixa responde ?health=1 consultando o banco com a chave de serviço, sem ler dado
+// de ninguém: uma chamada por execução conta como uso. Endereço público, sem chave.
+const MEU_CAIXA_HEALTH = process.env.MEU_CAIXA_HEALTH || 'https://jgqhtshcuyzytljkmmxd.supabase.co/functions/v1/whatsapp?health=1';
+async function dbMc() {
+  const t = Date.now(); const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 30000);
+  try {
+    const r = await fetch(MEU_CAIXA_HEALTH, { signal: ctl.signal, headers: { accept: 'application/json', 'user-agent': UA } });
+    if (r.status === 540) throw new Error('projeto pausado no Supabase (reativar no painel)');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (!j || j.db !== true) throw new Error('a função respondeu, mas não alcançou o banco');
+    return { ms: Date.now() - t };
+  } finally { clearTimeout(to); }
+}
+// APIs dos outros apps do dono no Render grátis (LicitaFácil e CREDIX). O UptimeRobot grátis confere de 5 em
+// 5 min, o que deixa cada serviço acordado 24 h: dois serviços esgotam as 750 h/mês do Render em ~16 dias (em
+// 26/10/2026 todos os serviços grátis foram suspensos até o mês seguinte). Aqui, uma chamada de saúde a cada
+// ~5 h acorda a API por ~15 min e consulta o banco dela (o Supabase grátis pausa com ~7 dias sem uso): ~40 h/mês
+// por serviço. Endereços públicos, sem chave; falha nunca derruba o robô.
+const APPS = [['appLicitafacil', 'https://licitafacil-api-kxks.onrender.com/api/health'], ['appCredix', 'https://loan-system-api-af5k.onrender.com/health']];
+const APP_EVERY = 5 * 3600e3;
+async function apps(prevStatus) {
+  await Promise.all(APPS.map(async ([k, url]) => {
+    const p = prevStatus && prevStatus.sources && prevStatus.sources[k];
+    if (p && p.at && Date.now() - Date.parse(p.at) < APP_EVERY) { status[k] = { ...p, cached: true }; return; }
+    const t = Date.now(), at = new Date().toISOString();
+    try {
+      const r = await raw(url, { timeout: 90000 }); // acordar o serviço grátis leva até ~1 min
+      status[k] = r.ok ? { ok: true, ms: Date.now() - t, at } : { ok: false, err: `HTTP ${r.status}`, at };
+    } catch (e) { status[k] = { ok: false, err: e && e.name === 'AbortError' ? 'não respondeu em 90 s' : String((e && e.message) || e).slice(0, 120), at }; }
+    console.log(status[k].ok ? '✓' : '✗', k, JSON.stringify(status[k]));
+  }));
 }
 
 // ---------- RSS ----------
@@ -336,6 +371,9 @@ for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', ()
 }
 try { const r = await db(); status.db = { ok: true, ...r }; console.log('✓ db', JSON.stringify(r)); }
 catch (e) { status.db = { ok: false, err: String(e.message || e).slice(0, 160) }; console.warn('✗ db', status.db.err); }
+try { const r = await dbMc(); status.dbMc = { ok: true, ...r }; console.log('✓ dbMc', JSON.stringify(r)); }
+catch (e) { status.dbMc = { ok: false, err: String(e.message || e).slice(0, 160) }; console.warn('✗ dbMc', status.dbMc.err); }
+try { await apps(await previous('status')); } catch (e) { console.warn('✗ apps', e.message); }
 // como esta execução começou: schedule (agendamento do GitHub), workflow_dispatch (agendador do banco ou botão)
 save('status', { generatedAt: new Date().toISOString(), ms: Date.now() - t0, event: process.env.GITHUB_EVENT_NAME || 'local', sources: status });
 writeFileSync(join(OUT, 'README.md'), '# Dados do NEXUS HUB\n\nRamo gerado automaticamente pelo robô (GitHub Actions). Não edite à mão.\n');

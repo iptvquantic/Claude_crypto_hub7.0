@@ -443,6 +443,8 @@ console.log('\n[5] Administrador');
   await goPage(page, 'admin', 2500);
   ok(await page.$eval('#pg-admin', (e) => /pagou@teste\.com/.test(e.innerText)).catch(() => false), 'pedidos e usuários aparecem');
   ok(await page.$eval('#pg-admin', (e) => /Banco de dados ativo/.test(e.innerText) && /Resume project/.test(e.innerText) && /Agenda econômica/.test(e.innerText)).catch(() => false), 'status do robô com nomes claros e aviso de banco pausado');
+  ok(await page.$eval('#pg-admin', (e) => /Banco do Meu Caixa ativo/.test(e.innerText) && /banco do Meu Caixa não respondeu/.test(e.innerText) && [...e.querySelectorAll('a')].some((a) => /supabase\.com\/dashboard\/project\/jgqhtshcuyzytljkmmxd$/.test(a.href))).catch(() => false), 'status do robô: banco do Meu Caixa (outro app) com aviso e link do painel');
+  ok(await page.$eval('#pg-admin', (e) => /LicitaFácil: API no Render/.test(e.innerText) && /HTTP 503/.test(e.innerText) && /CREDIX: API no Render/.test(e.innerText)).catch(() => false), 'status do robô: APIs do LicitaFácil e do CREDIX com nome claro e o erro de cada uma');
   // agendador do robô: sem token → passo a passo; token salvo vai só para o banco e não volta para a tela
   ok(await page.$eval('#pg-admin .adm-robot', (e) => /não configurado/.test(e.innerText) && /Only select repositories/.test(e.innerText) && !!e.querySelector('a[href="https://github.com/settings/personal-access-tokens/new"]')).catch(() => false), 'agendador: sem token mostra o passo a passo do GitHub');
   const TOK = 'github_pat_11TESTE' + 'x'.repeat(70);

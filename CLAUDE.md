@@ -25,9 +25,10 @@ Responda ao dono em português do Brasil, direto. Ele não programa: entregue pr
 - Agendador do robô: `migrations/03_agendador_robo.sql` (pg_cron nos minutos 2/22/42 → `private.robo_disparar()` → workflow_dispatch no GitHub com o segredo `github_dispatch_token` do Vault). O dono cola o token no Painel do administrador (RPCs `admin_robot_status/_set_token/_dispatch_now`); o token nunca volta para a tela. Em 22/10 a aplicação pelo conector foi cancelada duas vezes: o painel mostra como instalar pelo SQL Editor.
 
 ## Robô de dados
-- `scripts/atualizar-dados.mjs` publica `news.json`, `calendar.json`, `markets.json`, `status.json` no ramo órfão `data` (force-push). O site lê por `raw.githubusercontent.com`; se o arquivo estiver velho, busca direto. Também mantém o banco ativo (ping) — falha no ping nunca derruba a execução.
+- `scripts/atualizar-dados.mjs` publica `news.json`, `calendar.json`, `markets.json`, `status.json` no ramo órfão `data` (force-push). O site lê por `raw.githubusercontent.com`; se o arquivo estiver velho, busca direto. Também mantém ativos o banco do NEXUS (`rpc/ping`) e o do Meu Caixa (projeto `meu-caixa-br`, pela função `whatsapp?health=1`, sem chave; status `dbMc`) e acorda as APIs do LicitaFácil e do CREDIX no Render no máximo a cada ~5 h (`appLicitafacil`/`appCredix`, para os bancos delas não pausarem sem gastar as 750 h grátis do Render) — falha nunca derruba a execução.
 - Teste sem internet: `node dev/test-robot.mjs` (3 execuções: normal, banco pausado e "20 min depois", com os arquivos anteriores).
 - O que muda devagar não é lido a cada execução (`freshAt`): companiesmarketcap no máximo a cada 1–2 h, recompras 3 h, baleias 6 h, tokens 20 h. Cotações sempre.
+- CoinGecko grátis (tokens): 7 s entre as páginas; no 429 espera 65 s e tenta de novo (até 4 vezes, teto de 4 min — o job tem 12 min). BitInfoCharts (baleias) responde 403 ao robô desde 19/10/2026: o site mostra a última leitura com a data e, depois de 21 dias, o link da fonte.
 
 ## Wallet Watch (grátis)
 - `19b-wallets-core.js`: bloco puro entre `==WWC-START==`/`==WWC-END==` (hashes, base58/bech32, secp256k1 só público, BIP32 xpub, EIP-55, ENS, TON e `wwDetect`, que BLOQUEIA frase-semente/chave privada) testado no Node por `dev/test-wallets.mjs`; depois dele, os leitores de cada rede (`WW_READERS`) e os preços.

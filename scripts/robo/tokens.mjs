@@ -68,6 +68,23 @@ export function tonRaw(a) {
   const wc = b[1] === 0xff ? -1 : b[1];
   return `${wc}:${b.subarray(2, 34).toString('hex')}`;
 }
+// ---------- CoinGecko grátis: pedido com nova tentativa ----------
+const CG_GAP = 7000;          // entre as páginas (~8 pedidos por minuto, abaixo do limite do plano grátis)
+const CG_BUDGET = 4 * 60e3;   // teto das etapas 1 e 2
+// "429" = limite por minuto: espera 65 s (o minuto vira); outro erro: 15 s. Até 4 tentativas, sem passar do teto.
+export async function cgGet(get, url, what, timeout, until) {
+  for (let tent = 0; ; tent++) {
+    try {
+      const j = await get(url, { as: 'json', timeout });
+      if (Array.isArray(j)) return j;
+      throw new Error('resposta inesperada');
+    } catch (e) {
+      const wait = /\b429\b/.test(String(e.message)) ? 65000 : 15000;
+      if (tent >= 3 || Date.now() + wait > until) throw new Error(`CoinGecko ${what}: ${e.message}`);
+      await sleep(wait);
+    }
+  }
+}
 const normAddr = (k, a) => (RPC[k] ? String(a).trim().toLowerCase() : k === 'ton' ? tonRaw(a) : String(a).trim());
 const okAddr = (k, a) => (RPC[k] ? /^0x[0-9a-f]{40}$/.test(a) : k === 'ton' ? !!a : k === 'trx' ? /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(a) : k === 'sol' ? /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a) : false);
 
@@ -78,25 +95,24 @@ export async function tokens(ctx, { force = false } = {}) {
     save('tokens', prev);
     return { kept: true, n: prev.n };
   }
-  // 1) as maiores moedas por valor de mercado
+  // 1) as maiores moedas por valor de mercado. O CoinGecko grátis aceita poucos pedidos por minuto e o
+  // endereço do GitHub é dividido com muita gente: pausa entre as páginas e, no "429" (limite), espera o
+  // minuto virar. Tudo dentro de um teto de tempo (o robô inteiro tem 12 min); passou, mantém o arquivo anterior.
+  const until = Date.now() + CG_BUDGET;
   const coins = {};
   for (let page = 1; page <= PAGES; page++) {
-    let arr = null;
-    for (let tent = 0; tent < 3 && !Array.isArray(arr); tent++) {
-      try { arr = await get(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${page}`, { as: 'json', timeout: 30000 }); }
-      catch (e) { if (tent === 2) throw new Error(`CoinGecko markets p${page}: ${e.message}`); await sleep(15000); }
-    }
+    const arr = await cgGet(get, `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${page}`, `markets p${page}`, 30000, until);
     for (const m of arr) {
       if (!m || !m.id || !m.symbol) continue;
       const img = typeof m.image === 'string' ? (m.image.startsWith(IMG_PRE) ? m.image.slice(IMG_PRE.length) : m.image) : '';
       coins[m.id] = [String(m.symbol).toUpperCase().slice(0, 16), String(m.name || m.id).slice(0, 60), m.market_cap_rank || null, img.replace('/large/', '/small/')];
     }
-    await sleep(2500);
+    await sleep(CG_GAP);
   }
   if (Object.keys(coins).length < 500) throw new Error(`poucas moedas (${Object.keys(coins).length})`);
   // 2) contratos de cada moeda em cada rede
-  const list = await get('https://api.coingecko.com/api/v3/coins/list?include_platform=true', { as: 'json', timeout: 90000 });
-  if (!Array.isArray(list) || list.length < 5000) throw new Error('lista de contratos do CoinGecko incompleta');
+  const list = await cgGet(get, 'https://api.coingecko.com/api/v3/coins/list?include_platform=true', 'lista de contratos', 90000, until);
+  if (list.length < 5000) throw new Error('lista de contratos do CoinGecko incompleta');
   const chains = {}; const seen = new Set();
   for (const c of list) {
     if (!coins[c.id] || !c.platforms) continue;

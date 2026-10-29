@@ -5,7 +5,7 @@
 // com fonte e data de conferência) ou AUSENTE ("—"). Nada de constante disfarçada de dado.
 // =====================================================================
 const NX = {
-  version: '3.4.1',
+  version: '3.4.2',
   build: '__BUILD__',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
@@ -124,9 +124,15 @@ const US_CPI = [
   ['2027-02-11T13:30:00Z', 'jan/2027'], ['2027-03-10T13:30:00Z', 'fev/2027'], ['2027-04-13T12:30:00Z', 'mar/2027'],
   ['2027-05-12T12:30:00Z', 'abr/2027'], ['2027-06-10T12:30:00Z', 'mai/2027'], ['2027-07-14T12:30:00Z', 'jun/2027'],
   ['2027-08-11T12:30:00Z', 'jul/2027'], ['2027-09-14T12:30:00Z', 'ago/2027'], ['2027-10-14T12:30:00Z', 'set/2027'],
+  ['2027-11-10T13:30:00Z', 'out/2027'], ['2027-12-10T13:30:00Z', 'nov/2027'],
 ];
+// Payroll 2027 conferido no calendário do BLS em 29/10/2026 (horário de verão dos EUA: 14/03 a 07/11/2027).
 const US_NFP = [
   ['2026-10-02T12:30:00Z', 'set/2026'], ['2026-11-06T13:30:00Z', 'out/2026'], ['2026-12-04T13:30:00Z', 'nov/2026'],
+  ['2027-01-08T13:30:00Z', 'dez/2026'], ['2027-02-05T13:30:00Z', 'jan/2027'], ['2027-03-05T13:30:00Z', 'fev/2027'],
+  ['2027-04-02T12:30:00Z', 'mar/2027'], ['2027-05-07T12:30:00Z', 'abr/2027'], ['2027-06-04T12:30:00Z', 'mai/2027'],
+  ['2027-07-02T12:30:00Z', 'jun/2027'], ['2027-08-06T12:30:00Z', 'jul/2027'], ['2027-09-03T12:30:00Z', 'ago/2027'],
+  ['2027-10-08T12:30:00Z', 'set/2027'], ['2027-11-05T12:30:00Z', 'out/2027'], ['2027-12-03T13:30:00Z', 'nov/2027'],
 ];
 const FED_FACTS = {
   chair: 'Kevin Warsh', chairSince: '2026-05-22',

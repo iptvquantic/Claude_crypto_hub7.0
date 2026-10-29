@@ -179,7 +179,7 @@ function pipeline(name) {
     const ev = (d, h, country, title, impact, f, p) => ({ title, country, date: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + d, h)).toISOString(), impact, forecast: f, previous: p });
     return { generatedAt: gen, events: [ev(0, 13, 'USD', 'Unemployment Claims', 'Medium', '228K', '224K'), ev(1, 14, 'USD', 'Prelim UoM Consumer Sentiment', 'Medium', '54.8', '55.1'), ev(2, 9, 'EUR', 'German ZEW Economic Sentiment', 'Medium', '38.2', '37.3'), ev(3, 12, 'USD', 'Retail Sales m/m', 'High', '0.4%', '0.6%'), ev(4, 1, 'CNY', 'GDP q/q', 'High', '1.0%', '1.1%'), ev(5, 23, 'JPY', 'BOJ Policy Rate', 'High', '0.75%', '0.75%')] };
   }
-  if (name === 'status') return { generatedAt: gen, sources: { news: { ok: true, n: 48 }, calendar: { ok: true, n: 6 }, quotes: { ok: true, n: 10 }, world: { ok: false, err: 'HTTP 403' }, db: { ok: false, err: 'projeto pausado no Supabase (reativar no painel)' } } };
+  if (name === 'status') return { generatedAt: gen, sources: { news: { ok: true, n: 48 }, calendar: { ok: true, n: 6 }, quotes: { ok: true, n: 10 }, world: { ok: false, err: 'HTTP 403' }, db: { ok: false, err: 'projeto pausado no Supabase (reativar no painel)' }, dbMc: { ok: false, err: 'projeto pausado no Supabase (reativar no painel)' }, appLicitafacil: { ok: false, err: 'HTTP 503', at: gen }, appCredix: { ok: true, ms: 41000, at: gen, cached: true } } };
   return null;
 }
 // ---------- Supabase simulado ----------
