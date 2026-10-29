@@ -1,6 +1,6 @@
 # Mudanças
 
-## 3.4.2 — 29/10/2026 · Manutenção: bancos ativos e robô mais firme
+## 3.4.2 — 29/10/2026 · Manutenção: bancos ativos e robô mais firme (publicada na raiz)
 - **Banco do Meu Caixa:** o Supabase tinha pausado o projeto `meu-caixa-br` por falta de uso (o app Meu Caixa ficava sem login, sincronização e robô do WhatsApp). Ele voltou a ficar ativo em 29/10 e, a partir de agora, o robô de dados do NEXUS também o mantém ativo a cada execução (função de saúde do Meu Caixa, sem chave). O Painel do administrador mostra "Banco do Meu Caixa ativo" e avisa, com o link do painel, se ele parar de responder.
 - **Outros apps do dono no Render (LicitaFácil e CREDIX):** os serviços grátis foram suspensos em 26/10 porque o monitor de 5 em 5 min deixava as duas APIs acordadas 24 h e as 750 h do mês acabaram (voltam em 01/11). O robô agora confere a saúde de cada API no máximo a cada ~5 h — o suficiente para os bancos delas não pausarem — e o Painel do administrador mostra a situação de cada uma. Com isso, os monitores de 5 em 5 min podem ser pausados: cada API passa a gastar ~40 h por mês em vez de ~744 h (decisão do dono).
 - **Robô — tokens do Wallet Watch:** o CoinGecko grátis respondia "429" (limite de pedidos por minuto) no meio das 6 páginas e a lista não renovava. Agora há pausa maior entre as páginas e, no 429, o robô espera o minuto virar e tenta de novo (até 4 vezes, com teto de 4 min). Se ainda assim falhar, a lista anterior continua valendo.
