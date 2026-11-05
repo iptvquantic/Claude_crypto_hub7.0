@@ -1,96 +1,75 @@
 [
  {
-  "id": "cmc-btc-etf",
-  "url": "https://companiesmarketcap.com/bitcoin-etfs/largest-bitcoin-etfs-by-marketcap/",
-  "save": "cmc-btc-etf.html",
+  "id": "bd-realized-profit",
+  "url": "https://bitcoin-data.com/v1/realized-profit/last",
+  "sampleLen": 400,
+  "pause": 800
+ },
+ {
+  "id": "bd-realized-loss",
+  "url": "https://bitcoin-data.com/v1/realized-loss/last",
+  "sampleLen": 400,
+  "pause": 800
+ },
+ {
+  "id": "bd-realized_profit_lth",
+  "url": "https://bitcoin-data.com/v1/realized_profit_lth/last",
+  "sampleLen": 400,
+  "pause": 800
+ },
+ {
+  "id": "bd-realized_loss_lth",
+  "url": "https://bitcoin-data.com/v1/realized_loss_lth/last",
+  "sampleLen": 400,
+  "pause": 800
+ },
+ {
+  "id": "bd-realized_profit_sth",
+  "url": "https://bitcoin-data.com/v1/realized_profit_sth/last",
+  "sampleLen": 400,
+  "pause": 800
+ },
+ {
+  "id": "bd-realized_loss_sth",
+  "url": "https://bitcoin-data.com/v1/realized_loss_sth/last",
+  "sampleLen": 400,
+  "pause": 800
+ },
+ {
+  "id": "bd-nrpl-usd",
+  "url": "https://bitcoin-data.com/v1/nrpl-usd/last",
+  "sampleLen": 400,
+  "pause": 800
+ },
+ {
+  "id": "bd-balance-addr-1-BTC",
+  "url": "https://bitcoin-data.com/v1/balance-addr-1-BTC/last",
+  "sampleLen": 400,
+  "pause": 800
+ },
+ {
+  "id": "bd-coins-addr-10K-BTC",
+  "url": "https://bitcoin-data.com/v1/coins-addr-10K-BTC/last",
+  "sampleLen": 400,
+  "pause": 800
+ },
+ {
+  "id": "tv-hist",
+  "url": "https://economic-calendar.tradingview.com/events?from=2025-01-01T00:00:00.000Z&to=2025-02-15T00:00:00.000Z&countries=US",
   "headers": {
-   "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8"
+   "origin": "https://www.tradingview.com",
+   "referer": "https://www.tradingview.com/"
   },
+  "sampleLen": 1500
+ },
+ {
+  "id": "deribit-btc",
+  "url": "https://www.deribit.com/api/v2/public/get_book_summary_by_currency?currency=BTC&kind=option",
+  "sampleLen": 700
+ },
+ {
+  "id": "mempool-diff",
+  "url": "https://mempool.space/api/v1/difficulty-adjustment",
   "sampleLen": 600
- },
- {
-  "id": "cmc-eth-etf",
-  "url": "https://companiesmarketcap.com/ethereum-etfs/largest-ethereum-etfs-by-marketcap/",
-  "save": "cmc-eth-etf.html",
-  "headers": {
-   "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8"
-  },
-  "sampleLen": 600
- },
- {
-  "id": "cmc-cry-etf",
-  "url": "https://companiesmarketcap.com/cryptocurrency-etfs/largest-crypto-etfs-by-marketcap/",
-  "save": "cmc-cry-etf.html",
-  "headers": {
-   "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8"
-  },
-  "sampleLen": 600
- },
- {
-  "id": "cmc-etfs",
-  "url": "https://companiesmarketcap.com/etfs/largest-etfs-by-marketcap/",
-  "save": "cmc-etfs.html",
-  "headers": {
-   "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8"
-  },
-  "sampleLen": 600
- },
- {
-  "id": "cmc-assets",
-  "url": "https://companiesmarketcap.com/assets-by-market-cap/",
-  "save": "cmc-assets.html",
-  "headers": {
-   "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8"
-  },
-  "sampleLen": 300
- },
- {
-  "id": "bic-top",
-  "url": "https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html",
-  "save": "bic-top.html",
-  "headers": {
-   "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8"
-  },
-  "sampleLen": 900
- },
- {
-  "id": "bic-top-ref",
-  "url": "https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html",
-  "headers": {
-   "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8",
-   "referer": "https://bitinfocharts.com/"
-  },
-  "sampleLen": 300,
-  "pause": 2000
- },
- {
-  "id": "bic-home",
-  "url": "https://bitinfocharts.com/",
-  "headers": {
-   "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8"
-  },
-  "sampleLen": 300
- },
- {
-  "id": "bic-top2",
-  "url": "https://bitinfocharts.com/top-100-richest-bitcoin-addresses-2.html",
-  "headers": {
-   "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8"
-  },
-  "sampleLen": 300
- },
- {
-  "id": "blockchair-rich",
-  "url": "https://api.blockchair.com/bitcoin/addresses?limit=100&s=balance(desc)",
-  "save": "blockchair-rich.json"
  }
 ]
