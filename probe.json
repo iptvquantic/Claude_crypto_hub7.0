@@ -1,0 +1,456 @@
+{
+ "at": "2026-11-05T17:43:25.181Z",
+ "results": {
+  "bd-realized-profit": {
+   "status": 200,
+   "ms": 474,
+   "type": "application/json",
+   "acao": "*",
+   "len": 70,
+   "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+   "access-control-allow-methods": "GET",
+   "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+   "shape": {
+    "_keys": [
+     "d",
+     "unixTs",
+     "realizedProfit"
+    ],
+    "d": "2026-11-04",
+    "unixTs": 1793750400,
+    "realizedProfit": 562581523.43
+   }
+  },
+  "bd-realized-loss": {
+   "status": 200,
+   "ms": 137,
+   "type": "application/json",
+   "acao": "*",
+   "len": 69,
+   "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+   "access-control-allow-methods": "GET",
+   "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+   "shape": {
+    "_keys": [
+     "d",
+     "unixTs",
+     "realizedLoss"
+    ],
+    "d": "2026-11-04",
+    "unixTs": 1793750400,
+    "realizedLoss": -223682000.38
+   }
+  },
+  "bd-realized_profit_lth": {
+   "status": 200,
+   "ms": 130,
+   "type": "application/json",
+   "acao": "*",
+   "len": 74,
+   "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+   "access-control-allow-methods": "GET",
+   "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+   "shape": {
+    "_keys": [
+     "d",
+     "unixTs",
+     "realizedProfitLth"
+    ],
+    "d": "2026-11-04",
+    "unixTs": "1793750400",
+    "realizedProfitLth": "72130874.76"
+   }
+  },
+  "bd-realized_loss_lth": {
+   "status": 200,
+   "ms": 140,
+   "type": "application/json",
+   "acao": "*",
+   "len": 71,
+   "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+   "access-control-allow-methods": "GET",
+   "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+   "shape": {
+    "_keys": [
+     "d",
+     "unixTs",
+     "realizedLossLth"
+    ],
+    "d": "2026-11-04",
+    "unixTs": 1793750400,
+    "realizedLossLth": -49962579.44
+   }
+  },
+  "bd-realized_profit_sth": {
+   "status": 200,
+   "ms": 142,
+   "type": "application/json",
+   "acao": "*",
+   "len": 75,
+   "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+   "access-control-allow-methods": "GET",
+   "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+   "shape": {
+    "_keys": [
+     "d",
+     "unixTs",
+     "realizedProfitSth"
+    ],
+    "d": "2026-11-04",
+    "unixTs": "1793750400",
+    "realizedProfitSth": "490450648.67"
+   }
+  },
+  "bd-realized_loss_sth": {
+   "status": 200,
+   "ms": 142,
+   "type": "application/json",
+   "acao": "*",
+   "len": 74,
+   "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+   "access-control-allow-methods": "GET",
+   "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+   "shape": {
+    "_keys": [
+     "d",
+     "unixTs",
+     "realizedLossSth"
+    ],
+    "d": "2026-11-04",
+    "unixTs": "1793750400",
+    "realizedLossSth": "-173719420.94"
+   }
+  },
+  "bd-nrpl-usd": {
+   "status": 200,
+   "ms": 138,
+   "type": "application/json",
+   "acao": "*",
+   "len": 193,
+   "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+   "access-control-allow-methods": "GET",
+   "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+   "shape": {
+    "_keys": [
+     "d",
+     "unixTs",
+     "nrplUsd",
+     "delayed",
+     "message"
+    ],
+    "d": "2026-10-29",
+    "unixTs": 1793232000,
+    "nrplUsd": -477699207.38,
+    "delayed": true,
+    "message": "Real-time data (last 7 days) requires an active subscription. https://bitcoin-data.com/bguser/pricing"
+   }
+  },
+  "bd-balance-addr-1-BTC": {
+   "status": 200,
+   "ms": 131,
+   "type": "application/json",
+   "acao": "*",
+   "len": 65,
+   "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+   "access-control-allow-methods": "GET",
+   "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+   "shape": {
+    "_keys": [
+     "d",
+     "unixTs",
+     "balAddr1btc"
+    ],
+    "d": "2026-11-04",
+    "unixTs": "1793750400",
+    "balAddr1btc": "58902841"
+   }
+  },
+  "bd-coins-addr-10K-BTC": {
+   "status": 200,
+   "ms": 140,
+   "type": "application/json",
+   "acao": "*",
+   "len": 81,
+   "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+   "access-control-allow-methods": "GET",
+   "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+   "shape": {
+    "_keys": [
+     "d",
+     "unixTs",
+     "coinsAddr10Kbtc"
+    ],
+    "d": "2026-11-04",
+    "unixTs": "1793750400",
+    "coinsAddr10Kbtc": "2958036.410548710000"
+   }
+  },
+  "tv-hist": {
+   "status": 200,
+   "ms": 156,
+   "type": "application/json",
+   "acao": "*",
+   "len": 567405,
+   "access-control-allow-methods": "GET, OPTIONS",
+   "cache-control": "max-age=3",
+   "shape": {
+    "_keys": [
+     "status",
+     "result",
+     "total"
+    ],
+    "status": "ok",
+    "result": {
+     "_len": 863,
+     "first": {
+      "_keys": [
+       "id",
+       "title",
+       "country",
+       "indicator",
+       "ticker",
+       "comment",
+       "category",
+       "period",
+       "referenceDate",
+       "referencePeriod",
+       "source",
+       "source_url",
+       "actual",
+       "previous",
+       "forecast",
+       "actualRaw",
+       "previousRaw",
+       "forecastRaw",
+       "currency",
+       "unit",
+       "importance",
+       "date"
+      ],
+      "id": "1001621870401",
+      "title": "MBA Mortgage Applications",
+      "country": "US",
+      "indicator": "MBA Mortgage Applications",
+      "ticker": "ECONOMICS:USMAPL",
+      "comment": "In the US, the MBA Weekly Mortgage Application Survey is a comprehensive overview of the nationwide mortgage market and …",
+      "category": "hse",
+      "period": "w/o Dec. 16, 2024",
+      "referenceDate": "2024-12-20T00:00:00Z",
+      "referencePeriod": "20 Dec 2024",
+      "source": "Mortgage Bankers Association of America",
+      "source_url": "http://www.mortgagebankers.org/",
+      "actual": -10.7,
+      "previous": -0.7,
+      "forecast": null,
+      "actualRaw": -10.7,
+      "previousRaw": -0.7,
+      "forecastRaw": null,
+      "currency": "USD",
+      "unit": "%",
+      "importance": -1,
+      "date": "2025-01-02T11:00:00.000Z"
+     },
+     "last": {
+      "_keys": [
+       "id",
+       "title",
+       "country",
+       "indicator",
+       "category",
+       "period",
+       "referenceDate",
+       "referencePeriod",
+       "source",
+       "source_url",
+       "actual",
+       "previous",
+       "forecast",
+       "actualRaw",
+       "previousRaw",
+       "forecastRaw",
+       "currency",
+       "unit",
+       "importance",
+       "date"
+      ],
+      "id": "1001613928102",
+      "title": "Retail Inventories Ex Autos MoM",
+      "country": "US",
+      "indicator": "Retail Inventories Ex-Auto Rev",
+      "category": "bsnss",
+      "period": "Dec. 2024",
+      "referenceDate": "2024-12-31T00:00:00Z",
+      "referencePeriod": "Dec 2024",
+      "source": "",
+      "source_url": "",
+      "actual": -0.1,
+      "previous": 0.4,
+      "forecast": null,
+      "actualRaw": -0.1,
+      "previousRaw": 0.4,
+      "forecastRaw": null,
+      "currency": "USD",
+      "unit": "%",
+      "importance": -1,
+      "date": "2025-02-14T15:00:00.000Z"
+     }
+    },
+    "total": 863
+   }
+  },
+  "deribit-btc": {
+   "status": 200,
+   "ms": 151,
+   "type": "application/json",
+   "acao": "https://iptvquantic.github.io",
+   "len": 418110,
+   "access-control-allow-headers": "Authorization,User-Agent,Range,X-Requested-With,Content-Type,Partner",
+   "access-control-allow-methods": "GET, POST, OPTIONS",
+   "cache-control": "no-store, public, max-age=1",
+   "shape": {
+    "_keys": [
+     "jsonrpc",
+     "result",
+     "usIn",
+     "usOut",
+     "usDiff",
+     "testnet"
+    ],
+    "jsonrpc": "2.0",
+    "result": {
+     "_len": 934,
+     "first": {
+      "_keys": [
+       "high",
+       "low",
+       "last",
+       "instrument_name",
+       "bid_price",
+       "ask_price",
+       "open_interest",
+       "mark_price",
+       "interest_rate",
+       "creation_timestamp",
+       "estimated_delivery_price",
+       "price_change",
+       "volume",
+       "mark_iv",
+       "underlying_price",
+       "underlying_index",
+       "base_currency",
+       "quote_currency",
+       "volume_usd",
+       "mid_price"
+      ],
+      "high": null,
+      "low": null,
+      "last": 0.023,
+      "instrument_name": "BTC-25JUN27-55000-P",
+      "bid_price": 0.025,
+      "ask_price": 0.026,
+      "open_interest": 139.8,
+      "mark_price": 0.0256721,
+      "interest_rate": 0,
+      "creation_timestamp": 1793900603011,
+      "estimated_delivery_price": 75810.39,
+      "price_change": null,
+      "volume": 0,
+      "mark_iv": 45.42,
+      "underlying_price": 78555.57,
+      "underlying_index": "BTC-25JUN27",
+      "base_currency": "BTC",
+      "quote_currency": "BTC",
+      "volume_usd": 0,
+      "mid_price": 0.0255
+     },
+     "last": {
+      "_keys": [
+       "high",
+       "low",
+       "last",
+       "instrument_name",
+       "bid_price",
+       "ask_price",
+       "open_interest",
+       "mark_price",
+       "interest_rate",
+       "creation_timestamp",
+       "estimated_delivery_price",
+       "price_change",
+       "volume",
+       "mark_iv",
+       "underlying_price",
+       "underlying_index",
+       "base_currency",
+       "quote_currency",
+       "volume_usd",
+       "mid_price"
+      ],
+      "high": 0.0195,
+      "low": 0.0039,
+      "last": 0.014,
+      "instrument_name": "BTC-20NOV26-73000-P",
+      "bid_price": 0.015,
+      "ask_price": 0.0155,
+      "open_interest": 44.5,
+      "mark_price": 0.01515923,
+      "interest_rate": 0,
+      "creation_timestamp": 1793900603039,
+      "estimated_delivery_price": 75810.39,
+      "price_change": 154.5455,
+      "volume": 30.3,
+      "mark_iv": 39.86,
+      "underlying_price": 76039.72,
+      "underlying_index": "BTC-20NOV26",
+      "base_currency": "BTC",
+      "quote_currency": "BTC",
+      "volume_usd": 26089.54,
+      "mid_price": 0.01525
+     }
+    },
+    "usIn": 1793900603007498,
+    "usOut": 1793900603054810,
+    "usDiff": 47312,
+    "testnet": false
+   }
+  },
+  "mempool-diff": {
+   "status": 200,
+   "ms": 668,
+   "type": "application/json; charset=utf-8",
+   "acao": "*",
+   "len": 337,
+   "access-control-allow-headers": "Accept,Authorization,Cache-Control,Content-Type,DNT,If-Modified-Since,Keep-Alive,Origin,User-Agent,X-Requested-With",
+   "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+   "cache-control": "no-cache, public",
+   "shape": {
+    "_keys": [
+     "progressPercent",
+     "difficultyChange",
+     "estimatedRetargetDate",
+     "remainingBlocks",
+     "remainingTime",
+     "previousRetarget",
+     "previousTime",
+     "nextRetargetHeight",
+     "timeAvg",
+     "adjustedTimeAvg",
+     "timeOffset",
+     "expectedBlocks"
+    ],
+    "progressPercent": 47.61904761904761,
+    "difficultyChange": -3.7888761519555114,
+    "estimatedRetargetDate": 1794559842568,
+    "remainingBlocks": 1056,
+    "remainingTime": 659237568,
+    "previousRetarget": 5.5392014927774085,
+    "previousTime": 1793301298,
+    "nextRetargetHeight": 975744,
+    "timeAvg": 624278,
+    "adjustedTimeAvg": 624278,
+    "timeOffset": 0,
+    "expectedBlocks": 998.845
+   }
+  }
+ }
+}
