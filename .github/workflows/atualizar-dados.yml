@@ -40,7 +40,13 @@ jobs:
           git checkout -q -b data
           git add -A
           git commit -q -m "dados $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+          # o GitHub às vezes recusa o envio com erro dele mesmo (500, como em 04/11): tenta de novo
+          for i in 1 2 3; do
+            git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data && exit 0
+            echo "GitHub recusou o envio (tentativa ${i} de 3)"
+            [ "$i" -lt 3 ] && sleep $(( i * 20 ))
+          done
+          exit 1
       - name: Manter o agendamento ativo
         # o GitHub desliga agendamentos após 60 dias sem commits no ramo principal
         if: github.event_name == 'schedule'
