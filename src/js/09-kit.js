@@ -11,7 +11,7 @@ const note = (html) => `<p class="panel-note">${html}</p>`;
 const kpiBox = (k, v, s = '', cls = '') => `<div class="kpi ${cls}"><span class="k">${k}</span><span class="v">${v}</span>${s ? `<span class="s">${s}</span>` : ''}</div>`;
 // texto explicativo com cor: números em negrito, palavras de fundo/compra em verde e de topo/venda em vermelho
 let _RICH = null;
-try { _RICH = new RegExp('(^|[^\\p{L}\\d])(?:(\\d+(?:[.,]\\d+)*(?:\\s?[×%])?)|(fundos?|acumula\\p{L}*|barat\\p{L}*|compra\\p{L}*|capitula\\p{L}*|bottoms?|cheap\\p{L}*|buy\\p{L}*|undervalued|accumulat\\p{L}*)|(topos?|distribui\\p{L}*|car[oa]s?|vend[ae]\\p{L}*|euforia|euf[óo]ric\\p{L}*|bolhas?|tops?|expensive|sell\\p{L}*|overvalued|overheat\\p{L}*|euphori\\p{L}*|bubbles?))(?![\\p{L}\\d])', 'giu'); } catch { _RICH = null; }
+try { _RICH = new RegExp('(^|[^\\p{L}\\d])(?:(\\d+(?:[.,]\\d+)*(?:\\s?[×%])?)|(fundos?|acumula\\p{L}*|barat\\p{L}*|compra\\p{L}*|capitula\\p{L}*|bottoms?|cheap\\p{L}*|buy\\p{L}*|undervalued|accumulat\\p{L}*|sobrevendid\\p{L}*|oversold|altas|repiques?|bounces?)|(topos?|distribui\\p{L}*|car[oa]s?|vend[ae]\\p{L}*|euforia|euf[óo]ric\\p{L}*|bolhas?|tops?|expensive|sell\\p{L}*|overvalued|overheat\\p{L}*|euphori\\p{L}*|bubbles?|sobrecomprad\\p{L}*|overbought|quedas?|corre[çc][ãa]o|pullbacks?|capitulation))(?![\\p{L}\\d])', 'giu'); } catch { _RICH = null; }
 function richText(t) {
   t = String(t || ''); if (!_RICH) return esc(t);
   let out = '', last = 0, m; _RICH.lastIndex = 0;

@@ -159,42 +159,83 @@ function tkChips() {
   const sym = (id) => { const m = CGM[id]; const u = BY_CG[id]; return (m && String(m.symbol || '').toUpperCase()) || (u && u.b) || id.split('-')[0].toUpperCase().slice(0, 5); };
   return `<div class="tk-chips" role="group" aria-label="${esc(L('Moedas mais procuradas', 'Popular coins'))}">${TK_QUICK.map((id) => `<button class="tk-chip${id === TK.id ? ' on' : ''}" data-act="go" data-to="tokenomics" data-params='${esc(JSON.stringify({ id }))}'>${coinLogo({ b: sym(id), cg: id, logo: LOGOS[id] || (CGM[id] && CGM[id].image) }, 18)}${esc(sym(id))}</button>`).join('')}</div>`;
 }
-// ---------- preço em 1 ano (Binance quando a moeda é listada lá; senão CoinGecko) ----------
+// ---------- preço em 1 ano (Binance quando a moeda é listada lá; senão CoinGecko) — linha ou velas ----------
 async function tkPx(seq) {
   TK.px = null; tkDrawPx();
   try {
     const u = BY_CG[TK.id];
-    let pts;
-    if (u) pts = (await klines(u.s, '1d', 366)).map((k) => ({ t: k.t, v: k.c }));
+    let pts, ks = null;
+    if (u) { ks = await klines(u.s, '1d', 366); pts = ks.map((k) => ({ t: k.t, v: k.c })); }
     else pts = ((await getJSON(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(TK.id)}/market_chart?vs_currency=usd&days=365&interval=daily`, { timeout: 15000 })).prices || []).map(([t, v]) => ({ t, v })).filter((x) => isNum(x.v) && x.v > 0);
     if (seq !== TK.seq) return;
-    TK.px = { pts, src: u ? 'Binance' : 'CoinGecko', at: Date.now() };
+    TK.px = { pts, ks, src: u ? 'Binance' : 'CoinGecko', at: Date.now() };
   } catch (e) { if (seq === TK.seq) TK.px = { err: String(e.message || e) }; }
   tkDrawPx();
 }
+// velas de moedas fora da Binance: CoinGecko entrega velas de 4 dias para 1 ano
+async function tkOhlcCg() {
+  const P = TK.px; if (!P || P.ks || P.cgk || P.cgkLoading) return;
+  P.cgkLoading = true; const id = TK.id;
+  try {
+    const j = await getJSON(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/ohlc?vs_currency=usd&days=365`, { timeout: 15000 });
+    if (TK.id !== id || TK.px !== P) return;
+    P.cgk = (Array.isArray(j) ? j : []).filter((x) => x.length >= 5 && x.slice(1, 5).every((v) => isNum(v) && v > 0)).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
+  } catch { P.cgk = []; }
+  P.cgkLoading = false;
+  const el = $('#tk-pxc'); if (el) el.dataset.k = '';
+  tkDrawPx();
+}
+const TK_PXR = { '1m': 31, '3m': 92, '6m': 183, '1y': 366 };
 async function tkDrawPx() {
   const box = $('#tk-px'); if (!box || !TK.data) return;
   const P = TK.px;
+  const kind = chartKind('tkpx'); const rg = TK_PXR[LS.get('tk-pxr', '1y')] ? LS.get('tk-pxr', '1y') : '1y';
   const src = P && P.src ? `<span class="stamp live"><i class="dot"></i><b>${esc(P.src)}</b><span class="st">${esc(ago(P.at))}</span></span>` : '';
-  const head = panelHead('chart-line', L('Preço no último ano', 'Price over the last year'), { sub: esc(L('Fechamento diário, com a máxima histórica (ATH) tracejada para comparar.', 'Daily close, with the all-time high (ATH) dashed for comparison.')), right: src });
-  if (!P) { setHTML(box, head + '<div class="skel" style="height:260px"></div>'); return; }
+  const head = panelHead('chart-candlestick', L('Preço no último ano', 'Price over the last year'), { sub: esc(L('Linha ou velas diárias, com a máxima histórica (ATH) e a máxima e a mínima do ano. Passe o mouse para ver cada dia.', 'Line or daily candles, with the all-time high (ATH) and the year high and low. Hover to see each day.')), right: src });
+  if (!P) { setHTML(box, head + '<div class="skel" style="height:300px"></div>'); return; }
   if (P.err || !P.pts.length) { setHTML(box, head + emptyBox('wifi-off', L('Histórico de preço indisponível agora', 'Price history unavailable'), esc(P.err || ''))); return; }
   const pts = P.pts; const last = pts[pts.length - 1].v;
   const ret = (days) => { const t0 = pts[pts.length - 1].t - days * 86400e3; const a = pts.find((x) => x.t >= t0); return a ? (last / a.v - 1) * 100 : null; };
   const hi = Math.max(...pts.map((x) => x.v)), lo = Math.min(...pts.map((x) => x.v));
   const m = TK.data.market_data || {}; const ath = num(m.ath && m.ath.usd);
-  if (!$('#tk-pxc')) setHTML(box, head + `<div class="row wrap" style="gap:6px 22px" id="tk-pxk"></div><div id="tk-pxc" style="height:280px;margin-top:10px"></div>`);
-  setHTML('#tk-pxk', [[L('30 dias', '30 days'), ret(30)], [L('90 dias', '90 days'), ret(90)], [L('1 ano', '1 year'), ret(365)]].map(([k, v]) => kpiBox(k, isNum(v) ? `<span class="${tone(v)}">${esc(fmtPct(v, 1))}</span>` : '—')).join('') + kpiBox(L('Máxima e mínima do ano', 'Year high and low'), `<span class="small">${esc(usd(hi))} · ${esc(usd(lo))}</span>`));
-  const el = $('#tk-pxc'); const key = TK.id + pts.length + S.theme;
-  if (el.dataset.k === key && el.querySelector('canvas')) return; el.dataset.k = key;
+  if (!$('#tk-pxc')) setHTML(box, head + `<div class="row wrap" style="gap:6px 22px" id="tk-pxk"></div><div class="row wrap between tk-pxt" style="gap:8px;margin-top:10px">${seg('tkpxr', [['1m', '1M'], ['3m', '3M'], ['6m', '6M'], ['1y', L('1A', '1Y')]], rg)}${chartKindSeg('tkpx', kind)}</div><div class="tk-pxl" id="tk-pxl"></div><div id="tk-pxc" style="height:320px;position:relative"></div><div id="tk-pxn"></div>`);
+  setHTML('#tk-pxk', [[L('30 dias', '30 days'), ret(30)], [L('90 dias', '90 days'), ret(90)], [L('1 ano', '1 year'), ret(365)]].map(([k, v]) => kpiBox(k, isNum(v) ? `<span class="${tone(v)}">${esc(fmtPct(v, 1))}</span>` : '—')).join('') + kpiBox(L('Máxima e mínima do ano', 'Year high and low'), `<span class="small"><span class="up">${esc(usd(hi))}</span> · <span class="down">${esc(usd(lo))}</span></span>`) + (isNum(ath) ? kpiBox(L('Distância da máxima histórica', 'Distance from ATH'), `<span class="${tone(last / ath - 1)}">${esc(fmtPct((last / ath - 1) * 100, 1))}</span>`) : ''));
+  let ks = P.ks; let ksNote = '';
+  if (kind === 'candle' && !ks) { if (P.cgk === undefined) { tkOhlcCg(); } else if (P.cgk && P.cgk.length) { ks = P.cgk; ksNote = L('Velas de 4 dias do CoinGecko (moeda fora da Binance; é o que a API gratuita entrega para 1 ano).', '4-day CoinGecko candles (coin not on Binance; what the free API provides for 1 year).'); } else if (P.cgk) ksNote = L('Velas indisponíveis para esta moeda agora: mostrando a linha.', 'Candles unavailable for this coin now: showing the line.'); }
+  setHTML('#tk-pxn', ksNote ? note(esc(ksNote)) : '');
+  const el = $('#tk-pxc'); const useC = kind === 'candle' && ks && ks.length > 5;
+  const key = [TK.id, pts.length, S.theme, useC ? 'c' + ks.length : 'l'].join('|');
+  if (el.dataset.k === key && el.querySelector('canvas')) { tkPxRange(); return; }
+  el.dataset.k = key;
   let r; try { r = await makeChart(el, { onTheme: () => { el.dataset.k = ''; tkDrawPx(); } }); } catch { return; }
   const { ch, c } = r;
-  const up = last >= pts[0].v;
-  const s1 = ch.addAreaSeries({ lineColor: up ? c.up : c.down, topColor: up ? 'rgba(49,214,127,.18)' : 'rgba(255,97,112,.16)', bottomColor: 'rgba(0,0,0,0)', lineWidth: 2, priceLineVisible: false });
-  s1.setData(pts.map((x) => ({ time: ctime(x.t, false), value: x.v })));
-  if (isNum(ath)) s1.createPriceLine({ price: ath, color: c.signal, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'ATH' });
-  ch.timeScale().fitContent();
+  const up = last >= pts[0].v; const sym = (TK.data.symbol || '').toUpperCase();
+  let s1;
+  if (useC) { s1 = ch.addCandlestickSeries({ ...candleOpts(c), lastValueVisible: true, title: sym, nxFmt: (v) => usd(v) }); s1.setData(candleData(ks, false)); }
+  else { s1 = ch.addAreaSeries({ lineColor: up ? c.up : c.down, topColor: up ? 'rgba(49,214,127,.18)' : 'rgba(255,97,112,.16)', bottomColor: 'rgba(0,0,0,0)', lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: sym, nxFmt: (v) => usd(v) }); s1.setData(pts.map((x) => ({ time: ctime(x.t, false), value: x.v }))); }
+  if (isNum(ath) && ath <= hi * 4) s1.createPriceLine({ price: ath, color: c.signal, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'ATH' });
+  s1.createPriceLine({ price: hi, color: c.up, lineWidth: 1, lineStyle: 3, axisLabelVisible: false, title: L('máx. do ano', 'year high') });
+  s1.createPriceLine({ price: lo, color: c.down, lineWidth: 1, lineStyle: 3, axisLabelVisible: false, title: L('mín. do ano', 'year low') });
+  TK.pxch = ch; TK.pxn = pts.length;
+  tkPxRange();
+  // legenda: dia apontado (ou o último), fechamento e variação do dia
+  const byT = new Map(); const kk = useC ? ks : pts.map((x, i) => ({ t: x.t, c: x.v, o: i ? pts[i - 1].v : x.v }));
+  kk.forEach((k, i) => byT.set(ctime(k.t, false), { k, prev: i ? kk[i - 1].c : null }));
+  const leg = (x) => {
+    if (!x) return; const k = x.k; const dch = isNum(x.prev) ? (k.c / x.prev - 1) * 100 : null;
+    setHTML('#tk-pxl', `<b>${esc(fmtDate(k.t, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b>${useC ? `<span>${esc(L('Abertura', 'Open'))} <b>${esc(usd(k.o))}</b></span><span>${esc(L('Máxima', 'High'))} <b class="up">${esc(usd(k.h))}</b></span><span>${esc(L('Mínima', 'Low'))} <b class="down">${esc(usd(k.l))}</b></span>` : ''}<span>${esc(L('Fechamento', 'Close'))} <b>${esc(usd(k.c))}</b></span>${isNum(dch) ? `<span class="${tone(dch)} b">${esc(fmtPct(dch, 2))}</span>` : ''}`);
+  };
+  const lastT = ctime(kk[kk.length - 1].t, false);
+  leg(byT.get(lastT));
+  ch.subscribeCrosshairMove((pm) => { leg((pm && pm.time !== undefined && pm.point && byT.get(pm.time)) || byT.get(lastT)); });
 }
+function tkPxRange() {
+  const ch = TK.pxch; const P = TK.px; if (!ch || !P || !P.pts.length) return;
+  const d = TK_PXR[LS.get('tk-pxr', '1y')] || 366; const tl = P.pts[P.pts.length - 1].t;
+  try { if (d >= 366) ch.timeScale().fitContent(); else ch.timeScale().setVisibleRange({ from: ctime(tl - d * 86400e3, false), to: ctime(tl + 86400e3, false) }); } catch { /* */ }
+}
+ACT.seg_tkpxr = (v) => { LS.set('tk-pxr', v); tkPxRange(); };
+ACT.seg_ck_tkpx = (v) => { LS.set('ck-tkpx', v); const el = $('#tk-pxc'); if (el) el.dataset.k = ''; tkDrawPx(); };
 // ---------- recompra e queima do token (dados do Burn, Baby, Burn) ----------
 function tkBurn() { const D = typeof bbData === 'function' ? bbData() : null; return D ? D.toks.find((t) => t.cg === TK.id) || null : null; }
 function tkDrawBurn() {

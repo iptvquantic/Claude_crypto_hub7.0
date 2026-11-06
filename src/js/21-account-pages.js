@@ -19,6 +19,7 @@ function plansHtml() {
   const feats = [
     ['flask-conical', L('Bitcoin Lab', 'Bitcoin Lab'), L('Gráfico de ciclo com preço realizado, médias de longo prazo, Mayer, Pi Cycle, CVDD e posição no ciclo.', 'Cycle chart with realized price, long-term MAs, Mayer, Pi Cycle, CVDD and cycle position.')],
     ['package', L('Tokenomics', 'Tokenomics'), L('Oferta, diluição, distância do topo, receita, recompras, segurança e notícias de qualquer moeda.', 'Supply, dilution, distance from top, revenue, buybacks, security and news for any coin.')],
+    ['flame', 'Burn, Baby, Burn', L('Recompras, queimas e repasses de dezenas de tokens, dia a dia, com o rendimento para o detentor (DefiLlama).', 'Buybacks, burns and payouts of dozens of tokens, day by day, with the yield to holders (DefiLlama).')],
     ['wallet', 'Portfolio Vault', L('Sua carteira com preço médio, resultado, evolução e mapa de acumulação, salva na sua conta (PC e celular).', 'Your portfolio with average cost, P/L, history and allocation, saved to your account (PC and phone).')],
   ];
   return `${pageHead(PAGES.plans, '')}
@@ -66,8 +67,8 @@ async function drawClaims() {
 ACT.planPay = (el, e) => { if (!ACCOUNT.user) { e.preventDefault(); toast(L('Crie sua conta (ou entre) antes de pagar, para o plano ficar no seu nome.', 'Create an account (or sign in) before paying, so the plan is yours.'), { type: 'warn' }); authModal('signup'); } };
 page({
   id: 'plans', group: 'conta', icon: 'crown', pt: 'Planos', en: 'Plans', acct: true,
-  sub: 'Use o NEXUS HUB grátis. Desbloqueie o Lab, o Tokenomics e o Portfolio Vault com o PRO.',
-  subEn: 'Use NEXUS HUB for free. Unlock the Lab, Tokenomics and Portfolio Vault with PRO.',
+  sub: 'Use o NEXUS HUB grátis. Desbloqueie o Lab, o Tokenomics, o Burn, Baby, Burn e o Portfolio Vault com o PRO.',
+  subEn: 'Use NEXUS HUB for free. Unlock the Lab, Tokenomics, Burn, Baby, Burn and Portfolio Vault with PRO.',
   init(el) { el.innerHTML = plansHtml(); drawClaims(); },
   show() { drawClaims(); },
 });

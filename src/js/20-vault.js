@@ -132,9 +132,9 @@ function vaultDraw() {
   <section class="panel mt">${panelHead('chart-line', L('Evolução do patrimônio', 'Portfolio over time'), { sub: esc(L('Quanto sua carteira valia em cada dia, comparado ao custo dos aportes.', 'What your portfolio was worth each day vs. the cost of entries.')), right: seg('vrange', [['1m', '1M'], ['3m', '3M'], ['6m', '6M'], ['1y', '1A'], ['all', L('Tudo', 'All')]], VAULT.range) })}<div id="v-hist" style="height:340px"></div><div id="v-hist-note"></div></section>
   <section class="panel mt" id="v-cmp"></section>
   <section class="panel flush mt" id="v-hold"></section>
-  <div class="grid g-2 mt"><section class="panel" id="v-plb"></section><section class="panel" id="v-month"></section></div>
+  <div class="grid g-3 mt v-trio"><section class="panel" id="v-plb"></section><section class="panel" id="v-month"></section><section class="panel" id="v-ex"></section></div>
   <section class="panel mt" id="v-asset"></section>
-  <div class="grid g-2 mt"><section class="panel" id="v-perf"></section><section class="panel" id="v-ex"></section></div>
+  <section class="panel flush mt" id="v-perf"></section>
   <section class="panel mt" id="v-ir"></section>
   <section class="panel flush mt" id="v-list"></section>`;
   box.innerHTML = html;
@@ -153,7 +153,7 @@ function vaultDrawLive(H, T) {
   const held = H.filter((h) => h.qty > 0);
   const k = VAULT.cur === 'BRL' ? 'valueBRL' : 'valueUSD';
   const tot = sum(held.map((h) => h[k] || 0));
-  setHTML('#v-donut', held.length ? `<div class="donut-wrap">${donutSVG(held.map((h) => ({ v: h[k] || 0, c: h.color, t: h.sym })), { label: L('Distribuição da carteira', 'Portfolio allocation') })}<div class="legend">${held.slice(0, 8).map((h) => `<div><i style="background:${esc(h.color)}"></i><span>${esc(h.sym)}</span><span class="lv">${tot > 0 ? esc(fmtPct((h[k] || 0) / tot * 100, 1, false)) : '—'}</span></div>`).join('')}${held.length > 8 ? `<div class="faint">+${held.length - 8} ${esc(L('outros', 'others'))}</div>` : ''}</div></div>` : emptyBox('chart-pie', L('Nada em carteira agora', 'Nothing held now')));
+  setHTML('#v-donut', held.length ? vaultAllocHtml(held, k, tot) : emptyBox('chart-pie', L('Nada em carteira agora', 'Nothing held now')));
   // tabela de posições
   const c = VAULT.cur;
   const pr2 = (h) => (c === 'BRL' ? h.priceBRL : h.price);
@@ -166,6 +166,17 @@ tot > 0 && isNum(val) && !closed ? esc(fmtPct(val / tot * 100, 1, false)) : '—
   }).join('')}</tbody></table></div>`);
   vaultDrawPlBars(H); vaultDrawPerf(H);
 }
+// rosca com o total no centro (fatias abaixo de 1,5% viram "outros" só no desenho) e a lista completa ao lado
+function vaultAllocHtml(held, k, tot) {
+  const list = held.slice().sort((a, b) => (b[k] || 0) - (a[k] || 0));
+  const big = [], small = [];
+  for (const h of list) ((tot > 0 && (h[k] || 0) / tot < 0.015 && list.length > 6) ? small : big).push(h);
+  const parts = big.map((h) => ({ v: h[k] || 0, c: h.color, t: `${h.sym} · ${tot > 0 ? fmtPct((h[k] || 0) / tot * 100, 1, false) : ''}` }));
+  if (small.length) parts.push({ v: sum(small.map((h) => h[k] || 0)), c: 'var(--text-3)', t: L(`Outros (${small.length})`, `Others (${small.length})`) });
+  const maxP = tot > 0 ? (list[0][k] || 0) / tot * 100 : 100;
+  return `<div class="v-alloc"><div class="v-don">${donutSVG(parts, { size: 200, thick: 30, label: L('Distribuição da carteira', 'Portfolio allocation') })}<div class="v-don-c"><b>${esc(money(tot, [0, 0]))}</b><small>${esc(L(`${list.length} ativo(s)`, `${list.length} asset(s)`))}</small></div></div>
+    <div class="v-al-l${list.length > 9 ? ' scroll' : ''}">${list.map((h) => { const pc = tot > 0 ? (h[k] || 0) / tot * 100 : 0; return `<button class="v-al" data-act="vaultAsset" data-id="${esc(h.id)}" title="${esc(L(`Ver ${h.name} no gráfico`, `See ${h.name} on the chart`))}"><i style="background:${esc(h.color)}"></i><span class="s"><b>${esc(h.sym)}</b></span><span class="p">${esc(fmtPct(pc, 1, false))}</span><span class="b"><b style="width:${clamp(pc / (maxP || 1) * 100, 2, 100).toFixed(1)}%;background:${esc(h.color)}"></b></span><small class="m">${isNum(h[k]) ? esc(money(h[k], [0, 0])) : '—'}</small></button>`; }).join('')}</div></div>`;
+}
 // ---------- gráfico do ativo com marcadores de compra/venda e preço médio ----------
 async function vaultDrawAsset(H) {
   const box = $('#v-asset'); if (!box) return;
@@ -174,15 +185,17 @@ async function vaultDrawAsset(H) {
   const chips = H.map((x) => `<button class="btn xs ${x.id === h.id ? 'pri' : 'ghost'}" data-act="vaultAsset" data-id="${esc(x.id)}">${esc(x.sym)}</button>`).join('');
   const avgNow = cur === 'BRL' ? h.avgBRL : h.avgUSD;
   box.innerHTML = panelHead('chart-candlestick', L(`${h.name}: suas compras e vendas no gráfico`, `${h.name}: your buys and sells on the chart`), { sub: esc(L(`Pontos verdes = compras, vermelhos = vendas (o tamanho acompanha o valor). A linha âmbar em degraus é o seu preço médio ao longo do tempo, em ${cur === 'BRL' ? 'reais' : 'dólares'}. Passe o mouse para ver os detalhes do dia.`, `Green dots = buys, red = sells (size follows the amount). The amber step line is your average cost over time (${cur}). Hover for the day’s details.`)) }) +
-    `<div class="row wrap" style="gap:6px;margin-bottom:10px">${chips}</div>
+    `<div class="row wrap between" style="gap:8px;margin-bottom:10px"><div class="row wrap" style="gap:6px">${chips}</div>${chartKindSeg('vasset', chartKind('vasset'))}</div>
     <div class="row wrap v-asset-k" style="gap:6px 22px;margin-bottom:8px">${kpiBox(L('Seu preço médio', 'Your avg. cost'), isNum(avgNow) ? `<span style="color:var(--signal)">${esc(money(avgNow))}</span>` : '—')}${kpiBox(L('Preço agora', 'Price now'), isNum(cur === 'BRL' ? h.priceBRL : h.price) ? esc(money(cur === 'BRL' ? h.priceBRL : h.price)) : '—')}${kpiBox(L('Compras / vendas', 'Buys / sells'), `${h.buys} / ${h.sells}`)}</div>
     <div id="v-asset-ch" style="height:340px;position:relative"></div><div id="v-asset-note"></div>`;
   const el = $('#v-asset-ch');
   try {
     const first = Date.parse(h.first + 'T00:00:00Z') - 30 * 86400e3;
-    let pts;
-    if (h.bsym && VALID.has(h.bsym)) pts = (await klinesSince(h.bsym, '1d', first)).map((k) => ({ t: k.t, v: k.c }));
+    let pts, ks = null;
+    if (h.bsym && VALID.has(h.bsym)) { ks = await klinesSince(h.bsym, '1d', first); pts = ks.map((k) => ({ t: k.t, v: k.c })); }
     else pts = await cgDaily(h.id, first);
+    const wantCandle = chartKind('vasset') === 'candle';
+    if (wantCandle && !ks) setTimeout(() => toast(L(`${h.sym} não tem par na Binance: velas indisponíveis, mostrando a linha.`, `${h.sym} has no Binance pair: candles unavailable, showing the line.`), { type: 'warn' }), 50);
     const fxm = cur === 'BRL' ? await fxHistory(first).catch(() => null) : null;
     if (!$('#v-asset-ch')) return;
     if (!pts.length) throw new Error(L('sem histórico de preço para este ativo', 'no price history for this asset'));
@@ -192,14 +205,22 @@ async function vaultDrawAsset(H) {
     const series = pts.map((p) => {
       const d = new Date(p.t).toISOString().slice(0, 10);
       if (fxm) { while (fi < fxKeys.length && fxKeys[fi] <= d) lastFx = fxm[fxKeys[fi++]]; }
-      const v = cur === 'BRL' ? (lastFx || fxNow() ? p.v * (lastFx || fxNow()) : null) : p.v;
-      return { t: p.t, d, v };
+      const m = cur === 'BRL' ? (lastFx || fxNow() || null) : 1;
+      const v = isNum(m) ? p.v * m : null;
+      return { t: p.t, d, v, m };
     }).filter((p) => isNum(p.v));
     const { ch, c } = await makeChart(el, { onTheme: () => vaultDrawAsset(holdings()) });
     ch.applyOptions({ crosshair: { mode: 0 } });
     // preço em azul-lavanda (destaque) e preço médio em âmbar: nunca se confundem, qualquer que seja a cor da moeda
-    const s = ch.addAreaSeries({ lineColor: c.accent, topColor: 'rgba(142,152,255,.28)', bottomColor: 'rgba(142,152,255,0)', lineWidth: 2, priceLineVisible: false, crosshairMarkerRadius: 4 });
-    s.setData(series.map((p) => ({ time: ctime(p.t, false), value: p.v })));
+    let s;
+    if (wantCandle && ks) {
+      const byT = new Map(series.map((p) => [p.t, p.m]));
+      s = ch.addCandlestickSeries({ ...candleOpts(c), lastValueVisible: true, title: h.sym, nxFmt: (v) => money(v) });
+      s.setData(ks.filter((k) => byT.has(k.t)).map((k) => { const m = byT.get(k.t); return { time: ctime(k.t, false), open: k.o * m, high: k.h * m, low: k.l * m, close: k.c * m }; }));
+    } else {
+      s = ch.addAreaSeries({ lineColor: c.accent, topColor: 'rgba(142,152,255,.28)', bottomColor: 'rgba(142,152,255,0)', lineWidth: 2, priceLineVisible: false, crosshairMarkerRadius: 4 });
+      s.setData(series.map((p) => ({ time: ctime(p.t, false), value: p.v })));
+    }
     // preço médio passo a passo (mesma contabilidade da tabela)
     const t0 = series[0].t, byDay = {};
     let q = 0, cost = 0; const avgPts = [];
@@ -616,6 +637,7 @@ ACT.vaultFixEst = (el) => {
 ACT.vaultHistRetry = () => { VAULT.histKey = ''; VAULT.hist = null; vaultHist(); };
 ACT.seg_vrange = (v) => { VAULT.range = v; vaultHistDraw(); };
 ACT.seg_vcur = (v) => { VAULT.cur = v; LS.set('vault-cur', v); vaultDraw(); };
+ACT.seg_ck_vasset = (v) => { LS.set('ck-vasset', v); vaultDrawAsset(holdings()); };
 ACT.vaultAsset = (el) => { VAULT.asset = el.dataset.id; vaultDrawAsset(holdings()); $('#v-asset') && $('#v-asset').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 ACT.vaultRetry = () => { VAULT.err = ''; vaultLoad(true); vaultDraw(); };
 // ---------- compras e vendas por mês (ou por ano, quando o período é longo) ----------
@@ -664,7 +686,7 @@ function vaultDrawEx() {
   for (const r of VAULT.rows) { if (r.type !== 'buy') continue; const k = (r.exchange || '').trim() || L('Não informada', 'Not set'); const { feeU, feeB } = vEntryFx(r); by[k] = (by[k] || 0) + (cur === 'BRL' ? r.amount_brl + feeB : r.amount_usd + feeU); }
   const list = Object.entries(by).sort((a, b) => b[1] - a[1]); const tot = sum(list.map((x) => x[1]));
   box.innerHTML = panelHead('building-2', L('Onde você comprou', 'Where you bought'), { sub: esc(L('Total das compras por corretora ou carteira (com as taxas). Mostra onde você comprou — não onde as moedas estão hoje.', 'Total buys per exchange or wallet (with fees). Where you bought, not where coins are today.')) }) +
-    (list.length ? `<div class="v-exl">${list.slice(0, 8).map(([k, v]) => `<div class="v-exr"><span class="v-exn">${esc(k)}</span><span class="v-plb-t"><i class="acc" style="width:${Math.max(1.5, v / (list[0][1] || 1) * 100)}%"></i></span><span class="v-exv">${esc(money(v, [2, 2]))} <span class="faint">${tot > 0 ? esc(fmtPct(v / tot * 100, 1, false)) : ''}</span></span></div>`).join('')}${list.length > 8 ? `<div class="small faint">+${list.length - 8} ${esc(L('outras', 'others'))}</div>` : ''}</div>` : emptyBox('building-2', L('Nenhuma compra registrada', 'No buys recorded')));
+    (list.length ? `<div class="v-exl">${list.slice(0, 8).map(([k, v]) => `<div class="v-exr2"><span class="n">${esc(k)}</span><span class="v">${esc(money(v, [2, 2]))}</span><span class="p">${tot > 0 ? esc(fmtPct(v / tot * 100, 1, false)) : ''}</span><span class="b"><i style="width:${Math.max(1.5, v / (list[0][1] || 1) * 100)}%"></i></span></div>`).join('')}${list.length > 8 ? `<div class="small faint">+${list.length - 8} ${esc(L('outras', 'others'))}</div>` : ''}</div>` : emptyBox('building-2', L('Nenhuma compra registrada', 'No buys recorded')));
 }
 
 // ---------- apoio para a declaração (vendas por mês e posição no fim do ano) ----------
@@ -712,22 +734,43 @@ ACT.vaultIrCsv = () => {
     ...D.pos.map((p) => [p.sym, p.name || '', n(p.qty, 10), n(p.costBRL), n(p.costBRL / p.qty, 8), p.ex.join(' / ')])];
   downloadFile(`nexus-vault-ir-${y}.csv`, '﻿' + lines.map((l) => l.map(cell).join(';')).join('\r\n'), 'text/csv');
 };
+const VPERF = { sort: LS.get('vperf-sort', 'best'), n: 12 };
 function vaultDrawPerf(H) {
   const box = $('#v-perf'); if (!box) return;
-  const buys = VAULT.rows.filter((r) => r.type === 'buy').map((r) => {
-    const h = H.find((x) => x.id === r.asset_id); const unit = r.qty > 0 ? r.amount_usd / r.qty : null;
-    const ch = h && isNum(h.price) && isNum(unit) && unit > 0 ? (h.price / unit - 1) * 100 : null;
-    return { r, unit, ch };
-  }).filter((x) => isNum(x.ch)).sort((a, b) => b.ch - a.ch);
-  const row = (x) => `<div class="li"><span class="grow"><span class="t" style="display:block">${esc(x.r.sym)} · ${esc(fmtDate(x.r.date + 'T12:00:00Z', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</span><span class="m">${esc(fmtQty(x.r.qty))} @ ${esc(usd(x.unit))}</span></span>${chg(x.ch, 1)}</div>`;
-  box.innerHTML = panelHead('trophy', L('Desempenho por aporte', 'Performance per entry'), { sub: esc(L('Quanto cada compra já subiu ou caiu (preço pago × preço agora, em US$).', 'How much each buy has moved (price paid vs. now, USD).')) }) +
-    (buys.length ? `<div class="list">${buys.slice(0, 4).map(row).join('')}${buys.length > 4 ? `<div class="li tiny faint" style="justify-content:center">···</div>${buys.slice(-3).map(row).join('')}` : ''}</div>` : emptyBox('trophy', L('Sem compras com preço ao vivo', 'No buys with a live price')));
+  const cur = VAULT.cur;
+  const buys = VAULT.rows.filter((r) => r.type === 'buy' && r.qty > 0).map((r) => {
+    const h = H.find((x) => x.id === r.asset_id); if (!h) return null;
+    const { feeU, feeB } = vEntryFx(r);
+    const paid = cur === 'BRL' ? r.amount_brl + feeB : r.amount_usd + feeU;
+    const pNow = cur === 'BRL' ? h.priceBRL : h.price;
+    const now = isNum(pNow) ? r.qty * pNow : null;
+    return { r, h, paid, unit: paid / r.qty, pNow, now, res: isNum(now) ? now - paid : null, ch: isNum(now) && paid > 0 ? (now / paid - 1) * 100 : null };
+  }).filter((x) => x && isNum(x.ch));
+  const S0 = { best: (a, b) => b.ch - a.ch, worst: (a, b) => a.ch - b.ch, new: (a, b) => b.r.date.localeCompare(a.r.date), big: (a, b) => b.paid - a.paid };
+  buys.sort(S0[VPERF.sort] || S0.best);
+  const head = `<div class="panel-h" style="padding:16px 18px 8px;margin:0"><div class="tt"><h2 class="panel-t">${ico('trophy', 18)}${esc(L('Desempenho por aporte', 'Performance per entry'))}</h2><p class="panel-s">${esc(L(`Cada compra: quanto pagou (com a taxa) e quanto vale hoje, em ${cur === 'BRL' ? 'reais (inclui a variação do dólar)' : 'dólares'}.`, `Each buy: what you paid (with fee) and what it is worth today, in ${cur}.`))}</p></div>${seg('vperf', [['best', L('Maiores altas', 'Best')], ['worst', L('Maiores quedas', 'Worst')], ['new', L('Mais recentes', 'Newest')], ['big', L('Maiores valores', 'Largest')]], VPERF.sort)}</div>`;
+  if (!buys.length) { box.innerHTML = head + `<div style="padding:0 18px 18px">${emptyBox('trophy', L('Sem compras com preço ao vivo', 'No buys with a live price'))}</div>`; return; }
+  const win = buys.filter((x) => x.ch > 0).length, lose = buys.length - win;
+  const best = buys.reduce((a, b) => (b.ch > a.ch ? b : a)), worst = buys.reduce((a, b) => (b.ch < a.ch ? b : a));
+  const mx = Math.max(...buys.map((x) => Math.abs(x.ch)), 1);
+  const dt = (d) => fmtDate(d + 'T12:00:00Z', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const dts = (d) => fmtDate(d + 'T12:00:00Z', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+  const rows = buys.slice(0, VPERF.n).map((x) => `<tr class="click" data-act="vaultAsset" data-id="${esc(x.h.id)}"><td class="nowrap num">${esc(dts(x.r.date))}</td><td><div class="coin">${coinLogo({ b: x.h.sym, logo: x.h.logo || LOGOS[x.h.id], c: x.h.color, cg: x.h.id }, 24)}<div><div class="nm">${esc(x.h.sym)}</div><div class="sy">${esc(x.r.exchange || '')}</div></div></div></td><td class="r num">${esc(fmtQty(x.r.qty))}</td><td class="r num">${esc(money(x.unit))}<div class="tiny faint">${esc(L('agora', 'now'))} ${esc(money(x.pNow))}</div></td><td class="r num">${esc(money(x.paid, [2, 2]))}</td><td class="r num b">${esc(money(x.now, [2, 2]))}</td><td class="r num b ${tone(x.res)}">${x.res > 0 ? '+' : ''}${esc(money(x.res, [2, 2]))}</td><td class="r"><div class="v-pf ${x.ch >= 0 ? 'up' : 'down'}"><span class="v-pfb"><i style="width:${clamp(Math.abs(x.ch) / mx * 100, 2, 100).toFixed(1)}%"></i></span><b>${esc(fmtPct(x.ch, 1))}</b></div></td></tr>`).join('');
+  box.innerHTML = head + `<div class="v-pf-sum"><span class="up">${ico('trending-up', 15)}<b>${win}</b> ${esc(L('no lucro', 'in profit'))}</span><span class="down">${ico('trending-down', 15)}<b>${lose}</b> ${esc(L('no prejuízo', 'at a loss'))}</span><span>${esc(L('Melhor:', 'Best:'))} <b class="${tone(best.ch)}">${esc(best.h.sym)} ${esc(fmtPct(best.ch, 1))}</b> <span class="faint">${esc(dt(best.r.date))}</span></span><span>${esc(L('Pior:', 'Worst:'))} <b class="${tone(worst.ch)}">${esc(worst.h.sym)} ${esc(fmtPct(worst.ch, 1))}</b> <span class="faint">${esc(dt(worst.r.date))}</span></span></div>
+    <div class="tbl-wrap"><table class="tbl v-pft"><thead><tr><th>${esc(L('Data', 'Date'))}</th><th>${esc(L('Ativo', 'Asset'))}</th><th class="r">${esc(L('Quantidade', 'Quantity'))}</th><th class="r">${esc(L('Preço pago', 'Price paid'))}</th><th class="r">${esc(L('Pago', 'Paid'))}</th><th class="r">${esc(L('Vale hoje', 'Worth today'))}</th><th class="r">${esc(L('Resultado', 'Result'))}</th><th class="r" style="min-width:140px">${esc(L('Variação', 'Change'))}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${buys.length > VPERF.n ? `<div style="padding:10px 18px 14px"><button class="btn sm block" data-act="vaultPerfMore">${esc(L(`Mostrar mais (${fmtNum(buys.length - VPERF.n, 0, 0)})`, `Show more (${buys.length - VPERF.n})`))}</button></div>` : '<div style="height:8px"></div>'}`;
 }
+ACT.seg_vperf = (v) => { VPERF.sort = v; VPERF.n = 12; LS.set('vperf-sort', v); vaultDrawPerf(holdings()); };
+ACT.vaultPerfMore = () => { VPERF.n += 30; vaultDrawPerf(holdings()); };
 // ---------- histórico de lançamentos: busca, filtros e totais do que está filtrado ----------
-const VL = { q: '', n: 40, type: '', asset: '', ex: '', year: '' };
+const VL = { q: '', n: 40, type: '', asset: '', ex: '', year: '', sort: 'date', dir: -1 };
+const vAmt = (r) => { const { feeU, feeB } = vEntryFx(r); return VAULT.cur === 'BRL' ? { a: r.amount_brl, f: r.fee ? feeB : 0 } : { a: r.amount_usd, f: r.fee ? feeU : 0 }; };
 function vaultListRows() {
-  const q = VL.q.trim().toLowerCase();
-  return [...VAULT.rows].sort((a, b) => b.date.localeCompare(a.date) || String(b.created_at).localeCompare(String(a.created_at))).filter((r) =>
+  const q = VL.q.trim().toLowerCase(); const d = VL.dir;
+  const cmp = VL.sort === 'asset' ? (a, b) => d * a.sym.localeCompare(b.sym) || b.date.localeCompare(a.date)
+    : VL.sort === 'amt' ? (a, b) => d * (vAmt(a).a - vAmt(b).a)
+      : (a, b) => d * (a.date.localeCompare(b.date) || String(a.created_at).localeCompare(String(b.created_at)));
+  return [...VAULT.rows].sort(cmp).filter((r) =>
     (!VL.type || r.type === VL.type) && (!VL.asset || r.asset_id === VL.asset) && (!VL.ex || (r.exchange || '').trim() === VL.ex) && (!VL.year || r.date.startsWith(VL.year)) &&
     (!q || (r.sym + ' ' + (r.name || '') + ' ' + (r.exchange || '') + ' ' + (r.notes || '')).toLowerCase().includes(q)));
 }
@@ -751,11 +794,29 @@ function vaultDrawList() {
     ${filtered ? `<button class="btn sm ghost" data-act="vaultFClear">${ico('x', 15)}${esc(L('Limpar filtros', 'Clear filters'))}</button>` : ''}
   </div>
   <div class="v-ftot small"><span><b>${esc(fmtNum(rows.length, 0, 0))}</b> ${esc(L(rows.length === 1 ? 'lançamento' : 'lançamentos', rows.length === 1 ? 'entry' : 'entries'))}${filtered ? ` ${esc(L(`de ${fmtNum(VAULT.rows.length, 0, 0)}`, `of ${VAULT.rows.length}`))}` : ''}</span><span>${esc(L('Compras:', 'Buys:'))} <b>${esc(money(tb, [2, 2]))}</b></span><span>${esc(L('Vendas:', 'Sells:'))} <b>${esc(money(ts, [2, 2]))}</b></span></div>
-  ${rows.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>${esc(L('Data', 'Date'))}</th><th>${esc(L('Tipo', 'Type'))}</th><th>${esc(L('Ativo', 'Asset'))}</th><th class="r">${esc(L('Quantidade', 'Quantity'))}</th><th class="r">${esc(L('Valor', 'Amount'))}</th><th class="r">${esc(L('Preço unitário', 'Unit price'))}</th><th>${esc(L('Corretora', 'Exchange'))}</th><th>${esc(L('Nota', 'Note'))}</th><th class="r"></th></tr></thead><tbody>${rows.slice(0, VL.n).map((r) => {
-    const a = r.currency === 'USD' ? r.amount_usd : r.amount_brl, unit = r.qty > 0 ? a / r.qty : null;
-    return `<tr><td>${esc(fmtDate(r.date + 'T12:00:00Z', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }))}</td><td><span class="badge ${r.type === 'buy' ? 'live' : 'bad'}">${esc(r.type === 'buy' ? L('compra', 'buy') : L('venda', 'sell'))}</span></td><td><b>${esc(r.sym)}</b></td><td class="r num">${esc(fmtQty(r.qty))}</td><td class="r">${esc(fmtMoney(a, r.currency, [2, 2]))}${r.fee ? `<div class="tiny faint">${esc(L('taxa', 'fee'))} ${esc(fmtMoney(r.fee, r.currency, [2, 2]))}</div>` : ''}</td><td class="r">${isNum(unit) ? esc(fmtMoney(unit, r.currency)) : '—'}</td><td class="muted">${esc(r.exchange || '')}</td><td class="muted" style="white-space:normal;max-width:220px">${esc(r.notes || '')}</td><td class="r nowrap">${pro ? `<button class="icon-btn" style="width:32px;height:32px;display:inline-grid" data-act="vaultEdit" data-id="${esc(r.id)}" aria-label="${esc(L('Editar', 'Edit'))}">${ico('pencil', 15)}</button> ` : ''}<button class="icon-btn" style="width:32px;height:32px;display:inline-grid" data-act="vaultDel" data-id="${esc(r.id)}" aria-label="${esc(L('Excluir', 'Delete'))}">${ico('trash-2', 15)}</button></td></tr>`;
-  }).join('')}</tbody></table></div>${rows.length > VL.n ? `<div style="padding:12px 18px"><button class="btn sm block" data-act="vaultMore">${esc(L(`Mostrar mais (${fmtNum(rows.length - VL.n, 0, 0)})`, `Show more (${rows.length - VL.n})`))}</button></div>` : ''}` : `<div style="padding:8px 18px 18px">${emptyBox('search', L('Nenhum lançamento com esses filtros', 'No entries match these filters'))}</div>`}`;
+  ${rows.length ? vaultListTable(rows, pro) : `<div style="padding:8px 18px 18px">${emptyBox('search', L('Nenhum lançamento com esses filtros', 'No entries match these filters'))}</div>`}`;
 }
+function vaultListTable(rows, pro) {
+  const cur = VAULT.cur; const shown = rows.slice(0, VL.n);
+  const th = (k, t, cls = '') => `<th class="${cls}"><button class="th-sort${VL.sort === k ? ' on' : ''}" data-act="vaultSort" data-k="${k}">${esc(t)}${VL.sort === k ? ico(VL.dir < 0 ? 'chevron-down' : 'chevron-up', 13) : ico('arrow-up-down', 12)}</button></th>`;
+  let body = '', lastM = '';
+  const byM = {};
+  if (VL.sort === 'date') for (const r of rows) { const m = r.date.slice(0, 7); const o = byM[m] || (byM[m] = { n: 0, b: 0, s: 0 }); o.n++; if (r.type === 'buy') o.b += vAmt(r).a; else o.s += vAmt(r).a; }
+  for (const r of shown) {
+    const m = r.date.slice(0, 7);
+    if (VL.sort === 'date' && m !== lastM) {
+      lastM = m; const o = byM[m];
+      const mn = fmtDate(m + '-15T12:00:00Z', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+      body += `<tr class="v-mh"><td colspan="8"><b>${esc(mn.charAt(0).toUpperCase() + mn.slice(1))}</b><span>${esc(L(`${o.n} lançamento(s)`, `${o.n} entr(ies)`))}</span>${o.b ? `<span class="up">${esc(L('compras', 'buys'))} ${esc(money(o.b, [2, 2]))}</span>` : ''}${o.s ? `<span class="down">${esc(L('vendas', 'sells'))} ${esc(money(o.s, [2, 2]))}</span>` : ''}</td></tr>`;
+    }
+    const { a, f } = vAmt(r); const unit = r.qty > 0 ? a / r.qty : null;
+    const orig = r.currency !== cur ? `<div class="tiny faint">${esc(L('lançado em', 'entered as'))} ${esc(fmtMoney(r.currency === 'USD' ? r.amount_usd : r.amount_brl, r.currency, [2, 2]))}</div>` : '';
+    const c = BY_CG[r.asset_id];
+    body += `<tr><td class="nowrap num">${esc(fmtDate(r.date + 'T12:00:00Z', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }))}</td><td><span class="v-ty ${r.type}">${ico(r.type === 'buy' ? 'arrow-down-left' : 'arrow-up-right', 13)}${esc(r.type === 'buy' ? L('Compra', 'Buy') : L('Venda', 'Sell'))}</span></td><td><div class="coin">${coinLogo({ b: r.sym, logo: r.logo || LOGOS[r.asset_id], c: r.color || (c && c.c) || hashColor(r.asset_id), cg: r.asset_id }, 24)}<div><div class="nm">${esc(r.sym)}</div><div class="sy">${esc(r.name || '')}</div></div></div></td><td class="r num">${esc(fmtQty(r.qty))}</td><td class="r num">${isNum(unit) ? esc(money(unit)) : '—'}</td><td class="r num"><b class="${r.type === 'buy' ? '' : 'down'}">${esc(money(a, [2, 2]))}</b>${f ? `<div class="tiny faint">${esc(L('taxa', 'fee'))} ${esc(money(f, [2, 2]))}</div>` : ''}${orig}</td><td class="hide-sm">${r.exchange ? `<span class="v-exb">${esc(r.exchange)}</span>` : '<span class="faint">—</span>'}${r.notes ? `<div class="v-note" title="${esc(r.notes)}">${esc(r.notes)}</div>` : ''}</td><td class="r nowrap">${pro ? `<button class="icon-btn v-ib" data-act="vaultEdit" data-id="${esc(r.id)}" aria-label="${esc(L('Editar', 'Edit'))}" title="${esc(L('Editar', 'Edit'))}">${ico('pencil', 15)}</button>` : ''}<button class="icon-btn v-ib del" data-act="vaultDel" data-id="${esc(r.id)}" aria-label="${esc(L('Excluir', 'Delete'))}" title="${esc(L('Excluir', 'Delete'))}">${ico('trash-2', 15)}</button></td></tr>`;
+  }
+  return `<div class="tbl-wrap v-scroll"><table class="tbl v-lt"><thead><tr>${th('date', L('Data', 'Date'))}<th>${esc(L('Tipo', 'Type'))}</th>${th('asset', L('Ativo', 'Asset'))}<th class="r">${esc(L('Quantidade', 'Quantity'))}</th><th class="r">${esc(L('Preço unitário', 'Unit price'))}</th>${th('amt', L(`Valor (${cur === 'BRL' ? 'R$' : 'US$'})`, `Amount (${cur})`), 'r')}<th class="hide-sm">${esc(L('Corretora e nota', 'Exchange & note'))}</th><th class="r"><span class="sr-only">${esc(L('Ações', 'Actions'))}</span></th></tr></thead><tbody>${body}</tbody></table></div>${rows.length > VL.n ? `<div style="padding:12px 18px"><button class="btn sm block" data-act="vaultMore">${esc(L(`Mostrar mais (${fmtNum(rows.length - VL.n, 0, 0)})`, `Show more (${rows.length - VL.n})`))}</button></div>` : ''}`;
+}
+ACT.vaultSort = (el) => { const k = el.dataset.k; if (VL.sort === k) VL.dir = -VL.dir; else { VL.sort = k; VL.dir = k === 'asset' ? 1 : -1; } vaultDrawList(); };
 ACT.vaultQ = debounce((el) => { VL.q = el.value; VL.n = 40; vaultDrawList(); const i = $('#v-list [data-inp=vaultQ]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 200);
 ACT.vaultF = (el) => { VL[el.dataset.k] = el.value; VL.n = 40; vaultDrawList(); const s = $(`#v-list select[data-k="${el.dataset.k}"]`); if (s) s.focus(); };
 ACT.vaultFClear = () => { Object.assign(VL, { q: '', type: '', asset: '', ex: '', year: '', n: 40 }); vaultDrawList(); };
