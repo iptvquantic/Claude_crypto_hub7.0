@@ -188,6 +188,31 @@ async function ffCalendar() {
   if (!Array.isArray(parts[0])) throw new Error('semana atual indisponível: ' + (parts[0] && parts[0].err));
   return parts.filter(Array.isArray).flat().filter((x) => x && x.title && x.date && x.country).map((x) => ({ title: String(x.title).slice(0, 120), country: x.country, date: x.date, impact: x.impact, forecast: x.forecast || '', previous: x.previous || '', actual: x.actual || '' }));
 }
+// histórico dos eventos de alto impacto dos EUA e do Brasil (resultado, previsão e anterior de cada divulgação),
+// para a página "Eventos que mexem com o mercado": ~26 meses em janelas de 2 meses; renova 1× por semana.
+async function calhist() {
+  const prev = await previous('calhist');
+  if (prev && Array.isArray(prev.ev) && prev.ev.length && freshAt(prev.generatedAt, 7 * 24)) { save('calhist', prev); return { n: prev.ev.length, cached: true }; }
+  const H = { origin: 'https://www.tradingview.com', referer: 'https://www.tradingview.com/' };
+  const now = Date.now(), seen = new Map(); let ok = 0;
+  const nn = (v) => { const n = typeof v === 'number' ? v : parseFloat(v); return Number.isFinite(n) ? n : null; };
+  for (let k = 0; k < 13; k++) {
+    const to = new Date(now - k * 60 * 86400e3).toISOString(), from = new Date(now - (k + 1) * 60 * 86400e3).toISOString();
+    try {
+      const j = await get(`https://economic-calendar.tradingview.com/events?from=${from}&to=${to}&countries=US,BR`, { as: 'json', headers: H, timeout: 30000 });
+      ok++;
+      for (const x of (j && j.result) || []) {
+        if (!x || x.importance !== 1 || !x.date || !x.title || x.actual === null || x.actual === undefined || x.actual === '') continue;
+        seen.set(String(x.id), { id: String(x.id), t: String(x.title).slice(0, 110), i: String(x.indicator || x.title).slice(0, 110), k: String(x.ticker || '').slice(0, 40), c: x.country, d: x.date,
+          a: tvNum(x.actual, x.unit, x.scale), f: tvNum(x.forecast, x.unit, x.scale), p: tvNum(x.previous, x.unit, x.scale), ar: nn(x.actualRaw ?? x.actual), fr: nn(x.forecastRaw ?? x.forecast), pr: nn(x.previousRaw ?? x.previous) });
+      }
+    } catch { /* janela que falhar fica de fora; o resto segue */ }
+  }
+  if (ok < 7) throw new Error(`TradingView: só ${ok} de 13 janelas`);
+  const ev = [...seen.values()].sort((a, b) => a.d.localeCompare(b.d));
+  save('calhist', { generatedAt: new Date().toISOString(), src: 'TradingView', ev });
+  return { n: ev.length, windows: ok };
+}
 async function calendar() {
   let ev = [], src = 'TradingView', note = '';
   try { ev = await tvCalendar(); } catch (e) { note = 'TradingView: ' + String(e.message || e); }
@@ -360,7 +385,7 @@ async function bench() {
 const CTX = { get, raw, pool, previous, save, parseRss, strip, GN, GNE };
 const t0 = Date.now();
 const prevMarkets = await previous('markets');
-for (const [name, fn] of [['news', news], ['calendar', calendar], ['markets', () => markets(prevMarkets)], ['lab', () => lab(CTX)], ['buybacks', () => buybacks(CTX)], ['whales', () => whales(CTX)], ['tokens', () => tokens(CTX)], ['bench', bench]]) {
+for (const [name, fn] of [['news', news], ['calendar', calendar], ['calhist', calhist], ['markets', () => markets(prevMarkets)], ['lab', () => lab(CTX)], ['buybacks', () => buybacks(CTX)], ['whales', () => whales(CTX)], ['tokens', () => tokens(CTX)], ['bench', bench]]) {
   try { const r = await fn(); status[name] = { ok: true, ...r }; console.log('✓', name, JSON.stringify(r)); }
   catch (e) {
     status[name] = { ok: false, err: String(e.message || e).slice(0, 160) };

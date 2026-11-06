@@ -45,7 +45,7 @@ function tkMcResult(n, dec) { // resposta do Multicall3.aggregate3 com n resulta
 }
 let calls = 0;
 let pingFails = false; let pings = []; let mcPings = []; let appPings = [];
-let cg429 = 1; // páginas do CoinGecko respondidas com "429" (limite por minuto) antes de responder normalmente
+let cg429 = 1; const bdCalls = []; let tvHist = 0; // páginas do CoinGecko respondidas com "429" (limite por minuto) antes de responder normalmente
 let prevDir = null, cmcCalls = 0; // 3ª execução: arquivos da 1ª servidos como "anteriores" (ramo data)
 const failing = new Set(['https://www.criptofacil.com/feed/', 'https://nfs.faireconomy.media/ff_calendar_nextweek.json']);
 globalThis.fetch = async (url, opts = {}) => {
@@ -59,7 +59,16 @@ globalThis.fetch = async (url, opts = {}) => {
   if (u.includes('.supabase.co/functions/v1/whatsapp?health=1')) { mcPings.push(u); return pingFails ? res('paused', false, 540) : res({ db: true, configured: true }); }
   if (failing.has(u)) return res('erro', false, 503);
   if (u.includes('community-api.coinmetrics.io/v4/timeseries')) return res({ data: cmRows() });
-  if (u.startsWith('https://bitcoin-data.com/v1/')) { const name = u.split('/v1/')[1]; if (name === 'reserve-risk') return res({ status: 404 }, false, 404); const key = { cvdd: 'cvdd', 'sth-realized-price': 'sthRealizedPrice', 'lth-realized-price': 'lthRealizedPrice', aviv: 'aviv' }[name] || 'x'; return res(bdRows(key)); }
+  if (u.startsWith('https://bitcoin-data.com/v1/')) {
+    const name = u.split('/v1/')[1].split('?')[0]; bdCalls.push(name);
+    if (name === 'reserve-risk') return res({ status: 404 }, false, 404);
+    // faixas de saldo (Baleias): só os últimos ~40 dias, valores como texto (igual à fonte)
+    const m = /^(balance|coins)-addr-(.+)$/.exec(name);
+    if (m) { const k = (m[1] === 'balance' ? 'balAddr' : 'coinsAddr') + m[2].replace(/-BTC$/, 'btc').replace(/-/g, '_'); return res(Array.from({ length: 40 }, (_, i) => ({ d: new Date(Date.now() - (40 - i) * DAY).toISOString().slice(0, 10), unixTs: '1', [k]: String(m[1] === 'balance' ? 1000 + i * 10 : 50000 + i * 100) }))); }
+    const key = { cvdd: 'cvdd', 'sth-realized-price': 'sthRealizedPrice', 'lth-realized-price': 'lthRealizedPrice', aviv: 'aviv', 'realized-profit': 'realizedProfit', 'realized-loss': 'realizedLoss' }[name] || 'x';
+    return res(bdRows(key));
+  }
+  if (u.startsWith('https://economic-calendar.tradingview.com/events') && /countries=US,BR$/.test(u)) { tvHist++; const to = Date.parse(decodeURIComponent(u.split('to=')[1].split('&')[0])); return res({ status: 'ok', result: [{ id: 'cpi-' + to, title: 'Inflation Rate YoY', indicator: 'Inflation Rate', ticker: 'ECONOMICS:USIRYY', country: 'US', importance: 1, date: new Date(to - 5 * DAY).toISOString(), actual: 2.9, forecast: 3.0, previous: 3.1, unit: '%' }, { id: 'low-' + to, title: 'Baixo', country: 'US', importance: -1, date: new Date(to - 3 * DAY).toISOString(), actual: 1 }, { id: 'fut-' + to, title: 'Futuro', country: 'US', importance: 1, date: new Date(to - DAY).toISOString(), actual: null }] }); }
   if (u.startsWith('https://api.alternative.me/fng/')) return res({ data: Array.from({ length: 900 }, (_, i) => ({ value: String(20 + (i % 60)), timestamp: String(Math.floor((now - i * DAY) / 1000)) })) });
   if (u.startsWith('https://api.llama.fi/overview/fees')) return res(llamaOverview);
   if (u.startsWith('https://api.llama.fi/summary/fees/')) { const slug = decodeURIComponent(u.split('/summary/fees/')[1].split('?')[0]); if (slug === 'papertrade') return res({ name: 'Papertrade', gecko_id: null }); const g = { hyperliquid: ['Hyperliquid', 'HYPE', 'hyperliquid'], tron: ['Tron', 'TRX', 'tron'] }[slug] || [slug, slug.toUpperCase().replace('-', ''), slug]; return res({ name: g[0], displayName: g[0], symbol: g[1], gecko_id: g[2], logo: 'https://icons.test/' + slug, category: 'Dexs', methodology: slug === 'tron' ? 'Burned TRX fees' : undefined, total24h: null, totalDataChart: Array.from({ length: 220 }, (_, i) => [Math.floor((now - (220 - i) * DAY) / 1000), 1000 + i]) }); }
@@ -150,6 +159,10 @@ ok(bb.list.find((x) => x.sym === 'TRX').type === 'burn', 'recompra: queima ident
 const wh = read('whales');
 ok(wh.top.length === 60 && wh.top[0].label === 'Exchange-0' && wh.top[0].bal === 250000 && wh.dist.length === 8 && wh.dist[1].addrPct === 1.5, 'baleias: maiores endereços e faixas de saldo');
 ok(st.sources.lab.ok && st.sources.buybacks.ok && st.sources.whales.ok, 'status registra lab, recompra e baleias');
+ok(wh.topAt && wh.bg && Object.keys(wh.bg).length === 2 && Object.values(wh.bg).every((x) => isFinite(x.v) && x.d && isFinite(x.v30)) && wh.bg['balance-addr-1-BTC'].v === 1390, 'baleias: faixas de saldo da BGeometrics (2 por execução, valor de hoje e de 30 dias antes)');
+ok(bdCalls.length === 5, `bitcoin-data.com: no máximo 5 pedidos por execução, somando Lab e Baleias (${bdCalls.length})`);
+const ch = read('calhist');
+ok(tvHist === 13 && ch.ev.length === 13 && ch.ev.every((e) => e.a === '2.9%' && e.f === '3%' && e.ar === 2.9 && e.c === 'US') && st.sources.calhist.ok, 'histórico do calendário: 26 meses, só alto impacto e o que já saiu');
 const tk = read('tokens');
 const tkEth = Object.fromEntries((tk.chains.eth || []).map(([a, d, id]) => [a, [d, id]]));
 ok(tkEth['0xdac17f958d2ee523a2206206994597c13d831ec7'] && tkEth['0xdac17f958d2ee523a2206206994597c13d831ec7'][0] === 6 && tkEth['0xdac17f958d2ee523a2206206994597c13d831ec7'][1] === 'tether', 'tokens: contrato em minúsculas, decimais e id da moeda');
@@ -187,6 +200,9 @@ ok(cmcCalls === 0 && st3.sources.etfAum.cached && st3.sources.world.cached && st
 ok(mk3.quotes['^GSPC'] && mk3.etfs.IBIT && Date.parse(mk3.generatedAt) > Date.parse(mk.generatedAt) - 1, 'cotações lidas de novo a cada execução');
 ok(st3.sources.bench.cached && JSON.parse(readFileSync(join(out3, 'bench.json'), 'utf8')).generatedAt === bj.generatedAt, 'índices de 10 anos reaproveitados (renovam a cada ~12 h)');
 ok(st.event === 'local' && st3.event === 'workflow_dispatch', 'status registra como a execução começou (agendamento, pedido ou local)');
+const wh3 = JSON.parse(readFileSync(join(out3, 'whales.json'), 'utf8'));
+ok(wh3.topAt === wh.topAt && wh3.top.length === 60 && Object.keys(wh3.bg).length === 4, 'baleias 20 min depois: lista dos 100 maiores reaproveitada e mais 2 faixas lidas');
+ok(st3.sources.calhist.cached && tvHist === 26, 'histórico do calendário reaproveitado (renova 1× por semana)');
 ok(st3.sources.appCredix && st3.sources.appCredix.cached && st3.sources.appCredix.ok && st3.sources.appCredix.at === st.sources.appCredix.at && appPings.length === 4, 'APIs dos outros apps: no máximo a cada ~5 h (20 min depois, reaproveita a última conferência)');
 console.log(`\n${fails.length ? '✗ ' + fails.length + ' falha(s)' : '✓ robô: tudo certo'} (${calls} pedidos simulados)`);
 process.exit(fails.length ? 1 : 0);
