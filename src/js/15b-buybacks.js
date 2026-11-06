@@ -265,11 +265,11 @@ async function bbChart(t, D) {
   const tot = new Array(D.N).fill(null);
   for (const s of t.src) for (let i = 0; i < D.N; i++) { const v = s.arr[i]; if (isNum(v)) tot[i] = (tot[i] || 0) + v; }
   const col = (BB_MECH()[t.src.slice().sort((a, b) => (b.d30 || 0) - (a.d30 || 0))[0].type] || BB_MECH().share).c;
-  const hs = ch.addHistogramSeries({ color: labRGBA(col, 0.8), priceLineVisible: false, lastValueVisible: false, base: 0 });
+  const hs = ch.addHistogramSeries({ color: labRGBA(col, 0.8), priceLineVisible: false, lastValueVisible: false, base: 0, nxName: L('Valor do dia', 'Daily value'), nxFmt: (v) => fmtCompact(v, 'USD') });
   const tm = (i) => ctime(D.t0 + i * 86400e3, false);
   hs.setData(tot.map((v, i) => (isNum(v) ? { time: tm(i), value: v } : null)).filter(Boolean));
   const ma = rollMean(tot.map((v) => (isNum(v) ? v : null)), 7);
-  const ls = ch.addLineSeries({ color: c.text, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  const ls = ch.addLineSeries({ color: c.text, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, nxName: L('Média de 7 dias', '7-day average'), nxFmt: (v) => fmtCompact(v, 'USD') });
   ls.setData(ma.map((v, i) => (isNum(v) ? { time: tm(i), value: v } : null)).filter(Boolean));
   ch.timeScale().fitContent();
 }

@@ -159,10 +159,11 @@ function registerWhaleSources() {
   source({
     id: 'whales', label: L('Maiores endereços de BTC', 'Largest BTC addresses'), provider: 'BitInfoCharts', every: 60 * 60e3, persist: false, kind: 'daily',
     need: () => S.page === 'whales' && WH.asset === 'bitcoin',
-    // a BitInfoCharts às vezes bloqueia o robô: vale a última lista lida (até 21 dias), sempre com a data dela
+    // faixas por tamanho de carteira: BGeometrics (ao vivo, robô a cada 3 dias). Lista dos 100 maiores: BitInfoCharts,
+    // que às vezes bloqueia o robô — vale a última lista lida, com a data dela (topAt), e depois de 21 dias só o link
     run: async () => getPipeline('whales', 21 * 86400e3),
-    validate: (d) => Array.isArray(d.top) && d.top.length > 50 && Array.isArray(d.dist) && d.dist.length > 5,
-    onData: (d) => { if (HEALTH.whales) HEALTH.whales.dataTs = Date.parse(d.generatedAt); _markDirty('WHALES'); },
+    validate: (d) => (Array.isArray(d.top) && d.top.length > 50) || !!whBgTiers(d),
+    onData: (d) => { if (HEALTH.whales) { const bg = whBgTiers(d); HEALTH.whales.dataTs = bg ? Date.parse(bg[0].d + 'T12:00:00Z') : Date.parse(d.topAt || d.generatedAt); } if (SRC.whales) SRC.whales.provider = whBgTiers(d) ? 'BGeometrics · BitInfoCharts' : 'BitInfoCharts'; _markDirty('WHALES'); },
   });
 }
 function whalesHtml() {
@@ -202,6 +203,15 @@ const WH_TIERS = () => [
   { n: L('Baleias', 'Whales'), r: '1.000–10.000 BTC', max: 10000, c: '#fb923c' },
   { n: L('Megabaleias', 'Mega whales'), r: L('10.000 BTC ou mais', '10,000 BTC or more'), max: Infinity, c: '#f87171' },
 ];
+// faixas ao vivo da BGeometrics (mesma ordem de WH_TIERS): endereços e moedas, com a variação de 30 dias
+const WH_BGK = ['1-BTC', '10-1-BTC', '100-10-BTC', '1K-100-BTC', '10K-1K-BTC', '10K-BTC'];
+function whBgTiers(W) {
+  if (!W || !W.bg) return null;
+  const T = WH_TIERS().map((t, i) => { const a = W.bg['balance-addr-' + WH_BGK[i]], c = W.bg['coins-addr-' + WH_BGK[i]]; return a && c && isNum(a.v) && isNum(c.v) ? { ...t, addr: a.v, coins: c.v, d: c.d || a.d, dc: isNum(c.v30) ? c.v - c.v30 : null, da: isNum(a.v30) ? a.v - a.v30 : null, d30: c.d30 } : null; });
+  return T.every(Boolean) ? T : null;
+}
+const whTopAt = (W) => Date.parse((W && (W.topAt || W.generatedAt)) || '');
+const whTopOk = (W) => W && Array.isArray(W.top) && W.top.length > 50 && Date.now() - whTopAt(W) <= 21 * 86400e3;
 function whRangeMin(r) { const m = String(r).match(/[[(]\s*([\d.,]+)/); return m ? parseFloat(m[1].replace(/,/g, '')) : 0; }
 function whTiers(dist) {
   const T = WH_TIERS().map((t) => ({ ...t, addr: 0, coins: 0 }));
@@ -215,18 +225,19 @@ function drawWhSum() {
   if (!W) { setHTML(box, head + (HEALTH.whales && HEALTH.whales.ok === false ? `<div class="callout">${ico('wifi-off', 18)}<span>${esc(L('O ranking de endereços não chegou agora. Veja direto na fonte:', 'The address ranking is not available right now. See it at the source:'))} ${extLink('https://bitinfocharts.com/pt/top-100-richest-bitcoin-addresses.html', 'BitInfoCharts')}</span></div>` : skel(3, 22))); return; }
   const live = PX.BTCUSDT && PX.BTCUSDT.p;
   const m = CACHE.get('mempool'); const supply = m ? supplyAt(m.v.height) : W.dist.reduce((s, d) => s + (d.coins || 0), 0);
-  const T = whTiers(W.dist); const big = T.slice(4);
+  const T = whBgTiers(W) || (Array.isArray(W.dist) ? whTiers(W.dist) : []); const big = T.slice(4);
   const bigAddr = big.reduce((s, t) => s + t.addr, 0), bigCoins = big.reduce((s, t) => s + t.coins, 0);
-  const topSum = W.top.reduce((s, x) => s + (x.bal || 0), 0);
-  const exch = W.top.filter((x) => whLabel(x.label).exch);
+  const top = whTopOk(W) ? W.top : [];
+  const topSum = top.reduce((s, x) => s + (x.bal || 0), 0);
+  const exch = top.filter((x) => whLabel(x.label).exch);
   const exchSum = exch.reduce((s, x) => s + (x.bal || 0), 0);
   const tre = CACHE.get('tre-bitcoin'); const coTot = tre && num(tre.v.total_holdings);
   const pct = (v) => (isNum(v) && supply ? fmtPct(v / supply * 100, 1, false) : '—');
-  const gen = Date.parse(W.generatedAt); const old = isNum(gen) && Date.now() - gen > 36 * 3600e3;
-  setHTML(box, head + (old ? `<div class="callout warn" style="margin-bottom:12px">${ico('history', 18)}<span>${esc(L(`Lista de ${fmtDateTime(gen)}: a BitInfoCharts está bloqueando a leitura automática agora. Mostramos a última lista lida, com a data; o robô tenta de novo a cada execução.`, `List from ${fmtDateTime(gen)}: BitInfoCharts is blocking automatic reads right now. Showing the last list read, with its date; the bot retries every run.`))} ${extLink('https://bitinfocharts.com/pt/top-100-richest-bitcoin-addresses.html', L('Ver agora na fonte', 'See it now at the source'))}</span></div>` : '') + `<div class="wh-kpis">
+  const gen = whTopAt(W); const old = isNum(gen) && Date.now() - gen > 36 * 3600e3;
+  setHTML(box, head + (old ? `<div class="callout warn" style="margin-bottom:12px">${ico('history', 18)}<span>${esc(whTopOk(W) ? L(`Lista dos 100 maiores de ${fmtDateTime(gen)}: a BitInfoCharts está bloqueando a leitura automática. As faixas por tamanho de carteira seguem ao vivo (BGeometrics); a lista mostra a última leitura, com a data.`, `Top-100 list from ${fmtDateTime(gen)}: BitInfoCharts is blocking automatic reads. Wallet-size tiers stay live (BGeometrics); the list shows the last read, with its date.`) : L('A BitInfoCharts bloqueia a leitura automática há mais de 21 dias: a lista dos 100 maiores endereços fica só na fonte. As faixas por tamanho de carteira seguem ao vivo (BGeometrics).', 'BitInfoCharts has blocked automatic reads for over 21 days: the top-100 list is only at the source. Wallet-size tiers stay live (BGeometrics).'))} ${extLink('https://bitinfocharts.com/pt/top-100-richest-bitcoin-addresses.html', L('Ver agora na fonte', 'See it now at the source'))}</span></div>` : '') + `<div class="wh-kpis">
     ${kpiBox(L('Baleias (1.000 BTC ou mais)', 'Whales (1,000+ BTC)'), esc(fmtNum(bigAddr, 0, 0)) + ` <small class="faint">${esc(L('endereços', 'addresses'))}</small>`, `${esc(L('guardam', 'hold'))} <b>${esc(fmtNum(bigCoins, 0, 0))} BTC</b> · ${esc(pct(bigCoins))} ${esc(L('da oferta', 'of supply'))}`)}
-    ${kpiBox(L('100 maiores endereços', 'Top 100 addresses'), esc(fmtNum(topSum, 0, 0)) + ' BTC', `${esc(pct(topSum))} ${esc(L('da oferta', 'of supply'))}${live ? ` · ${esc(fmtCompact(topSum * live))}` : ''}`)}
-    ${kpiBox(L('Corretoras no top 100', 'Exchanges in the top 100'), esc(fmtNum(exch.length, 0, 0)) + ` <small class="faint">${esc(L('endereços', 'addresses'))}</small>`, `${esc(fmtNum(exchSum, 0, 0))} BTC · ${esc(pct(exchSum))} ${esc(L('da oferta', 'of supply'))}`)}
+    ${top.length ? kpiBox(L('100 maiores endereços', 'Top 100 addresses'), esc(fmtNum(topSum, 0, 0)) + ' BTC', `${esc(pct(topSum))} ${esc(L('da oferta', 'of supply'))}${live ? ` · ${esc(fmtCompact(topSum * live))}` : ''}`) : kpiBox(L('Megabaleias (10 mil BTC ou mais)', 'Mega whales (10k+ BTC)'), T[5] ? esc(fmtNum(T[5].addr, 0, 0)) + ` <small class="faint">${esc(L('endereços', 'addresses'))}</small>` : '—', T[5] ? `${esc(fmtNum(T[5].coins, 0, 0))} BTC · ${esc(pct(T[5].coins))} ${esc(L('da oferta', 'of supply'))}` : '')}
+    ${top.length ? kpiBox(L('Corretoras no top 100', 'Exchanges in the top 100'), esc(fmtNum(exch.length, 0, 0)) + ` <small class="faint">${esc(L('endereços', 'addresses'))}</small>`, `${esc(fmtNum(exchSum, 0, 0))} BTC · ${esc(pct(exchSum))} ${esc(L('da oferta', 'of supply'))}`) : kpiBox(L('Baleias em 30 dias', 'Whales over 30 days'), isNum(big[0] && big[0].dc) ? `<span class="${tone(big[0].dc + big[1].dc)}">${esc((big[0].dc + big[1].dc > 0 ? '+' : '') + fmtNum(big[0].dc + big[1].dc, 0, 0))} BTC</span>` : '—', esc(L('variação das carteiras com 1.000 BTC ou mais', 'change in wallets holding 1,000+ BTC')))}
     ${kpiBox(L('Empresas de capital aberto', 'Public companies'), isNum(coTot) ? esc(fmtNum(coTot, 0, 0)) + ' BTC' : '—', isNum(coTot) ? `${esc(pct(coTot))} ${esc(L('da oferta', 'of supply'))} · CoinGecko` : esc(L('carregando…', 'loading…')))}
   </div>`);
 }
@@ -236,20 +247,23 @@ function drawWhDist() {
   const head = panelHead('chart-bar-big', L('Quanto cada tamanho de carteira guarda', 'How much each wallet size holds'), { sub: esc(L('Endereços agrupados pelo saldo, com os apelidos que o mercado usa. A barra mostra a fatia de todos os bitcoins.', 'Addresses grouped by balance, with the nicknames the market uses. The bar shows the share of all bitcoins.')), right: stamp('whales') });
   if (!W) { setHTML(box, head + skel(4, 20)); return; }
   const live = PX.BTCUSDT && PX.BTCUSDT.p;
-  const T = whTiers(W.dist); const tot = T.reduce((s, t) => s + t.coins, 0) || 1; const totA = T.reduce((s, t) => s + t.addr, 0) || 1;
+  const BG = whBgTiers(W);
+  const T = BG || (Array.isArray(W.dist) ? whTiers(W.dist) : []); const tot = T.reduce((s, t) => s + t.coins, 0) || 1; const totA = T.reduce((s, t) => s + t.addr, 0) || 1;
   const stack = `<div class="wh-stack">${T.map((t) => `<i style="width:${t.coins / tot * 100}%;background:${t.c}" title="${esc(`${t.n}: ${fmtPct(t.coins / tot * 100, 1, false)}`)}"></i>`).join('')}</div>`;
   const rows = T.map((t) => `<div class="wh-tier"><span class="sw" style="background:${t.c}"></span><span class="grow"><b>${esc(t.n)}</b><span class="faint tiny">${esc(t.r)}</span></span>
     <span class="c"><b>${esc(fmtPct(t.coins / tot * 100, 1, false))}</b><span class="tiny faint">${esc(fmtNum(t.coins, 0, 0))} BTC</span></span>
     <span class="c hide-m"><b>${esc(fmtCompact(t.addr, ''))}</b><span class="tiny faint">${esc(L('endereços', 'addresses'))} · ${esc(t.addr / totA * 100 < 0.001 ? '<0,001%' : fmtPct(t.addr / totA * 100, t.addr / totA < 0.001 ? 3 : 1, false))}</span></span>
-    <span class="c hide-m">${live ? `<b>${esc(fmtCompact(t.coins * live))}</b><span class="tiny faint">${esc(L('valor agora', 'value now'))}</span>` : ''}</span></div>`).join('');
-  const det = `<details class="wh-det"><summary>${esc(L('Ver as 12 faixas detalhadas', 'See the 12 detailed ranges'))}</summary><div class="tbl-wrap" style="margin:8px 0 0"><table class="tbl"><thead><tr><th>${esc(L('Saldo (BTC)', 'Balance (BTC)'))}</th><th class="r">${esc(L('Endereços', 'Addresses'))}</th><th class="r">${esc(L('% dos endereços', '% of addresses'))}</th><th class="r">BTC</th><th class="r">${esc(L('% das moedas', '% of coins'))}</th></tr></thead><tbody>${W.dist.map((d) => `<tr><td>${esc(d.range)}</td><td class="r">${esc(fmtNum(d.addr, 0, 0))}</td><td class="r">${esc(fmtPct(d.addrPct, 2, false))}</td><td class="r">${esc(fmtNum(d.coins, 0, d.coins < 100 ? 2 : 0))}</td><td class="r">${esc(fmtPct(d.coinsPct, 2, false))}</td></tr>`).join('')}</tbody></table></div></details>`;
-  setHTML(box, head + stack + `<div class="wh-tiers">${rows}</div>` + det + note(L('Fonte: BitInfoCharts (atualizado pelo robô a cada 6 horas). O valor em dólar usa o preço ao vivo. Endereços de corretoras e custodiantes de ETFs aparecem como "megabaleias", mas guardam moedas de muitos clientes.', 'Source: BitInfoCharts (updated by the robot every 6 hours). Dollar value uses the live price. Exchange and ETF-custodian addresses show up as "mega whales" but hold many clients’ coins.')));
+    <span class="c hide-m">${live ? `<b>${esc(fmtCompact(t.coins * live))}</b><span class="tiny faint">${esc(L('valor agora', 'value now'))}</span>` : ''}</span>${BG ? `<span class="c wh-30">${isNum(t.dc) ? `<b class="${tone(t.dc)}">${esc((t.dc > 0 ? '+' : '') + fmtNum(t.dc, 0, 0))} BTC</b><span class="tiny ${t.dc >= 0 ? 'up' : 'down'}">${esc(t.dc >= 0 ? L('acumulando · 30 d', 'accumulating · 30 d') : L('distribuindo · 30 d', 'distributing · 30 d'))}</span>` : '<span class="faint">—</span>'}</span>` : ''}</div>`).join('');
+  const det = !Array.isArray(W.dist) || !W.dist.length ? '' : `<details class="wh-det"><summary>${esc(L('Ver as 12 faixas detalhadas', 'See the 12 detailed ranges'))}</summary><div class="tbl-wrap" style="margin:8px 0 0"><table class="tbl"><thead><tr><th>${esc(L('Saldo (BTC)', 'Balance (BTC)'))}</th><th class="r">${esc(L('Endereços', 'Addresses'))}</th><th class="r">${esc(L('% dos endereços', '% of addresses'))}</th><th class="r">BTC</th><th class="r">${esc(L('% das moedas', '% of coins'))}</th></tr></thead><tbody>${W.dist.map((d) => `<tr><td>${esc(d.range)}</td><td class="r">${esc(fmtNum(d.addr, 0, 0))}</td><td class="r">${esc(fmtPct(d.addrPct, 2, false))}</td><td class="r">${esc(fmtNum(d.coins, 0, d.coins < 100 ? 2 : 0))}</td><td class="r">${esc(fmtPct(d.coinsPct, 2, false))}</td></tr>`).join('')}</tbody></table></div></details>`;
+  const src = BG ? L(`Fonte: BGeometrics (bitcoin-data.com), dado de ${fmtDate(BG[0].d + 'T12:00:00Z', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}, lido pelo robô a cada 3 dias; a variação compara com 30 dias antes. As 12 faixas detalhadas são da BitInfoCharts (${fmtDate(whTopAt(W))}).`, `Source: BGeometrics (bitcoin-data.com), data from ${fmtDate(BG[0].d + 'T12:00:00Z', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}, read by the robot every 3 days; the change compares with 30 days earlier. The 12 detailed ranges are from BitInfoCharts (${fmtDate(whTopAt(W))}).`) : L(`Fonte: BitInfoCharts (${fmtDateTime(whTopAt(W))}).`, `Source: BitInfoCharts (${fmtDateTime(whTopAt(W))}).`);
+  setHTML(box, head + stack + `<div class="wh-tiers${BG ? ' bg' : ''}">${rows}</div>` + det + note(src + ' ' + L('O valor em dólar usa o preço ao vivo. Endereços de corretoras e custodiantes de ETFs aparecem como "megabaleias", mas guardam moedas de muitos clientes.', 'Dollar value uses the live price. Exchange and ETF-custodian addresses show up as "mega whales" but hold many clients’ coins.')));
 }
 function drawWhTop() {
   const box = $('#wh-top'); if (!box) return;
   const w = CACHE.get('whales'); const W = w && w.v;
   const head = `<div class="panel-h" style="padding:16px 18px 10px;margin:0"><div class="tt"><h2 class="panel-t">${ico('crown', 18)}${esc(L('Os 100 maiores endereços de bitcoin', 'The 100 largest bitcoin addresses'))}</h2><p class="panel-s">${esc(L('Saldo, dono conhecido (quando identificado) e quando o endereço enviou moedas pela última vez.', 'Balance, known owner (when identified) and when the address last sent coins.'))}</p></div>${seg('whf', [['all', L('Todos', 'All')], ['exch', L('Corretoras', 'Exchanges')], ['other', L('Outros donos', 'Other owners')], ['anon', L('Sem dono conhecido', 'Unknown owner')]], WH.filt)}</div>`;
   if (!W) { setHTML(box, head + `<div style="padding:0 18px 18px">${skel(6, 18)}</div>`); return; }
+  if (!whTopOk(W)) { setHTML(box, head + `<div style="padding:0 18px 18px"><div class="callout">${ico('history', 18)}<span>${esc(L('A lista dos 100 maiores endereços vem da BitInfoCharts, que está bloqueando a leitura automática há mais de 21 dias. Veja a lista atual direto na fonte:', 'The top-100 list comes from BitInfoCharts, which has blocked automatic reads for over 21 days. See the current list at the source:'))} ${extLink('https://bitinfocharts.com/pt/top-100-richest-bitcoin-addresses.html', 'BitInfoCharts')}</span></div></div>`); return; }
   const live = PX.BTCUSDT && PX.BTCUSDT.p;
   const list = W.top.map((x) => ({ ...x, lb: whLabel(x.label) })).filter((x) => WH.filt === 'all' || (WH.filt === 'exch' ? x.lb.exch : WH.filt === 'other' ? x.lb.n && !x.lb.exch : !x.lb.n));
   const shown = WH.all ? list : list.slice(0, 20);
@@ -262,7 +276,7 @@ function drawWhTop() {
       <td>${dormant ? `<span class="badge">${esc(L('parado', 'dormant'))}</span> ` : ''}<span class="small">${esc(whAgeTxt(out))}</span></td><td class="small muted">${inn ? esc(whAgeTxt(inn)) : '—'}</td></tr>`;
   }).join('');
   setHTML(box, head + `<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="r">#</th><th>${esc(L('Endereço', 'Address'))}</th><th class="r">BTC</th><th class="r">${esc(L('% da oferta', '% of supply'))}</th><th class="r">${esc(L('Valor agora', 'Value now'))}</th><th>${esc(L('Última saída', 'Last sent'))}</th><th>${esc(L('Última entrada', 'Last received'))}</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="center faint">${esc(L('Nenhum endereço neste filtro.', 'No address in this filter.'))}</td></tr>`}</tbody></table></div>
-    <div class="row wrap between" style="padding:10px 18px 16px;gap:8px">${list.length > 20 ? `<button class="btn sm" data-act="whAll">${ico(WH.all ? 'chevron-up' : 'chevron-down', 15)}${esc(WH.all ? L('Mostrar menos', 'Show less') : L(`Mostrar todos (${list.length})`, `Show all (${list.length})`))}</button>` : '<span></span>'}<span class="tiny faint">${esc(L('"Parado" = não envia moedas há mais de 3 anos. Clique no endereço para ver no mempool.space. Fonte: BitInfoCharts.', '"Dormant" = has not sent coins for over 3 years. Click an address to open it on mempool.space. Source: BitInfoCharts.'))}</span></div>`);
+    <div class="row wrap between" style="padding:10px 18px 16px;gap:8px">${list.length > 20 ? `<button class="btn sm" data-act="whAll">${ico(WH.all ? 'chevron-up' : 'chevron-down', 15)}${esc(WH.all ? L('Mostrar menos', 'Show less') : L(`Mostrar todos (${list.length})`, `Show all (${list.length})`))}</button>` : '<span></span>'}<span class="tiny faint">${esc(L(`"Parado" = não envia moedas há mais de 3 anos. Clique no endereço para ver no mempool.space. Fonte: BitInfoCharts, lista de ${fmtDateTime(whTopAt(W))}.`, `"Dormant" = has not sent coins for over 3 years. Click an address to open it on mempool.space. Source: BitInfoCharts, list from ${fmtDateTime(whTopAt(W))}.`))}</span></div>`);
 }
 function drawWhales() {
   const isBtc = WH.asset === 'bitcoin';

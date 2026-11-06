@@ -290,7 +290,7 @@ async function drawOcMining() {
   const hs = ch.addAreaSeries({ lineColor: cc.info, topColor: labRGBA('#62b4ff', 0.22), bottomColor: labRGBA('#62b4ff', 0), lineWidth: 2, priceLineVisible: false, title: 'EH/s' });
   hs.setData(M.hash.map((x) => ({ time: ctime(x.t, false), value: x.v / 1e18 })));
   const ma = rollMean(M.hash.map((x) => x.v / 1e18), 30);
-  const ms = ch.addLineSeries({ color: cc.signal, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  const ms = ch.addLineSeries({ color: cc.signal, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, nxName: L('Hashrate · média de 30 dias (EH/s)', 'Hashrate · 30-day average (EH/s)'), nxFmt: (v) => fmtNum(v, 0, 0) });
   ms.setData(M.hash.map((x, i) => (isNum(ma[i]) ? { time: ctime(x.t, false), value: ma[i] } : null)).filter(Boolean));
   const ds = ch.addLineSeries({ color: cc.text3, lineWidth: 2, lineType: 1, priceScaleId: 'left', priceLineVisible: false, lastValueVisible: true, title: L('dificuldade (T)', 'difficulty (T)') });
   const first = M.hash[0] && M.hash[0].t;

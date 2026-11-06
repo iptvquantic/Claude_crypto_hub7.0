@@ -116,14 +116,14 @@ async function chartRender(seq, keepRange) {
     timeScale: { rightOffset: 6, barSpacing: 8, minBarSpacing: 0.6 },
   });
   const kl = CH.kl; const D = chartSeriesData();
-  const cs = ch.addCandlestickSeries({ upColor: c.up, downColor: c.down, wickUpColor: c.up, wickDownColor: c.down, borderVisible: false, priceLineColor: c.text3 });
+  const cs = ch.addCandlestickSeries({ upColor: c.up, downColor: c.down, wickUpColor: c.up, wickDownColor: c.down, borderVisible: false, priceLineColor: c.text3, nxName: (BY_SYM[CH.s] && BY_SYM[CH.s].b) || CH.s });
   cs.setData(kl.map((k) => ({ time: ctime(k.t, intraday), open: k.o, high: k.h, low: k.l, close: k.c })));
   CH.cs = cs;
   const line = (vals, color, opts = {}) => { const s = ch.addLineSeries({ color, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, ...opts }); s.setData(lineData(kl, vals, intraday)); return s; };
-  D.mas.forEach((v, i) => line(v, maColor(i)));
-  if (D.bb) { const col = c.text3; line(D.bb.up, col, { lineWidth: 1, lineStyle: 2 }); line(D.bb.lo, col, { lineWidth: 1, lineStyle: 2 }); line(D.bb.mid, col, { lineWidth: 1 }); }
+  D.mas.forEach((v, i) => line(v, maColor(i), { nxName: maLabel(CH.mas[i]) }));
+  if (D.bb) { const col = c.text3; line(D.bb.up, col, { lineWidth: 1, lineStyle: 2, nxName: L('Bollinger (superior)', 'Bollinger (upper)') }); line(D.bb.lo, col, { lineWidth: 1, lineStyle: 2, nxName: L('Bollinger (inferior)', 'Bollinger (lower)') }); line(D.bb.mid, col, { lineWidth: 1, nxName: L('Bollinger (média 20)', 'Bollinger (20 MA)') }); }
   if (CH.vol) {
-    const vs = ch.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false });
+    const vs = ch.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false, nxName: L('Volume (US$)', 'Volume (US$)'), nxFmt: (v) => fmtCompact(v, 'USD') });
     ch.priceScale('vol').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
     vs.setData(kl.map((k) => ({ time: ctime(k.t, intraday), value: k.qv, color: (k.c >= k.o ? c.up : c.down) + '55' })));
     CH.vs = vs;
@@ -205,7 +205,7 @@ async function chartRsi(seq, D, c, LWC) {
     handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: false } },
   });
   const kl = CH.kl, intraday = CH.intraday;
-  const rs = rch.addLineSeries({ color: c.accent, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }) });
+  const rs = rch.addLineSeries({ color: c.accent, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, nxName: 'RSI 14', nxFmt: (v) => fmtNum(v, 1, 1), autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }) });
   // pontos vazios onde ainda não há RSI: mantém as velas alinhadas com o gráfico de cima
   rs.setData(kl.map((k, i) => (isNum(D.rsi[i]) ? { time: ctime(k.t, intraday), value: D.rsi[i] } : { time: ctime(k.t, intraday) })));
   for (const [lv, col] of [[70, c.down], [50, c.text3], [30, c.up]]) rs.createPriceLine({ price: lv, color: col, lineWidth: 1, lineStyle: 2, axisLabelVisible: lv !== 50, title: '' });

@@ -28,7 +28,12 @@ Responda ao dono em português do Brasil, direto. Ele não programa: entregue pr
 - `scripts/atualizar-dados.mjs` publica `news.json`, `calendar.json`, `markets.json`, `status.json` no ramo órfão `data` (force-push). O site lê por `raw.githubusercontent.com`; se o arquivo estiver velho, busca direto. Também mantém ativos o banco do NEXUS (`rpc/ping`) e o do Meu Caixa (projeto `meu-caixa-br`, pela função `whatsapp?health=1`, sem chave; status `dbMc`) e acorda as APIs do LicitaFácil e do CREDIX no Render no máximo a cada ~5 h (`appLicitafacil`/`appCredix`, para os bancos delas não pausarem sem gastar as 750 h grátis do Render) — falha nunca derruba a execução.
 - Teste sem internet: `node dev/test-robot.mjs` (3 execuções: normal, banco pausado e "20 min depois", com os arquivos anteriores).
 - O que muda devagar não é lido a cada execução (`freshAt`): companiesmarketcap no máximo a cada 1–2 h, recompras 3 h, baleias 6 h, tokens 20 h. Cotações sempre.
+- BGeometrics (bitcoin-data.com, grátis: ~10 pedidos/h por IP): teto de 5 por execução (`BD_BUDGET`, Lab 3 + baleias 2). Lab guarda também lucro/prejuízo realizados (todos/LTH/STH, US$ milhões, prejuízo negativo). Baleias: `whales.json` tem `top`/`dist` (BitInfoCharts, data em `topAt`) e `bg` (faixas da BGeometrics, a cada 3 dias). `calhist.json`: histórico de 2 anos dos indicadores de alto impacto (TradingView, EUA e BR), renovado por semana.
 - CoinGecko grátis (tokens): 7 s entre as páginas; no 429 espera 65 s e tenta de novo (até 4 vezes, teto de 4 min — o job tem 12 min). BitInfoCharts (baleias) responde 403 ao robô desde 19/10/2026: o site mostra a última leitura com a data e, depois de 21 dias, o link da fonte.
+
+## Eventos do mercado (`17b-events.js`)
+- Junta `allEvents()` (calendários oficiais + robô) com eventos cripto: vencimentos da Deribit (API pública, CORS liberado; só os acima de US$ 1 bi), ajuste de dificuldade e halving (mempool.space). Famílias (`EV_FAM`) ligam cada evento ao histórico do `calhist.json`; a reação do BTC usa velas de 5 min da Binance a partir do minuto da divulgação (guardada em `nx3:ev-react`, até 300 itens).
+- Burn, Baby, Burn é PRO desde a 3.5.0 (fonte `buybacks` só roda para PRO).
 
 ## Wallet Watch (grátis)
 - `19b-wallets-core.js`: bloco puro entre `==WWC-START==`/`==WWC-END==` (hashes, base58/bech32, secp256k1 só público, BIP32 xpub, EIP-55, ENS, TON e `wwDetect`, que BLOQUEIA frase-semente/chave privada) testado no Node por `dev/test-wallets.mjs`; depois dele, os leitores de cada rede (`WW_READERS`) e os preços.

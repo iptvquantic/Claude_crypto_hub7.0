@@ -218,7 +218,7 @@ async function vaultDrawAsset(H) {
       s = ch.addCandlestickSeries({ ...candleOpts(c), lastValueVisible: true, title: h.sym, nxFmt: (v) => money(v) });
       s.setData(ks.filter((k) => byT.has(k.t)).map((k) => { const m = byT.get(k.t); return { time: ctime(k.t, false), open: k.o * m, high: k.h * m, low: k.l * m, close: k.c * m }; }));
     } else {
-      s = ch.addAreaSeries({ lineColor: c.accent, topColor: 'rgba(142,152,255,.28)', bottomColor: 'rgba(142,152,255,0)', lineWidth: 2, priceLineVisible: false, crosshairMarkerRadius: 4 });
+      s = ch.addAreaSeries({ lineColor: c.accent, topColor: 'rgba(142,152,255,.28)', bottomColor: 'rgba(142,152,255,0)', lineWidth: 2, priceLineVisible: false, crosshairMarkerRadius: 4, nxName: L(`${h.sym} (fechamento)`, `${h.sym} (close)`), nxFmt: (v) => money(v) });
       s.setData(series.map((p) => ({ time: ctime(p.t, false), value: p.v })));
     }
     // preço médio passo a passo (mesma contabilidade da tabela)
@@ -242,7 +242,7 @@ async function vaultDrawAsset(H) {
       if (nextT > avgPts[i].t) avgLine.push({ time: ctime(nextT, false), value: avgPts[i].v });
     }
     if (avgLine.length) {
-      const al = ch.addLineSeries({ color: c.signal, lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+      const al = ch.addLineSeries({ color: c.signal, lineWidth: 2, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, nxName: L('Seu preço médio', 'Your average cost'), nxFmt: (v) => money(v) });
       al.setData(avgLine);
     }
     // marcadores: um por dia e tipo (com muitos lançamentos, um por semana ou por mês), tamanho pelo valor

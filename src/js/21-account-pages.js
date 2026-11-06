@@ -157,7 +157,7 @@ page({
 });
 
 // ---------- PAINEL DO ADMINISTRADOR ----------
-const ADM = { q: '', users: [], claims: [], ov: null, err: '', pipe: null, robot: null, robotMissing: false, robotErr: '' };
+const ADM = { q: '', f: 'all', users: [], claims: [], ov: null, err: '', pipe: null, robot: null, robotMissing: false, robotErr: '' };
 async function admLoad() {
   ADM.err = '';
   try {
@@ -230,17 +230,12 @@ function admDraw() {
   box.innerHTML = `<div class="panel flush"><div class="strip">${[[L('Usuários', 'Users'), o.users], [L('PRO ativos', 'Active PRO'), o.pro_active], [L('Em teste', 'On trial'), o.trial_active], [L('Vencidos', 'Expired'), o.expired], [L('Novos em 7 dias', 'New in 7 days'), o.new_7d], [L('Pedidos pendentes', 'Pending requests'), o.claims_pending], [L('Aportes salvos', 'Saved entries'), o.entries]].map(([k, v]) => `<div><div class="k">${esc(k)}</div><div class="v">${isNum(num(v)) ? esc(fmtNum(num(v), 0, 0)) : '—'}</div></div>`).join('')}</div></div>
   <section class="panel mt">${panelHead('credit-card', L('Pedidos de ativação (já paguei)', 'Activation requests'), { sub: esc(L('Confira o pagamento no PagBank antes de aprovar. Aprovar dá o PRO pelos dias do plano.', 'Check the payment in PagBank before approving. Approving grants PRO for the plan’s days.')) })}
     ${ADM.claims.length ? `<div class="list">${ADM.claims.map((c) => `<div class="li" style="flex-wrap:wrap"><span class="grow" style="min-width:220px"><span class="t" style="display:block">${esc(c.email)} · ${esc(PLAN_NAMES()[c.plan] || c.plan)} (${esc(brl(NX.planPrices[c.plan], [2, 2]))})</span><span class="m">${esc(fmtDateTime(c.created_at))} · ${esc(c.note || '')}</span></span><button class="btn sm pri" data-act="admApprove" data-u="${esc(c.user_id)}" data-p="${esc(c.plan)}">${ico('check', 15)}${esc(L(`Aprovar (+${NX.planDays[c.plan]} dias)`, `Approve (+${NX.planDays[c.plan]} days)`))}</button><button class="btn sm ghost" data-act="admReject" data-c="${esc(c.id)}">${esc(L('Recusar', 'Reject'))}</button></div>`).join('')}</div>` : `<p class="small muted">${esc(L('Nenhum pedido pendente.', 'No pending requests.'))}</p>`}</section>
-  <section class="panel flush mt"><div class="panel-h" style="padding:16px 18px 10px;margin:0"><div class="tt"><h2 class="panel-t">${ico('user', 18)}${esc(L('Usuários', 'Users'))}</h2></div><div class="inp-search" style="min-width:min(280px,100%)">${ico('search', 17)}<input class="inp" type="search" id="adm-q" placeholder="${esc(L('Buscar e-mail ou nome', 'Search e-mail or name'))}" value="${esc(ADM.q)}" data-inp="admQ" autocomplete="off" style="height:36px"></div></div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>${esc(L('Usuário', 'User'))}</th><th>${esc(L('Plano', 'Plan'))}</th><th>${esc(L('Validade', 'Expiry'))}</th><th class="r">${esc(L('Aportes', 'Entries'))}</th><th>${esc(L('Visto por último', 'Last seen'))}</th><th class="r">${esc(L('Ações', 'Actions'))}</th></tr></thead><tbody>${ADM.users.map((u) => {
-    const adm = u.plan === 'admin' || u.plan === 'master'; const exp = Date.parse(u.plan_expiry); const valid = exp > Date.now();
-    return `<tr style="${u.active ? '' : 'opacity:.55'}"><td><b>${esc(u.email)}</b><div class="tiny faint">${esc(u.name || '')} · ${esc(L('desde', 'since'))} ${esc(fmtDate(u.created_at))}${u.pending_claims ? ` · <span class="up">${esc(L('pedido pendente', 'pending request'))}</span>` : ''}</div></td><td><span class="badge ${adm ? 'pro' : u.plan === 'pro' && valid ? 'pro' : u.plan === 'trial' && valid ? 'live' : 'warn'}">${esc(adm ? L('admin', 'admin') : u.plan)}</span>${u.active ? '' : ` <span class="badge bad">${esc(L('desativado', 'disabled'))}</span>`}</td><td class="${valid || adm ? '' : 'down'}">${adm ? '∞' : esc(fmtDate(exp))}</td><td class="r">${esc(fmtNum(num(u.entries), 0, 0))}</td><td class="muted">${u.last_seen_at ? esc(ago(Date.parse(u.last_seen_at))) : '—'}</td><td class="r nowrap">${adm ? '' : `<div class="rel" style="display:inline-block"><button class="btn xs" data-act="menu" aria-haspopup="menu" aria-expanded="false">${esc(L('Gerenciar', 'Manage'))}${ico('chevron-down', 14)}</button><div class="menu" role="menu">
-      ${Object.entries(NX.planDays).map(([k, d]) => `<button class="menu-i" data-act="admPlan" data-u="${esc(u.id)}" data-p="pro" data-d="${d}">${ico('crown', 16)}PRO +${d} ${esc(L('dias', 'days'))} (${esc(PLAN_NAMES()[k])})</button>`).join('')}
-      <button class="menu-i" data-act="admPlan" data-u="${esc(u.id)}" data-p="trial" data-d="7">${ico('clock', 16)}${esc(L('Estender teste +7 dias', 'Extend trial +7 days'))}</button>
-      <button class="menu-i" data-act="admPlan" data-u="${esc(u.id)}" data-p="free" data-d="">${ico('user', 16)}${esc(L('Mudar para gratuito', 'Set to free'))}</button>
-      <div class="menu-sep"></div>
-      <button class="menu-i" data-act="admActive" data-u="${esc(u.id)}" data-v="${u.active ? '0' : '1'}">${ico(u.active ? 'lock' : 'check', 16)}${esc(u.active ? L('Desativar conta', 'Disable account') : L('Reativar conta', 'Enable account'))}</button>
-      <button class="menu-i" data-act="admReset" data-u="${esc(u.id)}" data-e="${esc(u.email)}">${ico('key-round', 16)}${esc(L('Gerar senha temporária', 'Generate temporary password'))}</button></div></div>`}</td></tr>`;
-  }).join('')}</tbody></table></div></section>
+  <section class="panel flush mt"><div class="panel-h" style="padding:16px 18px 10px;margin:0"><div class="tt"><h2 class="panel-t">${ico('user', 18)}${esc(L('Usuários', 'Users'))}</h2><p class="panel-s">${esc(L('Clique em "Ações" para renovar, dar dias, estender o teste, desativar ou gerar senha temporária.', 'Click "Actions" to renew, add days, extend the trial, disable or generate a temporary password.'))}</p></div><div class="inp-search" style="min-width:min(280px,100%)">${ico('search', 17)}<input class="inp" type="search" id="adm-q" placeholder="${esc(L('Buscar e-mail ou nome', 'Search e-mail or name'))}" value="${esc(ADM.q)}" data-inp="admQ" autocomplete="off" style="height:36px"></div></div>
+  <div class="adm-flt">${ADM_F().map(([k, t, c]) => { const n = ADM.users.filter((u) => k === 'all' || admSt(u) === k || (k === 'soon' && admSt(u) === 'soon')).length; return `<button class="lab-cat" style="--cc:${c}" data-act="admF" data-k="${k}" aria-pressed="${ADM.f === k}">${esc(t)} <b>${n}</b></button>`; }).join('')}</div>
+  <div class="tbl-wrap"><table class="tbl adm-ut"><thead><tr><th>${esc(L('Usuário', 'User'))}</th><th>${esc(L('Plano', 'Plan'))}</th><th>${esc(L('Validade', 'Expiry'))}</th><th class="r">${esc(L('Aportes', 'Entries'))}</th><th>${esc(L('Visto por último', 'Last seen'))}</th><th class="r">${esc(L('Ações', 'Actions'))}</th></tr></thead><tbody>${ADM.users.filter((u) => ADM.f === 'all' || admSt(u) === ADM.f).map((u) => {
+    const adm = u.plan === 'admin' || u.plan === 'master'; const exp = Date.parse(u.plan_expiry); const st = admSt(u);
+    return `<tr class="${u.active ? '' : 'off'}"><td><b>${esc(u.email)}</b><div class="tiny faint">${esc(u.name || '')} · ${esc(L('desde', 'since'))} ${esc(fmtDate(u.created_at))}${u.pending_claims ? ` · <span class="up">${esc(L('pedido pendente', 'pending request'))}</span>` : ''}</div></td><td><span class="badge ${adm ? 'pro' : st === 'pro' || (u.plan === 'pro' && st === 'soon') ? 'pro' : u.plan === 'trial' && st !== 'exp' ? 'live' : 'warn'}">${esc(adm ? L('admin', 'admin') : PLAN_LBL()[u.plan] || u.plan)}</span>${u.active ? '' : ` <span class="badge bad">${esc(L('desativado', 'disabled'))}</span>`}</td><td>${adm ? '∞' : `${esc(fmtDate(exp))}<div>${admDaysChip(u)}</div>`}</td><td class="r">${esc(fmtNum(num(u.entries), 0, 0))}</td><td class="muted">${u.last_seen_at ? esc(ago(Date.parse(u.last_seen_at))) : '—'}</td><td class="r nowrap">${adm ? '' : `<button class="btn sm adm-act" data-act="admUser" data-u="${esc(u.id)}">${ico('sliders-horizontal', 15)}${esc(L('Ações', 'Actions'))}</button>`}</td></tr>`;
+  }).join('') || `<tr><td colspan="6" class="center faint">${esc(L('Nenhum usuário neste filtro.', 'No users in this filter.'))}</td></tr>`}</tbody></table></div></section>
   <section class="panel mt">${panelHead('server', L('Robô de dados (GitHub Actions)', 'Data bot (GitHub Actions)'), { sub: esc(L('Traz o que o navegador não consegue (notícias, agenda global, bolsas e índices) e mantém ativos os bancos de dados do NEXUS e do Meu Caixa e as APIs do LicitaFácil e do CREDIX.', 'Fetches what the browser cannot (news, global calendar, indices) and keeps the NEXUS and Meu Caixa databases and the LicitaFácil and CREDIX APIs awake.')) })}
     ${pipe ? `<div class="small muted">${esc(L('Última execução:', 'Last run:'))} <b>${esc(fmtDateTime(Date.parse(pipe.generatedAt)))}</b> (${esc(ago(Date.parse(pipe.generatedAt)))})${pipe.event ? ` · ${esc(pipeEvent(pipe.event))}` : ''}</div>${pipe.sources && pipe.sources.db && !pipe.sources.db.ok ? `<div class="callout warn mt">${ico('triangle-alert', 18)}<span>${esc(L('Na última execução o robô não conseguiu falar com o banco de dados. Se o Supabase pausou o projeto por falta de uso, abra o painel e clique em "Resume project".', 'On its last run the bot could not reach the database. If Supabase paused the project for inactivity, open the dashboard and click "Resume project".'))} ${extLink('https://supabase.com/dashboard/project/' + NX.supabaseUrl.split('//')[1].split('.')[0], L('Painel do Supabase', 'Supabase dashboard'))}</span></div>` : ''}${pipe.sources && pipe.sources.dbMc && !pipe.sources.dbMc.ok ? `<div class="callout warn mt">${ico('triangle-alert', 18)}<span>${esc(L('O banco do Meu Caixa não respondeu na última execução. Se o Supabase pausou o projeto meu-caixa-br, abra o painel e clique em "Resume project".', 'The Meu Caixa database did not answer on the last run. If Supabase paused the meu-caixa-br project, open the dashboard and click "Resume project".'))} ${extLink('https://supabase.com/dashboard/project/' + MC_SB_REF, L('Painel do Meu Caixa', 'Meu Caixa dashboard'))}</span></div>` : ''}<div class="list mt">${Object.entries(pipe.sources || {}).map(([k, v]) => `<div class="li"><span class="grow t">${esc(pipeName(k))}</span><span class="small faint">${esc(v.n != null ? v.n + ' ' + L('itens', 'items') : '')}${v.cached || v.kept ? ' · ' + esc(L('lido há pouco, reaproveitado', 'read recently, reused')) : ''}</span><span class="badge ${v.ok ? 'live' : 'bad'}">${esc(v.ok ? 'ok' : (v.err || L('falhou', 'failed')).slice(0, 60))}</span></div>`).join('')}</div>` : `<div class="callout warn">${ico('triangle-alert', 18)}<span>${esc(L('O robô ainda não publicou o arquivo de status. Confira a aba Actions do repositório.', 'The bot has not published its status file yet. Check the repository Actions tab.'))} ${extLink(NX.repoUrl + '/actions', 'GitHub Actions')}</span></div>`}
     <div class="adm-robot mt">${admRobotHtml()}</div></section>`;
@@ -254,6 +249,70 @@ function pipeName(k) {
 }
 const pipeEvent = (e) => ({ schedule: L('agendamento do GitHub', 'GitHub schedule'), workflow_dispatch: L('pedido (agendador do banco ou botão Run workflow)', 'requested (scheduler or Run workflow)'), push: L('publicação', 'push') }[e] || e);
 ACT.admReload = () => admLoad();
+// situação de cada conta (para filtrar e colorir): vence em até 7 dias, vencida, desativada…
+const ADM_F = () => [['all', L('Todos', 'All'), 'var(--accent)'], ['pro', 'PRO', 'var(--up)'], ['trial', L('Em teste', 'On trial'), 'var(--info)'], ['soon', L('Vencem em 7 dias', 'Expire in 7 days'), 'var(--signal)'], ['exp', L('Vencidos', 'Expired'), 'var(--down)'], ['free', L('Gratuitos', 'Free'), 'var(--text-3)'], ['off', L('Desativados', 'Disabled'), 'var(--text-3)']];
+const PLAN_LBL = () => ({ pro: 'PRO', trial: L('teste', 'trial'), free: L('gratuito', 'free') });
+const admDaysLeft = (u) => Math.ceil((Date.parse(u.plan_expiry) - Date.now()) / 86400e3);
+function admSt(u) {
+  if (u.plan === 'admin' || u.plan === 'master') return 'admin';
+  if (!u.active) return 'off';
+  if (u.plan === 'free') return 'free';
+  const d = admDaysLeft(u); if (!isNum(d) || d <= 0) return 'exp';
+  return d <= 7 ? 'soon' : u.plan === 'pro' ? 'pro' : 'trial';
+}
+function admDaysChip(u) {
+  const d = admDaysLeft(u); if (!isNum(d)) return '';
+  if (u.plan === 'free') return `<span class="adm-dc">${esc(L('sem plano', 'no plan'))}</span>`;
+  if (d <= 0) return `<span class="adm-dc down">${esc(L(`vencido há ${-d + 1 > 1 ? `${-d + 1} dias` : '1 dia'}`, `expired ${-d + 1} day(s) ago`))}</span>`;
+  return `<span class="adm-dc ${d <= 7 ? 'warn' : 'up'}">${esc(L(`faltam ${d} ${d === 1 ? 'dia' : 'dias'}`, `${d} day(s) left`))}</span>`;
+}
+ACT.admF = (el) => { ADM.f = el.dataset.k; admDraw(); };
+// janela de ações de um usuário: renovar (a partir do vencimento atual ou de hoje), dar dias, teste, conta
+ACT.admUser = (el) => {
+  const u = ADM.users.find((x) => x.id === el.dataset.u); if (!u) return;
+  const exp = Date.parse(u.plan_expiry); const base = Math.max(exp, Date.now());
+  const until = (d) => fmtDate(base + d * 86400e3, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const renew = Object.entries(NX.planDays).map(([k, d]) => `<button class="adm-rn" data-act="admDo" data-u="${esc(u.id)}" data-p="pro" data-d="${d}" data-c="${esc(L(`Renovar o PRO ${PLAN_NAMES()[k]} de ${u.email}: +${d} dias, até ${until(d)}?`, `Renew ${u.email}’s ${PLAN_NAMES()[k]} PRO: +${d} days, until ${until(d)}?`))}"><b>${esc(PLAN_NAMES()[k])}</b><span>+${d} ${esc(L('dias', 'days'))}</span><small>${esc(L('até', 'until'))} ${esc(until(d))}</small><em>${esc(brl(NX.planPrices[k], [2, 2]))}</em></button>`).join('');
+  openModal({
+    title: u.email, wide: true,
+    body: `<div class="adm-ui">
+        <div><span>${esc(L('Nome', 'Name'))}</span><b>${esc(u.name || '—')}</b></div>
+        <div><span>${esc(L('Plano', 'Plan'))}</span><b>${esc(PLAN_LBL()[u.plan] || u.plan)}${u.active ? '' : ` · ${esc(L('desativado', 'disabled'))}`}</b></div>
+        <div><span>${esc(L('Validade', 'Expiry'))}</span><b>${esc(fmtDate(exp))}</b>${admDaysChip(u)}</div>
+        <div><span>${esc(L('Conta criada', 'Created'))}</span><b>${esc(fmtDate(u.created_at))}</b></div>
+        <div><span>${esc(L('Último acesso', 'Last seen'))}</span><b>${u.last_seen_at ? esc(ago(Date.parse(u.last_seen_at))) : '—'}</b></div>
+        <div><span>${esc(L('Aportes salvos', 'Saved entries'))}</span><b>${esc(fmtNum(num(u.entries), 0, 0))}</b></div>
+      </div>
+      ${u.pending_claims ? `<div class="callout warn mt">${ico('credit-card', 18)}<span>${esc(L('Este cliente avisou que pagou: confira no PagBank. Renovar o PRO aprova o pedido automaticamente.', 'This customer said they paid: check PagBank. Renewing PRO approves the request automatically.'))}</span></div>` : ''}
+      <div class="adm-sec up"><div class="adm-sh">${ico('crown', 16)}${esc(L('Renovar PRO', 'Renew PRO'))}<small>${esc(L(exp > Date.now() ? 'soma a partir do vencimento atual' : 'conta vencida: soma a partir de hoje', exp > Date.now() ? 'adds from the current expiry' : 'expired: adds from today'))}</small></div><div class="adm-rns">${renew}</div></div>
+      <div class="adm-sec"><div class="adm-sh">${ico('calendar-plus', 16)}${esc(L('Outro prazo', 'Custom period'))}</div>
+        <div class="row wrap" style="gap:8px;align-items:flex-end"><label class="fld" style="width:130px"><span class="lbl-t">${esc(L('Dias (+ ou −)', 'Days (+ or −)'))}</span><input class="inp" id="adm-days" type="number" inputmode="numeric" min="-3650" max="3650" step="1" value="15"></label>
+        <label class="fld" style="width:170px"><span class="lbl-t">${esc(L('Plano', 'Plan'))}</span><select class="sel" id="adm-pl"><option value="pro">PRO</option><option value="trial" ${u.plan === 'trial' ? 'selected' : ''}>${esc(L('Teste grátis', 'Free trial'))}</option></select></label>
+        <button class="btn pri" data-act="admCustom" data-u="${esc(u.id)}">${ico('check', 16)}${esc(L('Aplicar', 'Apply'))}</button>
+        <button class="btn" data-act="admDo" data-u="${esc(u.id)}" data-p="trial" data-d="7" data-c="${esc(L(`Estender o teste de ${u.email} em 7 dias?`, `Extend ${u.email}’s trial by 7 days?`))}">${esc(L('Teste +7 dias', 'Trial +7 days'))}</button></div>
+        <p class="tiny faint" style="margin-top:6px">${esc(L('Use número negativo para corrigir um prazo dado a mais.', 'Use a negative number to correct extra days given.'))}</p></div>
+      <div class="adm-sec"><div class="adm-sh">${ico('user', 16)}${esc(L('Conta', 'Account'))}</div><div class="row wrap" style="gap:8px">
+        <button class="btn" data-act="admCopy" data-e="${esc(u.email)}">${ico('copy', 16)}${esc(L('Copiar e-mail', 'Copy e-mail'))}</button>
+        <button class="btn" data-act="admReset" data-u="${esc(u.id)}" data-e="${esc(u.email)}">${ico('key-round', 16)}${esc(L('Gerar senha temporária', 'Generate temporary password'))}</button>
+        <button class="btn" data-act="admDo" data-u="${esc(u.id)}" data-p="free" data-d="" data-c="${esc(L(`Mudar ${u.email} para o plano gratuito? O PRO deixa de valer.`, `Move ${u.email} to the free plan? PRO stops.`))}">${ico('user-x', 16)}${esc(L('Mudar para gratuito', 'Set to free'))}</button>
+        <button class="btn ${u.active ? 'danger' : ''}" data-act="admActive" data-u="${esc(u.id)}" data-v="${u.active ? '0' : '1'}">${ico(u.active ? 'lock' : 'user-check', 16)}${esc(u.active ? L('Desativar conta', 'Disable account') : L('Reativar conta', 'Enable account'))}</button></div></div>`,
+    foot: `<button class="btn" data-act="closeModal">${esc(L('Fechar', 'Close'))}</button>`,
+  });
+};
+ACT.admDo = async (el) => {
+  const msg = el.dataset.c; const u = el.dataset.u, p = el.dataset.p, d = el.dataset.d ? +el.dataset.d : null;
+  if (!(await confirmBox(msg, { ok: L('Confirmar', 'Confirm') }))) return;
+  admRpc('admin_set_plan', { p_user: u, p_plan: p, p_days: d }, p === 'free' ? L('Conta passou para o plano gratuito.', 'Account moved to free.') : L('Prazo atualizado.', 'Period updated.'));
+};
+ACT.admCustom = async (el) => {
+  const d = Math.trunc(+($('#adm-days') || {}).value); const p = ($('#adm-pl') || {}).value === 'trial' ? 'trial' : 'pro';
+  if (!isNum(d) || d === 0 || Math.abs(d) > 3650) { toast(L('Informe de −3650 a 3650 dias (sem zero).', 'Enter −3650 to 3650 days (not zero).'), { type: 'warn' }); return; }
+  const u = ADM.users.find((x) => x.id === el.dataset.u); if (!u) return;
+  const until = fmtDate(Math.max(Date.parse(u.plan_expiry), Date.now()) + d * 86400e3, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  if (!(await confirmBox(L(`${d > 0 ? 'Dar' : 'Tirar'} ${Math.abs(d)} dia(s) de ${p === 'pro' ? 'PRO' : 'teste'} para ${u.email}? Nova validade: ${until}.`, `${d > 0 ? 'Add' : 'Remove'} ${Math.abs(d)} day(s) of ${p} for ${u.email}? New expiry: ${until}.`), { ok: L('Confirmar', 'Confirm'), danger: d < 0 }))) return;
+  admRpc('admin_set_plan', { p_user: u.id, p_plan: p, p_days: d }, L('Prazo atualizado.', 'Period updated.'));
+};
+ACT.admCopy = async (el) => { try { await navigator.clipboard.writeText(el.dataset.e); toast(L('E-mail copiado.', 'E-mail copied.'), { type: 'ok' }); } catch { toast(el.dataset.e, { ms: 6000 }); } };
 // agendador do robô: o token vai direto do navegador do dono para o Vault do Supabase (nunca volta para a tela)
 const GH_TOKEN_RE = /^(github_pat_[A-Za-z0-9_]{20,255}|ghp_[A-Za-z0-9]{30,255})$/;
 ACT.admTokSave = async (el) => {
@@ -291,7 +350,7 @@ async function admRpc(fn, args, okMsg) {
 ACT.admApprove = async (el) => { if (await confirmBox(L(`Aprovar e dar PRO por ${NX.planDays[el.dataset.p]} dias?`, `Approve and grant PRO for ${NX.planDays[el.dataset.p]} days?`), { ok: L('Aprovar', 'Approve') })) admRpc('admin_set_plan', { p_user: el.dataset.u, p_plan: 'pro', p_days: NX.planDays[el.dataset.p] }, L('PRO ativado.', 'PRO activated.')); };
 ACT.admReject = async (el) => { if (await confirmBox(L('Recusar este pedido (pagamento não encontrado)?', 'Reject this request (payment not found)?'), { ok: L('Recusar', 'Reject'), danger: true })) admRpc('admin_resolve_claim', { p_claim: el.dataset.c, p_status: 'rejected' }, L('Pedido recusado.', 'Request rejected.')); };
 ACT.admPlan = (el) => { closeMenus(); const d = el.dataset.d ? +el.dataset.d : null; admRpc('admin_set_plan', { p_user: el.dataset.u, p_plan: el.dataset.p, p_days: d }, L('Plano atualizado.', 'Plan updated.')); };
-ACT.admActive = (el) => { closeMenus(); admRpc('admin_set_active', { p_user: el.dataset.u, p_active: el.dataset.v === '1' }, el.dataset.v === '1' ? L('Conta reativada.', 'Account enabled.') : L('Conta desativada.', 'Account disabled.')); };
+ACT.admActive = async (el) => { closeMenus(); if (el.dataset.v === '0' && !(await confirmBox(L('Desativar esta conta? A pessoa não consegue mais entrar até você reativar.', 'Disable this account? The person cannot sign in until you re-enable it.'), { ok: L('Desativar', 'Disable'), danger: true }))) return; admRpc('admin_set_active', { p_user: el.dataset.u, p_active: el.dataset.v === '1' }, el.dataset.v === '1' ? L('Conta reativada.', 'Account enabled.') : L('Conta desativada.', 'Account disabled.')); };
 ACT.admReset = async (el) => {
   closeMenus();
   if (!(await confirmBox(L(`Gerar uma senha temporária para ${el.dataset.e}? A senha atual deixa de funcionar.`, `Generate a temporary password for ${el.dataset.e}? The current one stops working.`), { ok: L('Gerar', 'Generate'), danger: true }))) return;
