@@ -16,7 +16,7 @@ const BASE = process.argv.includes('--root') ? '' : 'beta/';
 const SHOTS = process.argv.includes('--shots');
 const TYPES = { '.html': 'text/html', '.js': 'application/javascript', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' };
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
-const PAGES = ['dash', 'chart', 'top100', 'markets', 'onchain', 'lab', 'tokenomics', 'buybacks', 'etf', 'whales', 'macro', 'agenda', 'poly', 'news', 'geo', 'wallets', 'vault', 'plans', 'settings'];
+const PAGES = ['dash', 'chart', 'top100', 'markets', 'onchain', 'lab', 'tokenomics', 'buybacks', 'etf', 'whales', 'macro', 'agenda', 'events', 'poly', 'news', 'geo', 'wallets', 'vault', 'plans', 'settings'];
 const fails = [];
 const ok = (cond, msg) => { if (!cond) { fails.push(msg); console.log('  ✗ ' + msg); } else console.log('  ✓ ' + msg); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -172,22 +172,37 @@ console.log('\n[1] Visitante · computador · todas as páginas');
   await page.click('#etf-list [data-act=etfAsset][data-k=btc]'); await sleep(400);
   await page.evaluate(() => { const i = document.querySelector('#etf-date'); const d = new Date(Date.now() - 40 * 864e5).toISOString().slice(0, 10); i.value = d; i.dispatchEvent(new Event('change', { bubbles: true })); }); await sleep(2500);
   ok(await page.$eval('#etf-list', (e) => /Cota em/.test(e.innerText) && /Desde então/.test(e.innerText) && /US\$\s?\d/.test(e.querySelector('tbody tr td:nth-child(7)').innerText)).catch(() => false), 'ETFs: escolher o dia mostra a cota daquele dia');
-  await goPage(page, 'buybacks', 2500);
-  ok(await page.$eval('#bb-burners', (e) => /Quem mais queima/.test(e.innerText) && e.querySelectorAll('.bb-bar').length >= 1).catch(() => false) && await page.$eval('#bb-buyers', (e) => /Quem mais recompra/.test(e.innerText)).catch(() => false), 'Burn: quem mais queima e quem mais recompra');
+  await goPage(page, 'buybacks', 1500);
+  ok(await page.$eval('#bb-body', (e) => /Teste grátis|Criar conta/.test(e.innerText) && !e.querySelector('#bb-tb')).catch(() => false), 'Burn, Baby, Burn: só para PRO (visitante vê o convite do teste grátis)');
+  ok(await page.$eval('#sb .sb-i[data-page=buybacks]', (e) => /PRO/.test(e.innerText)).catch(() => false), 'Burn, Baby, Burn: selo PRO no menu');
+  // Eventos do mercado: destaque, semana, cripto (opções, dificuldade, halving), lista, histórico e reação do BTC
+  await goPage(page, 'events', 3500);
+  ok(await page.$eval('#ev-hero', (e) => /Próximo grande evento/i.test(e.innerText) && !!e.querySelector('.cd')).catch(() => false), 'Eventos: próximo grande evento com contagem regressiva');
+  ok(await page.$$eval('#ev-week .ev-day', (a) => a.length === 7).catch(() => false), 'Eventos: semana em 7 colunas');
+  ok(await page.$eval('#ev-opt', (e) => /Maior vencimento/i.test(e.innerText) && /US\$/.test(e.innerText)).catch(() => false), 'Eventos: vencimento de opções (Deribit) com valor, put/call e dor máxima');
+  ok(await page.$eval('#ev-diff', (e) => /Mudança estimada/i.test(e.innerText)).catch(() => false) && await page.$eval('#ev-halv', (e) => /2028/.test(e.innerText)).catch(() => false), 'Eventos: ajuste de dificuldade e halving');
+  ok(await page.$$eval('#ev-list tbody tr.click', (a) => a.length >= 3).catch(() => false), 'Eventos: lista dos próximos 30 dias');
+  await page.waitForFunction(() => document.querySelectorAll('#ev-hist .ev-ht tbody tr').length >= 8 && document.querySelectorAll('#ev-hist .ev-r').length >= 8, { timeout: 15000 }).catch(() => {});
+  ok(await page.$eval('#ev-hist', (e) => e.querySelectorAll('.ev-ht tbody tr').length >= 8 && /BTC 4 h/.test(e.innerText) && e.querySelectorAll('.ev-r').length >= 8).catch(() => false), 'Eventos: histórico real (previsto × divulgado) com a reação do BTC');
+  await page.click('#ev-hero button[data-act=evOpen]'); await sleep(800);
+  ok(await page.$eval('#scrim .modal', (e) => /Google Agenda/.test(e.innerText) && /\.ics/.test(e.innerText)).catch(() => false), 'Eventos: detalhe com Google Agenda e arquivo .ics');
+  await page.keyboard.press('Escape'); await sleep(300);
+  await page.click('#ev-week .ev-cats [data-k="cripto"]'); await sleep(600);
+  ok(await page.$$eval('#ev-list tbody tr.click', (a) => a.length >= 1 && a.every((r) => /Cripto/i.test(r.innerText))).catch(() => false), 'Eventos: filtro "Cripto"');
+  await page.click('#ev-week .ev-cats [data-k="all"]'); await sleep(300);
+  await goPage(page, 'dash', 1500);
+  ok(await page.$eval('#d-ev a[href="#/events"]', (e) => !!e).catch(() => false), 'Dashboard: quadro de eventos leva à página Eventos do mercado');
+  await page.click('#d-rsi .rsi-r[data-tf="4h"]'); await sleep(2500);
+  ok(await page.$('#rsi-m-p canvas') !== null && await page.$('#rsi-m-r canvas') !== null, 'Dashboard: clicar no RSI abre o gráfico com velas e o RSI embaixo');
+  await page.keyboard.press('Escape'); await sleep(300);
+  ok(await page.$$eval('#d-mr td.p4, #d-mr td.n4, #d-mr td.p3, #d-mr td.n3', (a) => a.length >= 5).catch(() => false), 'Dashboard: retornos mensais com cores fortes');
   await goPage(page, 'news', 2500);
   ok(await page.$eval('#news-list', (e) => !/&nbsp;|&amp;|&[a-z]+;/.test(e.innerText)).catch(() => false), 'Notícias sem &nbsp; nem códigos HTML no texto');
   await goPage(page, 'whales', 3000);
   ok(await page.$$eval('#wh-dist .wh-tier', (a) => a.length === 6).catch(() => false), 'Baleias: 6 faixas por tamanho de carteira');
   ok(await page.$$eval('#wh-top tbody tr', (a) => a.length >= 20).catch(() => false), 'Baleias: 100 maiores endereços');
-  // Burn, Baby, Burn: tabela por token, filtros e detalhe
-  await goPage(page, 'buybacks', 3000);
-  ok(await page.$$eval('#bb-tb tbody tr.click', (a) => a.length >= 8).catch(() => false), 'Burn, Baby, Burn: tabela de recompra e queima por token');
-  ok(await page.$eval('#sb .sb-i[data-page=buybacks] .lbl', (e) => e.textContent === 'Burn, Baby, Burn').catch(() => false), 'Burn, Baby, Burn: item no menu');
-  await page.click('#bb-tbl .seg button[data-v="30d"]'); await sleep(400);
-  ok(await page.$eval('#bb-sum', (e) => /em 30 dias/.test(e.innerText)).catch(() => false), 'Burn, Baby, Burn: troca de período');
-  await page.click('#bb-tb tbody tr.click'); await sleep(1500);
-  ok(await page.$('#bb-mchart canvas') !== null, 'Burn, Baby, Burn: detalhe com gráfico diário');
-  await page.keyboard.press('Escape'); await sleep(300);
+  ok(await page.$eval('#wh-dist', (e) => /BGeometrics/.test(e.innerText) && /acumulando · 30 d/.test(e.innerText) && /distribuindo · 30 d/.test(e.innerText)).catch(() => false), 'Baleias: faixas ao vivo (BGeometrics) com acumulação e distribuição em 30 dias');
+  ok(await page.$eval('#wh-sum', (e) => /bloqueando a leitura automática/.test(e.innerText)).catch(() => false) && await page.$eval('#wh-top', (e) => /lista de \d{2}\//.test(e.innerText)).catch(() => false), 'Baleias: lista dos 100 maiores com a data dela (BitInfoCharts bloqueada)');
   // Geopolítica: frentes, linha do tempo de 7 dias com a força de cada notícia
   await goPage(page, 'geo', 2500);
   ok(await page.$$eval('#geo-fronts .geo-front', (a) => a.length === 5).catch(() => false), 'Geopolítica: 5 frentes (Oriente Médio, Rússia e Ucrânia, rotas, Ásia, comércio)');
@@ -212,7 +227,7 @@ console.log('\n[2] Visitante · celular (390×844)');
 {
   const { browser, page, errors } = await open({ width: 390, height: 844, mobile: true });
   await sleep(3500);
-  for (const id of ['dash', 'top100', 'macro', 'agenda', 'news', 'geo', 'wallets', 'vault', 'plans', 'onchain', 'whales', 'buybacks', 'markets', 'poly', 'chart']) {
+  for (const id of ['dash', 'top100', 'macro', 'agenda', 'events', 'news', 'geo', 'wallets', 'vault', 'plans', 'onchain', 'whales', 'buybacks', 'markets', 'poly', 'chart']) {
     await goPage(page, id, 1800);
     const r = await inspect(page);
     ok(!r.overflow, `${id}: sem rolagem lateral ${r.wide.join(' ')}`);
@@ -343,6 +358,30 @@ console.log('\n[3] Conta (teste grátis) · Portfolio Vault');
   ok(await page.evaluate(() => !document.querySelector('#lab-wrap').classList.contains('full')), 'Lab: Esc sai da tela cheia');
   const lr = await inspect(page); ok(!lr.bad.length && !lr.overflow, `Lab: sem número quebrado nem rolagem lateral ${lr.bad.join(',')} ${lr.wide.join(' ')}`);
   await shot(page, 'v-lab');
+  // Lab 3.5: velas, escala log explicada, linha personalizada e lucro/prejuízo realizados
+  await page.click('.seg[data-seg="labm"] button[data-v="ind"]'); await sleep(1200);
+  await page.click('.seg[data-seg="labk"] button[data-v="candle"]'); await sleep(2500);
+  ok(await page.evaluate(() => !!LAB.candle && !!document.querySelector('#lab-chart canvas')), 'Lab: gráfico em velas');
+  await page.click('[data-act=labLogInfo]'); await sleep(400);
+  ok(await page.$eval('#scrim .modal', (e) => /Escala log/.test(e.innerText)).catch(() => false), 'Lab: botão "?" explica a escala log');
+  await page.keyboard.press('Escape'); await sleep(300);
+  await page.click('[data-act=labAddLine]'); await sleep(400);
+  await page.$eval('#lab-nk', (i) => { i.value = '1,25'; }); await page.click('[data-act=labAddLineOk]'); await sleep(1800);
+  ok(await page.evaluate(() => LAB.custom.length === 1 && LAB.custom[0].k === 1.25), 'Lab: linha personalizada (preço-base × 1,25)');
+  ok(await page.$$eval('#rpl-kpis .rpl-k', (a) => a.length === 4).catch(() => false) && await page.$('#rpl-chart canvas') !== null, 'Lab: lucro e prejuízo realizados (24 h, 7 d, 30 d e gráfico com o preço)');
+  await page.click('.seg[data-seg="rplh"] button[data-v="sth"]'); await sleep(900);
+  ok(await page.$eval('#rpl-note', (e) => /curto prazo/.test(e.innerText)).catch(() => false), 'Lab: lucro/prejuízo filtra curto prazo (STH)');
+  await page.click('.seg[data-seg="rpla"] button[data-v="1w"]'); await sleep(900);
+  ok(await page.$eval('#rpl-ct', (e) => /semanais/.test(e.innerText)).catch(() => false), 'Lab: lucro/prejuízo em barras semanais');
+  // Burn, Baby, Burn (PRO): tabela por token, filtros e detalhe
+  await goPage(page, 'buybacks', 3000);
+  ok(await page.$$eval('#bb-tb tbody tr.click', (a) => a.length >= 8).catch(() => false), 'Burn, Baby, Burn: tabela de recompra e queima por token');
+  ok(await page.$eval('#bb-burners', (e) => /Quem mais queima/.test(e.innerText) && e.querySelectorAll('.bb-bar').length >= 1).catch(() => false) && await page.$eval('#bb-buyers', (e) => /Quem mais recompra/.test(e.innerText)).catch(() => false), 'Burn: quem mais queima e quem mais recompra');
+  await page.click('#bb-tbl .seg button[data-v="30d"]'); await sleep(400);
+  ok(await page.$eval('#bb-sum', (e) => /em 30 dias/.test(e.innerText)).catch(() => false), 'Burn, Baby, Burn: troca de período');
+  await page.click('#bb-tb tbody tr.click'); await sleep(1500);
+  ok(await page.$('#bb-mchart canvas') !== null, 'Burn, Baby, Burn: detalhe com gráfico diário');
+  await page.keyboard.press('Escape'); await sleep(300);
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
   await browser.close();
 }
@@ -392,6 +431,11 @@ console.log('\n[3b] Vault: 2.500 lançamentos, contas conferidas, comparação e
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true }); await sleep(2000);
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Vault com 2.500 lançamentos no celular sem rolagem lateral');
   await page.setViewport({ width: 1280, height: 860, deviceScaleFactor: 1 }); await sleep(800);
+  ok(await page.$$eval('#v-perf .v-pft tbody tr', (a) => a.length >= 10).catch(() => false), 'Vault: desempenho por aporte em tabela');
+  ok(await page.$$eval('#v-list tr.v-mh', (a) => a.length >= 2).catch(() => false), 'Vault: histórico agrupado por mês');
+  await page.click('#v-list [data-act=vaultSort][data-k=amt]'); await sleep(600);
+  ok(await page.evaluate(() => { const v = [...document.querySelectorAll('#v-list tbody tr:not(.v-mh) td:nth-child(6) b')].slice(0, 5).map((b) => parseFloat(b.textContent.replace(/[^\d,]/g, '').replace(',', '.'))); return v.length === 5 && v.every((x, i) => i === 0 || x <= v[i - 1] + 0.01); }), 'Vault: ordenar o histórico pelo valor');
+  ok(await page.$$eval('#v-donut .v-al', (a) => a.length >= 3).catch(() => false), 'Vault: mapa de acumulação lista todos os ativos');
   // caso de resposta conhecida: contas na mão
   const d = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
   const base = { user_id: supa.uid, asset_id: 'bitcoin', sym: 'BTC', name: 'Bitcoin', binance_sym: 'BTCUSDT', currency: 'BRL', fee: 0, removed_at: null, updated_at: new Date().toISOString() };
@@ -458,6 +502,14 @@ console.log('\n[5] Administrador');
   supa.db.robotMissing = true; await page.click('[data-act=admReload]'); await sleep(1500);
   ok(await page.$eval('#pg-admin .adm-robot', (e) => /Ainda não instalado/.test(e.innerText) && /03_agendador_robo\.sql/.test(e.innerText) && /SQL Editor/.test(e.innerText)).catch(() => false), 'agendador: sem a função no banco, explica como instalar');
   await shot(page, 'a-admin');
+  await page.click('[data-act=admUser][data-u="u9"]'); await sleep(500);
+  ok(await page.$eval('#scrim .modal', (e) => /Renovar PRO/i.test(e.innerText) && e.querySelectorAll('.adm-rn').length === 3 && /Gerar senha temporária/.test(e.innerText)).catch(() => false), 'admin: janela de ações com renovação mensal, trimestral e anual');
+  await page.click('#scrim .adm-rn'); await sleep(400);
+  await page.click('#scrim [data-k=yes]'); await sleep(1500);
+  const mDays = await page.evaluate(() => NX.planDays.mensal);
+  ok(supa.db.lastPlan && supa.db.lastPlan.p_plan === 'pro' && supa.db.lastPlan.p_days === mDays, `admin: renovar mensal envia +${mDays} dias de PRO (${JSON.stringify(supa.db.lastPlan)})`);
+  await page.click('[data-act=admF][data-k="exp"]'); await sleep(300);
+  ok(await page.$$eval('.adm-ut tbody tr', (a) => a.length === 1 && /pagou@teste/.test(a[0].innerText)).catch(() => false), 'admin: filtro "Vencidos"');
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
   await browser.close();
 }

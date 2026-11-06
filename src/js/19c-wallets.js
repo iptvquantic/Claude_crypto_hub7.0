@@ -527,7 +527,7 @@ async function wwDrawHist() {
   box.innerHTML = head + `<div id="ww-hist-ch" style="height:240px"></div><p class="panel-note">${esc(L('Adicionar ou remover carteiras muda a linha a partir daquele dia.', 'Adding or removing wallets changes the line from that day on.'))}</p>`;
   try {
     const { ch, c } = await makeChart($('#ww-hist-ch'), { onTheme: () => wwDrawHist(), priceFmt: (p) => fmtCompact(p, brlOn ? 'BRL' : 'USD') });
-    const s = ch.addAreaSeries({ lineColor: c.accent, topColor: c.accent + '40', bottomColor: c.accent + '00', lineWidth: 2, priceLineVisible: false });
+    const s = ch.addAreaSeries({ lineColor: c.accent, topColor: c.accent + '40', bottomColor: c.accent + '00', lineWidth: 2, priceLineVisible: false, nxName: L('Total das carteiras', 'Wallets total'), nxFmt: (v) => fmtCompact(v, brlOn ? 'BRL' : 'USD') });
     s.setData(pts.map((p) => ({ time: ctime(p.t, false), value: p.v })));
     ch.timeScale().fitContent();
   } catch (e) { box.innerHTML = head + emptyBox('wifi-off', L('Gráfico indisponível', 'Chart unavailable'), esc(String(e.message || e))); }

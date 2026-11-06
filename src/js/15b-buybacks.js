@@ -17,7 +17,7 @@ const bbMatch = (type, f) => (f === 'all' ? true : f === 'bought' ? type === 'bu
 function registerBuybackSources() {
   source({
     id: 'buybacks', label: 'Burn, Baby, Burn', provider: 'DefiLlama', every: 60 * 60e3, persist: false, kind: 'daily',
-    need: () => S.page === 'buybacks' || (S.page === 'tokenomics' && hasPro()),
+    need: () => (S.page === 'buybacks' || S.page === 'tokenomics') && hasPro(),
     run: async () => getPipeline('buybacks', 30 * 3600e3),
     validate: (j) => Array.isArray(j.list) && j.list.length >= 8,
     onData: (j) => { BB.D = null; BB.raw = j; const D = bbData(); if (D && HEALTH.buybacks) HEALTH.buybacks.dataTs = D.ref + 12 * 3600e3; _markDirty('BUYBACKS'); },
@@ -107,10 +107,13 @@ function bbBars(vals, color, w = 120, h = 28) {
   return `<svg class="bb-spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">${v.map((x, i) => (x > 0 ? `<rect x="${(i * bw).toFixed(2)}" y="${(h - Math.max(1, x / mx * h)).toFixed(2)}" width="${Math.max(0.6, bw - 0.4).toFixed(2)}" height="${Math.max(1, x / mx * h).toFixed(2)}" style="fill:${color}"/>` : '')).join('')}</svg>`;
 }
 const bbPill = (m) => { const x = BB_MECH()[m] || BB_MECH().share; return `<span class="bb-pill" style="--c:${x.c}">${ico(x.ic, 13)}${esc(x.t)}</span>`; };
+const bbKc = (k, icon, label, val, sub) => `<div class="bb-kc ${k}"><span class="k">${ico(icon, 15)}${esc(label)}</span><b class="v">${val}</b><span class="s">${sub}</span></div>`;
+// rendimento por ano: cor pela intensidade (quanto do valor de mercado volta ao token por ano)
+const bbYc = (y) => (!isNum(y) ? '' : y >= 10 ? 'y4' : y >= 3 ? 'y3' : y >= 1 ? 'y2' : 'y1');
 const bbDayTxt = (D, i) => fmtDate(D.t0 + i * 86400e3 + 12 * 3600e3, { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
-function bbHtml() {
-  return `${pageHead(PAGES.buybacks, `<span class="stamp-wrap">${stamp('buybacks')}</span>`)}
-  <section class="panel bb-hero" id="bb-sum"></section>
+function bbHtml() { return `${pageHead(PAGES.buybacks, '<span class="stamp-wrap" id="bb-st"></span>')}<div id="bb-body"></div>`; }
+function bbBody() {
+  return `<section class="panel bb-hero" id="bb-sum"></section>
   <section class="panel flush mt" id="bb-tbl"><div class="panel-h" style="padding:16px 18px 6px;margin:0"><div class="tt"><h2 class="panel-t"><span class="bb-n">01</span>${esc(L('Quanto chega ao token', 'How much reaches the token'))}</h2><p class="panel-s">${esc(L('Valor que cada protocolo usou para recomprar, queimar ou repassar ao token, e quanto isso representa do valor de mercado e do FDV por ano (no ritmo do período).', 'Value each protocol used to buy back, burn or pass to its token, and what that means as a share of market cap and FDV per year (at the period’s pace).'))}</p></div>${seg('bbp', [['1d', '1D'], ['7d', '7D'], ['30d', '30D'], ['90d', '90D'], ['1y', L('1A', '1Y')]], BB.per)}</div>
     <div class="bb-tools"><div class="bb-filt" role="group" aria-label="${esc(L('Mecanismo', 'Mechanism'))}">${BB_FILT().map(([k, t]) => `<button class="lab-cat" data-act="bbFilt" data-k="${k}" aria-pressed="${BB.filt === k}">${esc(t)}</button>`).join('')}</div><div class="inp-search bb-q">${ico('search', 16)}<input class="inp" type="search" data-inp="bbQ" value="${esc(BB.q)}" placeholder="${esc(L('Buscar token', 'Search token'))}" aria-label="${esc(L('Buscar token', 'Search token'))}"></div></div>
     <div id="bb-tb"></div></section>
@@ -122,7 +125,13 @@ function bbEmpty() {
   const h = HEALTH.buybacks;
   return h && h.ok === false ? emptyBox('wifi-off', L('Dados de recompra indisponíveis agora', 'Buyback data unavailable right now'), esc(L('O arquivo do robô não chegou. Tentando de novo; enquanto isso, veja direto na DefiLlama.', 'The robot file did not arrive. Retrying; meanwhile, see it on DefiLlama.')), extLink('https://defillama.com/holders-revenue', 'DefiLlama')) : skel(5, 22);
 }
-function bbDraw() { bbDrawSum(); bbDrawTbl(); bbDrawTop(); bbDrawRank(); bbDrawYield(); bbDrawHow(); }
+function bbDraw() {
+  const box = $('#bb-body'); if (!box) return;
+  setHTML('#bb-st', hasPro() ? stamp('buybacks') : '');
+  if (!hasPro()) { box.innerHTML = proGate(PAGES.buybacks); return; }
+  if (!$('#bb-sum')) { box.innerHTML = bbBody(); if (!CACHE.get('buybacks') && !BB.raw) runSource('buybacks', { force: true }); }
+  bbDrawSum(); bbDrawTbl(); bbDrawTop(); bbDrawRank(); bbDrawYield(); bbDrawHow();
+}
 function bbDrawSum() {
   const box = $('#bb-sum'); if (!box) return;
   const D = bbData();
@@ -138,11 +147,11 @@ function bbDrawSum() {
   const ch = isNum(prev) && prev > 0 ? (tot / prev - 1) * 100 : null;
   setHTML(box, `<div class="bb-tag">${esc(L('Se o protocolo ganha, o token ganha?', 'If the protocol wins, does the token win?'))}</div>
     <div class="bb-kpis">
-      ${kpiBox(L(`Chegou aos tokens ${perLbl}`, `Reached the tokens ${perLbl}`), esc(fmtCompact(tot)), esc(L(`${fmtCompact(tot / n)} por dia em média`, `${fmtCompact(tot / n)} per day on average`)))}
-      ${kpiBox(L('Comparado ao período anterior', 'Versus the previous period'), isNum(ch) ? `<span class="${tone(ch)}">${esc(fmtPct(ch, 1))}</span>` : '—', esc(isNum(prev) ? L(`antes: ${fmtCompact(prev)}`, `before: ${fmtCompact(prev)}`) : L('sem comparação para 1 ano', 'no comparison for 1 year')))}
-      ${kpiBox(L('Queimado (sai de circulação)', 'Burned (removed from supply)'), esc(fmtCompact(burnT)), esc(L('queima direta e recompra → queima', 'direct burns and buyback → burn')))}
-      ${kpiBox(L('Recomprado e guardado', 'Bought & held'), esc(fmtCompact(heldT)), esc(L('fica na tesouraria ou em fundo do protocolo', 'kept in the treasury or a protocol fund')))}
-      ${kpiBox(L('Tokens com fluxo', 'Tokens with flow'), esc(`${act}/${rows.length}`), esc(L('tiveram recompra ou queima no período', 'had buybacks or burns in the period')))}
+      ${bbKc('up', 'coins', L(`Chegou aos tokens ${perLbl}`, `Reached the tokens ${perLbl}`), esc(fmtCompact(tot)), esc(L(`${fmtCompact(tot / n)} por dia em média`, `${fmtCompact(tot / n)} per day on average`)))}
+      ${bbKc(isNum(ch) ? (ch >= 0 ? 'up' : 'down') : 'info', isNum(ch) && ch < 0 ? 'trending-down' : 'trending-up', L('Comparado ao período anterior', 'Versus the previous period'), isNum(ch) ? esc(fmtPct(ch, 1)) : '—', esc(isNum(prev) ? L(`antes: ${fmtCompact(prev)}`, `before: ${fmtCompact(prev)}`) : L('sem comparação para 1 ano', 'no comparison for 1 year')))}
+      ${bbKc('fire', 'flame', L('Queimado (sai de circulação)', 'Burned (removed from supply)'), esc(fmtCompact(burnT)), esc(L('queima direta e recompra → queima', 'direct burns and buyback → burn')))}
+      ${bbKc('info', 'vault', L('Recomprado e guardado', 'Bought & held'), esc(fmtCompact(heldT)), esc(L('fica na tesouraria ou em fundo do protocolo', 'kept in the treasury or a protocol fund')))}
+      ${bbKc('acc', 'activity', L('Tokens com fluxo', 'Tokens with flow'), esc(`${act}/${rows.length}`), esc(L('tiveram recompra ou queima no período', 'had buybacks or burns in the period')))}
     </div>
     <p class="tiny faint" style="margin-top:10px">${esc(L(`Último dia completo (UTC): ${fmtDate(D.ref + 12 * 3600e3, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })} · robô atualizado ${fmtDateTime(D.gen)} · fonte: DefiLlama (receita repassada aos detentores).`, `Last complete day (UTC): ${fmtDate(D.ref + 12 * 3600e3, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })} · robot updated ${fmtDateTime(D.gen)} · source: DefiLlama (holders revenue).`))}</p>`);
 }
@@ -163,12 +172,11 @@ function bbDrawTbl() {
       <td><div class="bb-mechs">${r.mechs.map(bbPill).join('')}</div></td>
       <td class="r">${isNum(r.tokens) ? `<b class="num">≈ ${esc(fmtNum(r.tokens, 0, r.tokens < 10 ? 2 : 0))}</b>${multi && isNum(r.tokDay) ? `<div class="tiny faint">≈ ${esc(fmtNum(r.tokDay, 0, r.tokDay < 10 ? 2 : 0))}/${esc(L('dia', 'day'))}</div>` : `<div class="tiny faint">${esc(t.sym)}</div>`}` : '—'}</td>
       <td class="r"><b class="num">${isNum(r.sum) ? esc(usd(r.sum, [0, 0])) : '—'}</b>${multi && isNum(r.perDay) ? `<div class="tiny faint">${esc(usd(r.perDay, [0, 0]))}/${esc(L('dia', 'day'))}</div>` : ''}${isNum(r.chg) ? `<div class="tiny ${tone(r.chg)}">${esc(fmtPct(r.chg, 0))} ${esc(L('vs antes', 'vs prior'))}</div>` : ''}</td>
-      <td class="r">${isNum(r.yMcap) ? `<b class="num">${esc(fmtNum(r.yMcap, 2, 2))}%/${esc(L('ano', 'yr'))}</b><div class="tiny faint">${esc(fmtNum(r.wMcap, 3, 3))}%/${esc(L('sem.', 'wk'))}</div>` : '—'}</td>
-      <td class="r hide-m">${isNum(r.yFdv) ? `<b class="num">${esc(fmtNum(r.yFdv, 2, 2))}%/${esc(L('ano', 'yr'))}</b><div class="tiny faint">${esc(fmtNum(r.wFdv, 3, 3))}%/${esc(L('sem.', 'wk'))}</div>` : '—'}</td>
-      <td class="hide-m">${bbBars(r.spark, col)}</td>
+      <td class="r">${isNum(r.yMcap) ? `<span class="bb-y ${bbYc(r.yMcap)}">${esc(fmtNum(r.yMcap, 2, 2))}%/${esc(L('ano', 'yr'))}</span><div class="tiny faint">${esc(fmtNum(r.wMcap, 3, 3))}%/${esc(L('sem.', 'wk'))}${isNum(r.yFdv) ? ` · FDV ${esc(fmtNum(r.yFdv, 2, 2))}%` : ''}</div>` : '—'}</td>
+      <td class="hide-m">${bbBars(r.spark, col, 96)}</td>
     </tr>`;
   }).join('');
-  setHTML(box, `<div class="tbl-wrap"><table class="tbl bb-t"><thead><tr><th class="r">#</th><th>${esc(L('Ativo', 'Asset'))}</th><th>${esc(L('Mecanismo', 'Mechanism'))}</th>${th('tok', L('Tokens', 'Tokens'))}${th('usd', L('Valor (US$)', 'Value (US$)'))}${th('mcap', L('% do valor de mercado', '% of market cap'))}<th class="r sortable hide-m" data-act="bbSort" data-k="fdv">${esc(L('% do FDV', '% of FDV'))}${BB.sort === 'fdv' ? (BB.dir < 0 ? ' ▼' : ' ▲') : ''}</th><th class="hide-m">${esc(L('90 dias', '90 days'))}</th></tr></thead><tbody>${body || `<tr><td colspan="8" class="center faint">${esc(L('Nenhum token neste filtro.', 'No token in this filter.'))}</td></tr>`}</tbody></table></div>
+  setHTML(box, `<div class="tbl-wrap"><table class="tbl bb-t"><thead><tr><th class="r">#</th><th>${esc(L('Ativo', 'Asset'))}</th><th>${esc(L('Mecanismo', 'Mechanism'))}</th>${th('tok', L('Tokens', 'Tokens'))}${th('usd', L('Valor (US$)', 'Value (US$)'))}${th('mcap', L('Rendimento (% do valor de mercado)', 'Yield (% of market cap)'))}<th class="hide-m">${esc(L('90 dias', '90 days'))}</th></tr></thead><tbody>${body || `<tr><td colspan="7" class="center faint">${esc(L('Nenhum token neste filtro.', 'No token in this filter.'))}</td></tr>`}</tbody></table></div>
     ${total > shown.length || BB.all ? `<div class="row wrap between" style="padding:10px 18px 0;gap:8px"><button class="btn sm" data-act="bbAll">${ico(BB.all ? 'chevron-up' : 'chevron-down', 15)}${esc(BB.all ? L('Mostrar só os 40 maiores', 'Show only the top 40') : L(`Mostrar todos (${total})`, `Show all (${total})`))}</button><span class="tiny faint">${esc(L(`${total} tokens neste filtro · os que entram na fonte aparecem sozinhos`, `${total} tokens in this filter · new ones appear automatically`))}</span></div>` : `<p class="tiny faint" style="padding:10px 18px 0">${esc(L(`${total} tokens neste filtro · os que entram na fonte aparecem sozinhos`, `${total} tokens in this filter · new ones appear automatically`))}</p>`}
     <div style="padding:8px 18px 16px">${note(esc(L('Toque em um token para ver o gráfico diário e os detalhes. "Tokens" ≈ valor ÷ preço de hoje (a quantidade exata depende do preço de cada compra). "% do valor de mercado por ano" = média diária do período × 365 ÷ valor de mercado — como um "dividend yield" do token. FDV = valor com todas as moedas que ainda serão emitidas.', 'Tap a token for its daily chart and details. "Tokens" ≈ value ÷ today’s price (the exact amount depends on each purchase price). "% of market cap per year" = period daily average × 365 ÷ market cap — like a token "dividend yield". FDV = value including all tokens still to be issued.')))}</div>`);
 }
@@ -257,11 +265,11 @@ async function bbChart(t, D) {
   const tot = new Array(D.N).fill(null);
   for (const s of t.src) for (let i = 0; i < D.N; i++) { const v = s.arr[i]; if (isNum(v)) tot[i] = (tot[i] || 0) + v; }
   const col = (BB_MECH()[t.src.slice().sort((a, b) => (b.d30 || 0) - (a.d30 || 0))[0].type] || BB_MECH().share).c;
-  const hs = ch.addHistogramSeries({ color: labRGBA(col, 0.8), priceLineVisible: false, lastValueVisible: false, base: 0 });
+  const hs = ch.addHistogramSeries({ color: labRGBA(col, 0.8), priceLineVisible: false, lastValueVisible: false, base: 0, nxName: L('Valor do dia', 'Daily value'), nxFmt: (v) => fmtCompact(v, 'USD') });
   const tm = (i) => ctime(D.t0 + i * 86400e3, false);
   hs.setData(tot.map((v, i) => (isNum(v) ? { time: tm(i), value: v } : null)).filter(Boolean));
   const ma = rollMean(tot.map((v) => (isNum(v) ? v : null)), 7);
-  const ls = ch.addLineSeries({ color: c.text, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  const ls = ch.addLineSeries({ color: c.text, lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, nxName: L('Média de 7 dias', '7-day average'), nxFmt: (v) => fmtCompact(v, 'USD') });
   ls.setData(ma.map((v, i) => (isNum(v) ? { time: tm(i), value: v } : null)).filter(Boolean));
   ch.timeScale().fitContent();
 }
@@ -277,7 +285,7 @@ onPrice((set) => {
   if (set.has('BUYBACKS') || set.has('TOP100')) bbDraw();
 });
 page({
-  id: 'buybacks', group: 'analise', icon: 'flame', pt: 'Burn, Baby, Burn', en: 'Burn, Baby, Burn',
+  id: 'buybacks', group: 'analise', icon: 'flame', pt: 'Burn, Baby, Burn', en: 'Burn, Baby, Burn', pro: true, proWhat: 'o Burn, Baby, Burn', proWhatEn: 'Burn, Baby, Burn',
   sub: 'Se o protocolo ganha, o token ganha? Recompras, queimas e reservas acumuladas a cada dia, com dados reais da DefiLlama.',
   subEn: 'If the protocol wins, does the token win? Daily buybacks, burns and reserve accumulation, with real DefiLlama data.',
   init(el) { const p = LS.get('bb'); if (p) { if (BB_PER[p.per]) BB.per = p.per; if (BB_FILT().some(([k]) => k === p.filt)) BB.filt = p.filt; } el.innerHTML = bbHtml(); bbDraw(); },

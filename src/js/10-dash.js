@@ -3,7 +3,7 @@
 // dominância, RSI, mapa de calor, maiores altas/baixas, em alta,
 // próximos eventos e retornos mensais (BTC/ETH).
 // =====================================================================
-const DASH = { cards: null, flashAt: {}, mr: 'BTC', t: {} };
+const DASH = { cards: null, flashAt: {}, mr: 'BTC', t: {}, mrc: null, mrx: null, rsiTf: '1d', rsiS: null, rseq: 0 };
 
 // ---------- cards: leitura/migração ----------
 function dashCards() {
@@ -62,7 +62,18 @@ function drawCards() {
   box.classList.toggle('dense', cards.length > 6);
   box.innerHTML = cards.map(cardHtml).join('') + (cards.length < 4 ? `<button class="pc-add" data-act="pcAdd">${ico('plus', 22)}<span>${esc(L('Adicionar moeda', 'Add coin'))}</span></button>` : '');
   const add = $('#d-add'); if (add) add.disabled = cards.length >= 12;
+  fitCards();
 }
+// os cards preenchem a largura: escolhe o número de colunas que deixa as linhas mais cheias (sem buraco no fim)
+function fitCards() {
+  const box = $('#d-cards'); if (!box || !box.children.length) return;
+  const n = box.children.length, W = box.clientWidth || 1000, gap = 12;
+  const min = W < 560 ? 150 : box.classList.contains('dense') ? 162 : 178;
+  const maxCols = Math.max(1, Math.floor((W + gap) / (min + gap)));
+  const rows = Math.ceil(n / maxCols);
+  box.style.setProperty('--pc-cols', String(Math.max(1, Math.ceil(n / rows))));
+}
+window.addEventListener('resize', debounce(() => { if (S.page === 'dash') fitCards(); }, 150));
 function updCards(set) {
   const cards = dashCards();
   cards.forEach((x) => {
@@ -166,11 +177,11 @@ function registerDashSources() {
       const out = {};
       for (const s of rsiPairs()) {
         const tfs = await Promise.all(['1h', '4h', '1d', '1w'].map((tf) => klines(s, tf, 300)));
-        out[s] = {}; ['1h', '4h', '1d', '1w'].forEach((tf, i) => { out[s][tf] = lastOf(rsiSeries(tfs[i].map((k) => k.c))); });
+        out[s] = {}; ['1h', '4h', '1d', '1w'].forEach((tf, i) => { const r = rsiSeries(tfs[i].map((k) => k.c)); out[s][tf] = { v: r[r.length - 1], p: r[r.length - 2] }; });
       }
       return out;
     },
-    validate: (d) => rsiPairs().some((s) => d[s] && isNum(d[s]['1d'])),
+    validate: (d) => rsiPairs().some((s) => d[s] && isNum(rsiV(d[s]['1d']))),
     onData: () => _markDirty('RSI'),
   });
   source({
@@ -190,17 +201,17 @@ function dashHtml() {
   const p = PAGES.dash;
   return `${pageHead(p, `<button class="btn sm pri" id="d-add" data-act="pcAdd">${ico('plus', 16)}${esc(L('Adicionar moeda', 'Add coin'))}</button><button class="btn sm ghost" data-act="pcReset" title="${esc(L('Voltar aos cards padrão', 'Reset cards'))}">${ico('undo-2', 16)}<span class="hide-m">${esc(L('Cards padrão', 'Default cards'))}</span></button><button class="btn sm" data-act="refreshAll">${ico('refresh-cw', 16)}${esc(L('Atualizar', 'Refresh'))}</button>`)}
   <div id="d-install"></div>
-  <div class="pcards" id="d-cards"></div>
+  <div class="pcards fit" id="d-cards"></div>
   <div class="panel flush mt"><div class="strip s8" id="d-strip">${skel(1, 34)}</div><div class="row wrap" style="padding:8px 14px 12px;gap:6px" id="d-strip-src"></div></div>
   <div class="grid g-3 mt">
     <section class="panel" id="d-fng"></section>
     <section class="panel" id="d-dom"></section>
-    <section class="panel" id="d-rsi"></section>
+    <section class="panel" id="d-trend"></section>
   </div>
-  <div class="grid g-3 mt">
+  <section class="panel mt" id="d-rsi"></section>
+  <div class="grid g-2 mt">
     <section class="panel" id="d-up"></section>
     <section class="panel" id="d-down"></section>
-    <section class="panel" id="d-trend"></section>
   </div>
   <div class="grid g-2 mt">
     <section class="panel span-2" id="d-mr"></section>
@@ -267,20 +278,35 @@ function rsiState(v) {
 }
 // moedas do painel de RSI (padrão BTC e ETH; você troca qualquer uma pela lista da Binance)
 function rsiPairs() { const a = LS.get('rsi-coins'); const ok = Array.isArray(a) ? a.filter((s) => BY_SYM[s]).slice(0, 2) : []; return ok.length === 2 ? ok : ['BTCUSDT', 'ETHUSDT']; }
+const rsiV = (x) => (isNum(x) ? x : x && isNum(x.v) ? x.v : null);
+const rsiP = (x) => (x && isNum(x.p) ? x.p : null);
+function rsiZone(v) {
+  if (!isNum(v)) return { z: 'na', t: '—' };
+  if (v >= 70) return { z: 'ob', t: L('Sobrecomprado', 'Overbought') };
+  if (v >= 60) return { z: 'hi', t: L('Forte', 'Strong') };
+  if (v > 40) return { z: 'mid', t: L('Neutro', 'Neutral') };
+  if (v > 30) return { z: 'lo', t: L('Fraco', 'Weak') };
+  return { z: 'os', t: L('Sobrevendido', 'Oversold') };
+}
+const RSI_TFN = () => ({ '1h': '1h', '4h': '4h', '1d': L('1D', '1D'), '1w': L('1S', '1W') });
 function drawRsi() {
   const box = $('#d-rsi'); if (!box) return;
   const r = CACHE.get('rsi');
-  const head = panelHead('activity', L('Força relativa (RSI 14)', 'Relative strength (RSI 14)'), { sub: esc(L('Acima de 70: esticado para cima. Abaixo de 30: esticado para baixo. Clique na moeda para trocar.', 'Above 70: stretched up. Below 30: stretched down. Click the coin to change it.')), right: stamp('rsi') });
-  const pairs = rsiPairs();
-  const tfn = { '1h': '1h', '4h': '4h', '1d': L('1D', '1D'), '1w': L('1S', '1W') };
+  const head = panelHead('activity', L('Força relativa (RSI 14)', 'Relative strength (RSI 14)'), { sub: esc(L('Acima de 70: esticado para cima (sobrecomprado). Abaixo de 30: esticado para baixo (sobrevendido). Clique numa linha para ver o gráfico.', 'Above 70: stretched up (overbought). Below 30: stretched down (oversold). Click a row to see the chart.')), right: stamp('rsi') });
+  const pairs = rsiPairs(); const tfn = RSI_TFN();
   const grp = (s, i) => {
-    const c = BY_SYM[s]; const d = r && r.v && r.v[s];
-    const q = PX[s];
-    return `<div class="rsi-g"><button class="rsi-h rsi-pick" data-act="rsiPick" data-i="${i}" title="${esc(L('Trocar moeda', 'Change coin'))}">${coinLogo({ ...c, logo: LOGOS[c.cg] }, 20)}<b>${esc(c.b)}</b>${q ? `<span class="small faint">${esc(usd(q.p))}</span>` : ''}<span class="tiny faint" style="margin-left:auto">${esc(L('trocar', 'change'))} ${ico('chevron-down', 13)}</span></button>${['1h', '4h', '1d', '1w'].map((tf) => { const v = d && d[tf]; const [cls, st] = rsiState(v); return `<div class="rsi-r"><span class="tf">${tfn[tf]}</span><div class="rsi-bar">${isNum(v) ? `<i style="left:${clamp(v, 0, 100)}%"></i>` : ''}</div><span class="v">${isNum(v) ? fmtNum(v, 1, 1) : d ? '—' : '…'}</span><span class="st ${cls}">${esc(d ? st : L('carregando', 'loading'))}</span></div>`; }).join('')}</div>`;
+    const c = BY_SYM[s]; const d = r && r.v && r.v[s]; const q = PX[s];
+    const rows = ['1h', '4h', '1d', '1w'].map((tf) => {
+      const v = d ? rsiV(d[tf]) : null, pv = d ? rsiP(d[tf]) : null; const z = rsiZone(v);
+      const dir = isNum(v) && isNum(pv) ? (v > pv + 0.05 ? 'up' : v < pv - 0.05 ? 'down' : '') : '';
+      const arrow = dir === 'up' ? '▲' : dir === 'down' ? '▼' : '';
+      return `<button class="rsi-r z-${z.z}" data-act="rsiOpen" data-s="${esc(s)}" data-tf="${tf}" title="${esc(L(`Ver o gráfico de ${tfn[tf]}`, `See the ${tfn[tf]} chart`))}"><span class="tf">${esc(tfn[tf])}</span><span class="rsi-bar">${isNum(v) ? `<b style="width:${clamp(v, 0, 100).toFixed(1)}%"></b><i style="left:${clamp(v, 0, 100).toFixed(1)}%"></i>` : ''}</span><span class="v">${isNum(v) ? esc(fmtNum(v, 1, 1)) : d ? '—' : '…'}${arrow ? `<em class="${dir}" title="${esc(dir === 'up' ? L('subindo em relação à vela anterior', 'rising vs the previous candle') : L('caindo em relação à vela anterior', 'falling vs the previous candle'))}">${arrow}</em>` : ''}</span><span class="st">${esc(d ? z.t : L('carregando', 'loading'))}</span></button>`;
+    }).join('');
+    return `<div class="rsi-g"><div class="rsi-h"><button class="rsi-coin" data-act="rsiOpen" data-s="${esc(s)}" data-tf="1d" title="${esc(L('Ver gráfico com o RSI', 'See chart with RSI'))}">${coinLogo({ ...c, logo: LOGOS[c.cg] }, 26)}<span class="rsi-cn"><b>${esc(c.n)}</b><small>${esc(c.b)}${q ? ` · <span class="${tone(q.chg)}">${esc(usd(q.p))} ${esc(fmtPct(q.chg, 2))}</span>` : ''}</small></span>${ico('chart-candlestick', 16, 'rsi-ci')}</button><button class="btn xs rsi-swap" data-act="rsiPick" data-i="${i}" title="${esc(L('Trocar a moeda deste bloco', 'Change this block’s coin'))}">${ico('arrow-left-right', 14)}<span>${esc(L('Trocar moeda', 'Change coin'))}</span></button></div>${rows}</div>`;
   };
   if (!r) { box.innerHTML = head + skel(8, 14); return; }
   if (!pairs.every((s) => r.v && r.v[s]) && !drawRsi._kick) { drawRsi._kick = true; setTimeout(() => { drawRsi._kick = false; }, 15000); runSource('rsi', { force: true }); }
-  box.innerHTML = head + pairs.map(grp).join('') + note(L('Método de Wilder sobre as velas da Binance; a vela atual entra no cálculo (como nas corretoras).', 'Wilder method on Binance candles; the current candle is included (as on exchanges).'));
+  setHTML(box, head + `<div class="rsi-gs">${pairs.map(grp).join('')}</div>` + `<div class="rsi-leg"><span class="z-os">≤ 30 ${esc(L('sobrevendido', 'oversold'))}</span><span class="z-lo">30–40 ${esc(L('fraco', 'weak'))}</span><span class="z-mid">40–60 ${esc(L('neutro', 'neutral'))}</span><span class="z-hi">60–70 ${esc(L('forte', 'strong'))}</span><span class="z-ob">≥ 70 ${esc(L('sobrecomprado', 'overbought'))}</span></div>` + note(L('Método de Wilder sobre as velas da Binance; a vela atual entra no cálculo (como nas corretoras). A seta compara com a vela anterior.', 'Wilder method on Binance candles; the current candle is included (as on exchanges). The arrow compares with the previous candle.')));
 }
 ACT.rsiPick = (el) => {
   const i = +el.dataset.i; const pairs = rsiPairs();
@@ -288,8 +314,59 @@ ACT.rsiPick = (el) => {
     if (p.kind !== 'b' || !BY_SYM[p.s]) { toast(L('O RSI usa as velas da Binance: escolha uma moeda da lista principal (tempo real).', 'RSI uses Binance candles: pick a main-list coin.'), { type: 'warn' }); return; }
     const np = [...pairs]; np[i] = p.s; LS.set('rsi-coins', np);
     drawRsi(); runSource('rsi', { force: true });
+    toast(L(`RSI de ${p.b} carregando…`, `Loading ${p.b} RSI…`), { type: 'ok', ms: 1800 });
   } });
 };
+// janela com o gráfico de preço (velas) e o RSI embaixo, por tempo gráfico
+ACT.rsiOpen = (el) => {
+  const s = el.dataset.s; const c = BY_SYM[s]; if (!c) return;
+  DASH.rsiS = s; DASH.rsiTf = el.dataset.tf || DASH.rsiTf || '1d';
+  const tfn = RSI_TFN();
+  openModal({
+    title: L(`${c.n} (${c.b}) · RSI 14`, `${c.n} (${c.b}) · RSI 14`), wide: true,
+    body: `<div class="row between wrap" style="gap:8px">${seg('rsitf', ['1h', '4h', '1d', '1w'].map((tf) => [tf, tfn[tf]]), DASH.rsiTf)}<span class="rsi-m-now" id="rsi-m-now"></span></div>
+      <div class="rsi-m"><div class="rsi-m-p" id="rsi-m-p"></div><div class="rsi-m-l">${ico('activity', 14)}RSI 14 <span class="faint">· 70 = ${esc(L('sobrecomprado', 'overbought'))} · 30 = ${esc(L('sobrevendido', 'oversold'))}</span></div><div class="rsi-m-r" id="rsi-m-r"></div></div>
+      <div class="howto">
+        <div class="ht-b ht-blue"><div class="ht-h">${ico('book-open', 16)}${esc(L('O que é', 'What it is'))}</div><p>${richText(L('O RSI (Índice de Força Relativa) mede de 0 a 100 a força das altas contra a das quedas nas últimas 14 velas. É calculado pelo método de Wilder, o mesmo das corretoras.', 'The RSI (Relative Strength Index) measures from 0 to 100 the strength of gains against losses over the last 14 candles. Computed with Wilder’s method, the same as exchanges.'))}</p></div>
+        <div class="ht-b ht-green"><div class="ht-h">${ico('lightbulb', 16)}${esc(L('Como ler', 'How to read it'))}</div><p>${richText(L('Acima de 70 o preço subiu rápido demais (sobrecomprado): risco maior de pausa ou correção. Abaixo de 30 caiu rápido demais (sobrevendido): é onde costumam aparecer repiques e fundos. Em tendência forte o RSI pode ficar dias acima de 70 ou abaixo de 30 — use junto com o gráfico, não sozinho.', 'Above 70 price rose too fast (overbought): higher risk of a pause or pullback. Below 30 it fell too fast (oversold): where bounces and bottoms tend to appear. In strong trends RSI can stay above 70 or below 30 for days — use it with the chart, not alone.'))}</p></div>
+      </div>`,
+    onOpen: () => rsiModalDraw(),
+  });
+};
+ACT.seg_rsitf = (v) => { DASH.rsiTf = v; rsiModalDraw(); };
+async function rsiModalDraw() {
+  const s = DASH.rsiS, tf = DASH.rsiTf; const pe = $('#rsi-m-p'), re = $('#rsi-m-r'); if (!s || !pe || !re) return;
+  const seq = ++DASH.rseq;
+  pe.innerHTML = '<div class="skel" style="height:100%"></div>'; re.innerHTML = '';
+  let ks;
+  try { ks = await klines(s, tf, 500); } catch (e) { if (seq === DASH.rseq) pe.innerHTML = emptyBox('wifi-off', L('Velas indisponíveis agora', 'Candles unavailable now'), esc(e.message)); return; }
+  if (seq !== DASH.rseq || !$('#rsi-m-p')) return;
+  const intraday = tf === '1h' || tf === '4h';
+  const rs = rsiSeries(ks.map((k) => k.c));
+  const v = lastOf(rs); const z = rsiZone(v);
+  setHTML('#rsi-m-now', isNum(v) ? `<span class="rsi-r z-${z.z}" style="display:inline-flex;width:auto;padding:0;gap:8px"><span>${esc(L('RSI agora', 'RSI now'))}</span><span class="v">${esc(fmtNum(v, 1, 1))}</span><span class="st">${esc(z.t)}</span></span>` : '');
+  let a, b;
+  try { a = await makeChart(pe, { intraday }); b = await makeChart(re, { intraday, priceFmt: (x) => fmtNum(x, 0, 0) }); } catch (e) { pe.innerHTML = emptyBox('wifi-off', L('Gráfico indisponível', 'Chart unavailable'), esc(e.message)); return; }
+  if (seq !== DASH.rseq) return;
+  const c = chartColors();
+  a.ch.applyOptions({ timeScale: { visible: false }, rightPriceScale: { minimumWidth: 74 } });
+  const cs = a.ch.addCandlestickSeries({ ...candleOpts(c), title: BY_SYM[s].b, lastValueVisible: true });
+  cs.setData(candleData(ks, intraday));
+  b.ch.applyOptions({ rightPriceScale: { minimumWidth: 74, scaleMargins: { top: 0.08, bottom: 0.08 } } });
+  const rl = b.ch.addLineSeries({ color: c.accent, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, nxName: 'RSI 14', nxFmt: (x) => fmtNum(x, 1, 1) });
+  rl.setData(lineData(ks, rs, intraday));
+  rl.applyOptions({ autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }) });
+  rl.createPriceLine({ price: 70, color: c.down, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: L('sobrecomprado', 'overbought') });
+  rl.createPriceLine({ price: 30, color: c.up, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: L('sobrevendido', 'oversold') });
+  rl.createPriceLine({ price: 50, color: c.line, lineWidth: 1, lineStyle: 3, axisLabelVisible: false });
+  // marcas onde o RSI entrou nas zonas extremas
+  const mk = []; for (let i = 1; i < rs.length; i++) { if (!isNum(rs[i]) || !isNum(rs[i - 1])) continue; if (rs[i] >= 70 && rs[i - 1] < 70) mk.push({ time: ctime(ks[i].t, intraday), position: 'aboveBar', color: c.down, shape: 'circle', size: 0.6 }); else if (rs[i] <= 30 && rs[i - 1] > 30) mk.push({ time: ctime(ks[i].t, intraday), position: 'belowBar', color: c.up, shape: 'circle', size: 0.6 }); }
+  try { rl.setMarkers(mk); } catch { /* */ }
+  let lock = false;
+  const sync = (from, to) => from.timeScale().subscribeVisibleLogicalRangeChange((rg) => { if (lock || !rg) return; lock = true; try { to.timeScale().setVisibleLogicalRange(rg); } catch { /* */ } lock = false; });
+  sync(a.ch, b.ch); sync(b.ch, a.ch);
+  const n = ks.length; a.ch.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - 140), to: n + 3 });
+}
 function moverList(dir) {
   const mv = typeof tickerMovers === 'function' ? tickerMovers() : { up: [], down: [] };
   const top = dir > 0 ? mv.up : mv.down;
@@ -313,41 +390,105 @@ function drawTrend() {
   if (!t) { box.innerHTML = head + skel(5, 18); return; }
   box.innerHTML = head + `<div class="list">${t.v.slice(0, 6).map((c, i) => `<a class="li" href="https://www.coingecko.com/pt/moedas/${encodeURIComponent(c.id)}" target="_blank" rel="noopener noreferrer"><span class="li-n">${i + 1}</span>${coinLogo({ b: String(c.s).toUpperCase(), logo: c.logo, cg: c.id }, 28)}<span class="grow"><span class="t" style="display:block">${esc(c.n)}</span><span class="m">${esc(String(c.s).toUpperCase())}${c.rank ? ' · #' + c.rank : ''}${isNum(c.p) ? ' · ' + esc(usd(c.p)) : ''}</span></span>${chg(c.chg)}</a>`).join('')}</div>`;
 }
-// ---------- retornos mensais ----------
+// ---------- retornos mensais (BTC, ETH ou qualquer moeda) ----------
+function mrCoin() { if (DASH.mrc === null) { const c = LS.get('mr-coin'); DASH.mrc = c && (c.kind === 'b' ? BY_SYM[c.s] : c.cg) ? c : false; } return DASH.mrc || null; }
+const mrKey = (c) => (c.kind === 'b' ? c.s : 'g:' + c.cg);
+// meses da moeda escolhida: Binance (velas mensais desde a listagem) ou CoinGecko (último ano, preços diários)
+async function mrxLoad(force) {
+  const c = mrCoin(); if (!c) return;
+  const key = mrKey(c);
+  if (!force && DASH.mrx && DASH.mrx.key === key && (DASH.mrx.loading || Date.now() - DASH.mrx.at < 30 * 60e3)) return;
+  DASH.mrx = { key, loading: true, at: Date.now() };
+  try {
+    let rows, src;
+    if (c.kind === 'b') {
+      rows = (await klines(c.s, '1M', 120)).map((k) => ({ t: k.t, o: k.o, c: k.c })); src = 'Binance';
+    } else {
+      const j = await getJSON(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(c.cg)}/market_chart?vs_currency=usd&days=365&interval=daily`, { timeout: 15000 });
+      const pts = ((j && j.prices) || []).filter((x) => isNum(x[0]) && isNum(x[1]) && x[1] > 0).sort((a, b) => a[0] - b[0]);
+      const by = new Map();
+      for (const [t, pr] of pts) { const d = new Date(t); const k = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); if (!by.has(k)) by.set(k, { t: k, o: pr, d1: d.getUTCDate(), last: pr }); else by.get(k).last = pr; }
+      const ms = [...by.values()].sort((a, b) => a.t - b.t);
+      // fechamento do mês = abertura do mês seguinte (o último ponto de cada dia é 00:00 UTC); mês que começou pela metade fica de fora
+      rows = ms.map((m, i) => ({ t: m.t, o: m.o, c: ms[i + 1] ? ms[i + 1].o : m.last, skip: m.d1 > 2 })).filter((m) => !m.skip); src = 'CoinGecko';
+    }
+    if (!rows.length) throw new Error(L('sem histórico', 'no history'));
+    DASH.mrx = { key, rows, src, at: Date.now() };
+  } catch (e) { DASH.mrx = { key, err: String((e && e.message) || e), at: Date.now() }; }
+  if (S.page === 'dash') drawMonthly();
+}
+function mrLive() {
+  if (DASH.mr === 'X') { const c = mrCoin(); if (!c) return null; if (c.kind === 'b') return PX[c.s] ? PX[c.s].p : null; return XP[c.cg] ? XP[c.cg].p : null; }
+  const q = PX[DASH.mr + 'USDT']; return q ? q.p : null;
+}
+// cor forte: 4 níveis por tamanho do movimento (contraste de 4,5:1 em todos os temas)
+const mrCls = (r) => { const a = Math.abs(r); const lv = a < 3 ? 1 : a < 10 ? 2 : a < 25 ? 3 : 4; return (r >= 0 ? 'p' : 'n') + lv; };
 function drawMonthly() {
   const box = $('#d-mr'); if (!box) return;
-  const m = CACHE.get('monthly');
-  const head = panelHead('calendar-days', L('Retornos mensais', 'Monthly returns'), { sub: esc(L('Variação de cada mês (abertura → fechamento, em UTC). O mês atual muda ao vivo.', 'Each month’s change (open → close, UTC). The current month updates live.')), right: `<div class="row" style="gap:8px">${seg('dmr', [['BTC', 'BTC'], ['ETH', 'ETH']], DASH.mr)}${stamp('monthly')}</div>` });
-  if (!m || !m.v[DASH.mr]) { box.innerHTML = head + skel(6, 18); return; }
+  const m = CACHE.get('monthly'); const cc = mrCoin();
+  if (DASH.mr === 'X' && !cc) DASH.mr = 'BTC';
+  const opts = [['BTC', 'BTC'], ['ETH', 'ETH']]; if (cc) opts.push(['X', cc.b]);
+  const right = `<div class="row wrap" style="gap:8px;justify-content:flex-end">${seg('dmr', opts, DASH.mr)}<button class="btn xs mr-pick" data-act="mrPick">${ico('arrow-left-right', 14)}<span>${esc(cc ? L('Outra moeda', 'Other coin') : L('Escolher moeda', 'Pick a coin'))}</span></button>${DASH.mr === 'X' ? '' : stamp('monthly')}</div>`;
+  const head = panelHead('calendar-days', L('Retornos mensais', 'Monthly returns'), { sub: esc(L('Variação de cada mês (abertura → fechamento, em UTC), com valores reais. O mês atual muda ao vivo. Escolha BTC, ETH ou qualquer moeda das maiores do mercado.', 'Each month’s change (open → close, UTC), real values. The current month updates live. Pick BTC, ETH or any top coin.')), right });
+  let arr, src, since;
+  if (DASH.mr === 'X') {
+    const x = DASH.mrx;
+    if (!x || x.key !== mrKey(cc)) { mrxLoad(); box.innerHTML = head + skel(6, 18); return; }
+    if (x.loading) { box.innerHTML = head + skel(6, 18); return; }
+    if (x.err) { box.innerHTML = head + emptyBox('wifi-off', L(`Histórico de ${cc.b} indisponível agora`, `${cc.b} history unavailable now`), esc(x.err), `<button class="btn sm" data-act="mrRetry">${ico('refresh-cw', 15)}${esc(L('Tentar de novo', 'Try again'))}</button>`); return; }
+    arr = x.rows; src = x.src;
+  } else {
+    if (!m || !m.v[DASH.mr]) { box.innerHTML = head + skel(6, 18); return; }
+    arr = m.v[DASH.mr]; src = 'Binance';
+  }
+  since = arr.length ? fmtDate(arr[0].t, { month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—';
   const rows = {}; const now = new Date();
   const curKey = `${now.getUTCFullYear()}-${now.getUTCMonth()}`;
-  for (const k of m.v[DASH.mr]) {
+  const live = mrLive();
+  for (const k of arr) {
     const d = new Date(k.t), y = d.getUTCFullYear(), mo = d.getUTCMonth();
     let c = k.c;
-    if (`${y}-${mo}` === curKey) { const live = PX[DASH.mr + 'USDT']; if (live) c = live.p; }
+    if (`${y}-${mo}` === curKey && isNum(live)) c = live;
+    if (!isNum(c) || !isNum(k.o) || k.o <= 0) continue;
     (rows[y] = rows[y] || {})[mo] = { r: (c / k.o - 1) * 100, cur: `${y}-${mo}` === curKey };
   }
   const years = Object.keys(rows).map(Number).sort((a, b) => b - a);
   const cols = Array.from({ length: 12 }, (_, i) => i);
-  const cell = (x) => (x ? `<td class="v ${x.r >= 0 ? 'pos' : 'neg'} ${x.cur ? 'cur' : ''}"${x.cur ? ' data-cur="1"' : ''}>${esc(fmtPct(x.r, 1))}</td>` : '<td class="na">—</td>');
+  const cell = (x) => (x ? `<td class="v ${mrCls(x.r)} ${x.cur ? 'cur' : ''}"${x.cur ? ' data-cur="1"' : ''}>${esc(fmtPct(x.r, 1))}</td>` : '<td class="na">—</td>');
   const yearTot = (y) => { const vals = cols.map((i) => rows[y][i]).filter(Boolean); if (!vals.length) return null; return (vals.reduce((p, x) => p * (1 + x.r / 100), 1) - 1) * 100; };
-  const body = years.map((y) => { const t = yearTot(y); return `<tr><td>${y}</td>${cols.map((i) => cell(rows[y][i])).join('')}<td class="v yr-tot ${isNum(t) ? (t >= 0 ? 'pos' : 'neg') : 'na'}">${isNum(t) ? esc(fmtPct(t, 1)) : '—'}</td></tr>`; }).join('');
-  const avgRow = cols.map((i) => { const vals = years.map((y) => rows[y][i]).filter((x) => x && !x.cur).map((x) => x.r); const a = avg(vals); return `<td class="${tone(a)}">${isNum(a) ? esc(fmtPct(a, 1)) : '—'}</td>`; }).join('');
-  const medRow = cols.map((i) => { const vals = years.map((y) => rows[y][i]).filter((x) => x && !x.cur).map((x) => x.r).sort((a, b) => a - b); const md = vals.length ? (vals.length % 2 ? vals[(vals.length - 1) / 2] : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2) : null; return `<td class="${tone(md)}">${isNum(md) ? esc(fmtPct(md, 1)) : '—'}</td>`; }).join('');
-  box.innerHTML = head + `<div class="tbl-wrap"><table class="tbl mr"><thead><tr><th>${esc(L('Ano', 'Year'))}</th>${cols.map((i) => `<th>${esc(monthName(i))}</th>`).join('')}<th>${esc(L('Ano', 'Year'))}</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>${esc(L('Média', 'Average'))}</td>${avgRow}<td></td></tr><tr><td>${esc(L('Mediana', 'Median'))}</td>${medRow}<td></td></tr></tfoot></table></div>` +
-    note(L(`Fonte: velas mensais ${DASH.mr}/USDT da Binance (desde ago/2017, início do par). Média e mediana não incluem o mês em andamento.`, `Source: Binance ${DASH.mr}/USDT monthly candles (since Aug 2017). Average and median exclude the current month.`));
+  const body = years.map((y) => { const t = yearTot(y); return `<tr><td>${y}</td>${cols.map((i) => cell(rows[y][i])).join('')}<td class="v yr-tot ${isNum(t) ? mrCls(t) : 'na'}">${isNum(t) ? esc(fmtPct(t, 1)) : '—'}</td></tr>`; }).join('');
+  const stat = (i, f) => { const vals = years.map((y) => rows[y][i]).filter((x) => x && !x.cur).map((x) => x.r); return f(vals); };
+  const med = (v) => { const a = v.slice().sort((x, y) => x - y); return a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : null; };
+  const avgRow = cols.map((i) => { const a = stat(i, (v) => avg(v)); return `<td class="${tone(a)}">${isNum(a) ? esc(fmtPct(a, 1)) : '—'}</td>`; }).join('');
+  const medRow = cols.map((i) => { const md = stat(i, med); return `<td class="${tone(md)}">${isNum(md) ? esc(fmtPct(md, 1)) : '—'}</td>`; }).join('');
+  const posRow = cols.map((i) => { const v = stat(i, (x) => x); const up = v.filter((r) => r > 0).length; return `<td>${v.length ? `<span class="mr-wr ${up / v.length >= 0.5 ? 'up' : 'down'}">${up}/${v.length}</span>` : '—'}</td>`; }).join('');
+  const coinLine = DASH.mr === 'X' && cc ? `<div class="mr-coin">${coinLogo({ b: cc.b, cg: cc.cg, logo: cc.logo || LOGOS[cc.cg], c: cc.c }, 22)}<b>${esc(cc.n || cc.b)}</b><span class="faint">${esc(cc.b)} · ${esc(src)}${src === 'CoinGecko' ? ' · ' + esc(L('último ano (limite do plano grátis)', 'last year (free plan limit)')) : ''}</span></div>` : '';
+  box.innerHTML = head + coinLine + `<div class="tbl-wrap"><table class="tbl mr"><thead><tr><th>${esc(L('Ano', 'Year'))}</th>${cols.map((i) => `<th>${esc(monthName(i))}</th>`).join('')}<th>${esc(L('Ano', 'Year'))}</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>${esc(L('Média', 'Average'))}</td>${avgRow}<td></td></tr><tr><td>${esc(L('Mediana', 'Median'))}</td>${medRow}<td></td></tr><tr><td title="${esc(L('Quantos anos esse mês fechou em alta', 'How many years this month closed up'))}">${esc(L('Meses de alta', 'Up months'))}</td>${posRow}<td></td></tr></tfoot></table></div>` +
+    `<div class="mr-scale"><span class="n4">≤ −25%</span><span class="n3">−10 a −25%</span><span class="n2">−3 a −10%</span><span class="n1">0 a −3%</span><span class="p1">0 a +3%</span><span class="p2">+3 a +10%</span><span class="p3">+10 a +25%</span><span class="p4">≥ +25%</span></div>` +
+    note(L(`Fonte: ${src === 'Binance' ? 'velas mensais da Binance' : 'preços diários do CoinGecko'} (desde ${since}). Média, mediana e meses de alta não incluem o mês em andamento.`, `Source: ${src === 'Binance' ? 'Binance monthly candles' : 'CoinGecko daily prices'} (since ${since}). Average, median and up months exclude the current month.`));
 }
 ACT.seg_dmr = (v) => { DASH.mr = v; drawMonthly(); };
+ACT.mrRetry = () => mrxLoad(true);
+ACT.mrPick = () => {
+  openCoinPicker({ title: L('Retornos mensais de qual moeda?', 'Monthly returns of which coin?'), exclude: ['BTCUSDT', 'ETHUSDT'], onPick: (p) => {
+    DASH.mrc = p.kind === 'b' ? { kind: 'b', s: p.s, b: p.b, n: p.n, cg: p.cg } : { kind: 'g', cg: p.cg, b: p.b, n: p.n, logo: /^https:/.test(p.logo || '') ? p.logo : '' };
+    LS.set('mr-coin', DASH.mrc); DASH.mr = 'X'; DASH.mrx = null;
+    if (p.kind === 'g') { LOGOS[p.cg] = LOGOS[p.cg] || p.logo; trackExtra(p.cg); }
+    drawMonthly();
+  } });
+};
 function updMonthlyCur() {
-  const td = $('#d-mr td[data-cur]'); const m = CACHE.get('monthly'); if (!td || !m) return;
-  const arr = m.v[DASH.mr]; const k = arr && arr[arr.length - 1]; const live = PX[DASH.mr + 'USDT']; if (!k || !live) return;
-  const r = (live.p / k.o - 1) * 100; td.textContent = fmtPct(r, 1); td.className = `v ${r >= 0 ? 'pos' : 'neg'} cur`; td.dataset.cur = '1';
+  const td = $('#d-mr td[data-cur]'); if (!td) return;
+  let arr = null;
+  if (DASH.mr === 'X') arr = DASH.mrx && DASH.mrx.rows; else { const m = CACHE.get('monthly'); arr = m && m.v[DASH.mr]; }
+  const k = arr && arr[arr.length - 1]; const live = mrLive(); if (!k || !isNum(live)) return;
+  const r = (live / k.o - 1) * 100; td.textContent = fmtPct(r, 1); td.className = `v ${mrCls(r)} cur`; td.dataset.cur = '1';
 }
 function drawEvents() {
   const box = $('#d-ev'); if (!box) return;
   const evs = typeof officialEvents === 'function' ? officialEvents().filter((e) => e.at > Date.now()).slice(0, 5) : [];
-  box.innerHTML = panelHead('calendar-days', L('Próximos eventos que mexem com o mercado', 'Upcoming market-moving events'), { sub: esc(L('Calendários oficiais. Quando um evento passa, o próximo assume sozinho.', 'Official calendars. When an event passes, the next one takes its place.')), right: `<a class="link-btn" href="#/agenda">${esc(L('Agenda completa', 'Full calendar'))}${ico('chevron-right', 15)}</a>` }) +
-    (evs.length ? `<div>${evs.map((e, i) => `<div class="ev ${i === 0 ? 'next' : ''}"><div class="ev-d">${esc(fmtDate(e.at, { day: '2-digit', month: 'short' }))}<small>${esc(fmtTime(e.at))}</small></div><div><div class="ev-t">${ctryTag(e.country)}${esc(e.t)}<span class="imp i${e.imp}" title="${esc(L('Impacto', 'Impact'))}"><i></i><i></i><i></i></span></div><div class="ev-m"><span>${esc(e.src)}</span></div></div><span class="badge ${i === 0 ? 'pro' : ''}" data-until="${e.at}">${esc(until(e.at))}</span></div>`).join('')}</div>` : emptyBox('calendar-days', L('Sem eventos programados', 'No events scheduled')));
+  box.innerHTML = panelHead('calendar-days', L('Próximos eventos que mexem com o mercado', 'Upcoming market-moving events'), { sub: esc(L('Calendários oficiais. Quando um evento passa, o próximo assume sozinho.', 'Official calendars. When an event passes, the next one takes its place.')), right: `<a class="btn sm ev-go" href="#/events">${ico('calendar-clock', 15)}${esc(L('Ver todos os eventos', 'See all events'))}${ico('chevron-right', 15)}</a>` }) +
+    (evs.length ? `<div>${evs.map((e, i) => `<div class="ev click ${i === 0 ? 'next' : ''}" data-act="go" data-to="events"><div class="ev-d">${esc(fmtDate(e.at, { day: '2-digit', month: 'short' }))}<small>${esc(fmtTime(e.at))}</small></div><div><div class="ev-t">${ctryTag(e.country)}${esc(e.t)}<span class="imp i${e.imp}" title="${esc(L('Impacto', 'Impact'))}"><i></i><i></i><i></i></span></div><div class="ev-m"><span>${esc(e.src)}</span></div></div><span class="badge ${i === 0 ? 'pro' : ''}" data-until="${e.at}">${esc(until(e.at))}</span></div>`).join('')}</div>` : emptyBox('calendar-days', L('Sem eventos programados', 'No events scheduled')));
 }
 function dashDraw() { setHTML('#d-install', typeof installHint === 'function' ? installHint() : ''); drawCards(); drawStrip(); drawFng(); drawDom(); drawRsi(); drawMovers(); drawTrend(); drawMonthly(); drawEvents(); }
 onPrice((set) => {
@@ -359,7 +500,7 @@ onPrice((set) => {
   if (set.has('CGM') || set.has('XP')) { if (!DASH.cards || DASH.cards.some((x) => !$(`#d-cards .pc[data-k="${CSS.escape(cardKey(x))}"] .spark`))) drawCards(); }
   if (set.has('RSI')) drawRsi();
   if (set.has('TREND')) drawTrend();
-  if (set.has('MONTHLY')) drawMonthly(); else if (set.has('BTCUSDT') || set.has('ETHUSDT')) updMonthlyCur();
+  if (set.has('MONTHLY')) drawMonthly(); else if (set.has('BTCUSDT') || set.has('ETHUSDT') || set.has('XP') || (DASH.mrc && DASH.mrc.s && set.has(DASH.mrc.s))) updMonthlyCur();
   const now = Date.now();
   if (set.has('TOP100') || now - (DASH.t.mv || 0) > 4000) { DASH.t.mv = now; drawMovers(); }
 });

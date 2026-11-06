@@ -191,7 +191,7 @@ function tickCountdowns() {
     const at = +el.dataset.cd; const s = Math.max(0, Math.round((at - Date.now()) / 1000));
     const v = [Math.floor(s / 86400), Math.floor((s % 86400) / 3600), Math.floor((s % 3600) / 60), s % 60];
     $$('b', el).forEach((b, i) => { const t = i === 0 ? String(v[0]) : String(v[i]).padStart(2, '0'); if (b.textContent !== t) b.textContent = t; });
-    if (s === 0 && !el.dataset.done) { el.dataset.done = '1'; setTimeout(() => { if (S.page === 'macro') macroDraw(); if (S.page === 'agenda') agendaDraw(); }, 1500); }
+    if (s === 0 && !el.dataset.done) { el.dataset.done = '1'; setTimeout(() => { if (S.page === 'macro') macroDraw(); if (S.page === 'agenda') agendaDraw(); if (S.page === 'events' && typeof eventsDraw === 'function') eventsDraw(); }, 1500); }
   });
   $$('[data-until]').forEach((el) => { const t = until(+el.dataset.until); if (el.textContent !== t) el.textContent = t; });
 }

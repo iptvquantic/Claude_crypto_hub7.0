@@ -78,7 +78,7 @@ function boot() {
   buildHeaderLabels(); updClock();
   // fontes de dados
   registerPriceSources(); registerSharedSources(); registerDashSources(); registerTop100Sources(); registerMarketSources();
-  registerOnchainSources(); registerLabSources(); registerBuybackSources(); registerWalletSources(); registerEtfSources(); registerWhaleSources(); registerMacroSources(); registerNewsSources(); registerGeoSource();
+  registerOnchainSources(); registerLabSources(); registerBuybackSources(); registerWalletSources(); registerEtfSources(); registerWhaleSources(); registerMacroSources(); registerEventSources(); registerNewsSources(); registerGeoSource();
   buildSidebar();
   accountBoot();
   setTimeout(dbHeartbeat, 6000);

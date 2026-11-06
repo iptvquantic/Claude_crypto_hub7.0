@@ -9,6 +9,20 @@ function panelHead(icon, title, { sub = '', right = '', id = '' } = {}) {
 const extLink = (url, text, cls = 'link-btn') => `<a class="${cls}" href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">${esc(text)}${cls === 'link-btn' ? ico('external-link', 14) : ''}</a>`;
 const note = (html) => `<p class="panel-note">${html}</p>`;
 const kpiBox = (k, v, s = '', cls = '') => `<div class="kpi ${cls}"><span class="k">${k}</span><span class="v">${v}</span>${s ? `<span class="s">${s}</span>` : ''}</div>`;
+// texto explicativo com cor: números em negrito, palavras de fundo/compra em verde e de topo/venda em vermelho
+let _RICH = null;
+try { _RICH = new RegExp('(^|[^\\p{L}\\d])(?:(\\d+(?:[.,]\\d+)*(?:\\s?[×%])?)|(fundos?|acumula\\p{L}*|barat\\p{L}*|compra\\p{L}*|capitula\\p{L}*|bottoms?|cheap\\p{L}*|buy\\p{L}*|undervalued|accumulat\\p{L}*|sobrevendid\\p{L}*|oversold|altas|repiques?|bounces?)|(topos?|distribui\\p{L}*|car[oa]s?|vend[ae]\\p{L}*|euforia|euf[óo]ric\\p{L}*|bolhas?|tops?|expensive|sell\\p{L}*|overvalued|overheat\\p{L}*|euphori\\p{L}*|bubbles?|sobrecomprad\\p{L}*|overbought|quedas?|corre[çc][ãa]o|pullbacks?|capitulation))(?![\\p{L}\\d])', 'giu'); } catch { _RICH = null; }
+function richText(t) {
+  t = String(t || ''); if (!_RICH) return esc(t);
+  let out = '', last = 0, m; _RICH.lastIndex = 0;
+  while ((m = _RICH.exec(t))) {
+    const st = m.index + (m[1] || '').length; const w = m[2] || m[3] || m[4];
+    out += esc(t.slice(last, st)) + `<b class="${m[2] ? 'hl-n' : m[3] ? 'hl-up' : 'hl-dn'}">${esc(w)}</b>`;
+    last = st + w.length;
+    if (_RICH.lastIndex <= m.index) _RICH.lastIndex = m.index + 1;
+  }
+  return out + esc(t.slice(last));
+}
 const pp = (v, dec = 2) => (isNum(v) ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtNum(Math.abs(v), dec, dec)} p.p.` : '—');
 function setHTML(sel, html, root = document) { const el = typeof sel === 'string' ? $(sel, root) : sel; if (el && el.innerHTML !== html) el.innerHTML = html; return el; }
 // marca d'água de "modelo": para números que são cálculo nosso, não leitura de fonte

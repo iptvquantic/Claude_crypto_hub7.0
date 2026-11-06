@@ -13,7 +13,7 @@ const DAYMS = 86400e3;
 const LAB_HALVINGS = ['2012-11-28', '2016-07-09', '2020-05-11', '2024-04-20'];
 const LAB_DEF_SEL = ['realized', 'sma200w', 'sthRP', 'mvrvZ'];
 const LAB_MAX_PANES = 4;
-const LAB = { sel: LAB_DEF_SEL.slice(), mode: 'ind', tab: 'acc', range: '4y', log: true, cat: 'all', q: '', h: 0, full: false, sideOpen: true, seq: 0, raw: null, D: null, cD: null, charts: [], _ck: '', _tk: 0 };
+const LAB = { sel: LAB_DEF_SEL.slice(), mode: 'ind', tab: 'acc', range: '4y', log: true, kind: 'line', custom: [], cat: 'all', q: '', h: 0, full: false, sideOpen: true, seq: 0, raw: null, D: null, cD: null, charts: [], _ck: '', _tk: 0, kl: null, klAt: 0, rpl: { h: 'all', m: 'net', agg: '1d', rg: '1y' }, rseq: 0, _rk: '' };
 
 // ---------- séries diárias (índice = dias desde 18/07/2010) ----------
 function lastPt(a) { if (!a) return null; for (let i = a.length - 1; i >= 0; i--) if (isNum(a[i])) return { v: a[i], i }; return null; }
@@ -138,6 +138,8 @@ function labBuild(j, live) {
   A.fng = g(j.fng);
   // BGeometrics (bitcoin-data.com)
   for (const k of ['sthRealizedPrice', 'lthRealizedPrice', 'trueMarketMean', 'terminalPrice', 'cvdd', 'balancedPrice', 'sthMvrv', 'lthMvrv', 'sopr', 'sthSopr', 'lthSopr', 'aviv', 'reserveRisk', 'rhodlRatio']) A[k] = g(bd[k]);
+  // lucro e prejuízo realizados por dia (US$ milhões; prejuízo negativo): todos, longo prazo (LTH) e curto prazo (STH)
+  for (const k of ['realizedProfit', 'realizedLoss', 'realizedProfitLth', 'realizedLossLth', 'realizedProfitSth', 'realizedLossSth']) A[k] = g(bd[k]);
   A.sopr7 = rollMean(A.sopr, 7); A.sthSopr7 = rollMean(A.sthSopr, 7); A.lthSopr7 = rollMean(A.lthSopr, 7);
   A.hr = hashRibbons(A.h30, A.h60, A.sma10, A.sma20);
   const D = { A, N, t0, hasLive, live, lastCM: lp.i, bdLast: j.bdLast || {}, via: j._via || 'robot', gen: j.generatedAt, T: (i) => t0 + i * DAYMS };
@@ -173,11 +175,40 @@ function labFmt(f, v, axis) {
 }
 const LAB_SRC = { cm: 'Coin Metrics', bd: 'BGeometrics', fng: 'alternative.me', calc: 'NEXUS HUB' };
 
+// ---------- linhas de múltiplo: preço-base × k (como nos painéis de ciclo dos sites de on-chain) ----------
+// Ex.: "STH ×1" = custo médio de quem comprou há menos de ~155 dias; "MVRV ×3,65" = preço realizado × 3,65.
+const LAB_BASES = {
+  rp: { n: 'MVRV', c: '#62b4ff', src: 'cm', ks: [0.8, 1, 1.2, 2.4, 2.7, 2.95, 3.65, 3.9], arr: (A) => A.rp },
+  sth: { n: 'STH', c: '#f472b6', src: 'bd', bdk: 'sthRealizedPrice', ks: [0.6, 0.66, 0.7, 1, 1.4, 1.5, 1.6], arr: (A) => A.sthRealizedPrice },
+  mayer: { n: 'Mayer', c: '#2dd4bf', src: 'cm', ks: [0.63, 0.8, 1, 1.7, 2, 2.4], arr: (A) => A.sma200 },
+  lth: { n: 'LTH', c: '#818cf8', src: 'bd', bdk: 'lthRealizedPrice', ks: [0.77, 1, 3, 4, 8, 11], arr: (A) => A.lthRealizedPrice },
+  w200: { n: '200W', c: '#f4b43f', src: 'cm', ks: [], arr: (A) => A.sma1400 },
+  tmm: { n: 'TMM', c: '#e879f9', src: 'bd', bdk: 'trueMarketMean', ks: [], arr: (A) => A.trueMarketMean },
+};
+const labBaseName = (b) => ({ rp: L('Preço realizado (MVRV)', 'Realized price (MVRV)'), sth: L('Curto prazo (STH)', 'Short-term holders (STH)'), mayer: L('Média de 200 dias (Mayer)', '200-day average (Mayer)'), lth: L('Longo prazo (LTH)', 'Long-term holders (LTH)'), w200: L('Média de 200 semanas', '200-week average'), tmm: 'True Market Mean' }[b] || b);
+function labMultColor(b, k) {
+  const B = LAB_BASES[b]; if (Math.abs(k - 1) < 1e-9) return B.c;
+  const ks = (B.ks.length ? B.ks : [k]).slice();
+  if (k < 1) { const lo = ks.filter((x) => x < 1); const t = lo.length > 1 ? (1 - k) / (1 - Math.min(...lo)) : 0.5; return mixHex('#86efac', '#15803d', clamp(t, 0, 1)); }
+  const hi = ks.filter((x) => x > 1); const t = hi.length > 1 ? (k - Math.min(...hi)) / (Math.max(...hi) - Math.min(...hi) || 1) : 0.5;
+  return mixHex('#fcd34d', '#ef4444', clamp(t, 0, 1));
+}
+function labMultInd(b, k, custom) {
+  const B = LAB_BASES[b]; const kt = fmtNum(k, 0, 3);
+  const what = { rp: L('o MVRV', 'MVRV'), sth: L('o STH MVRV', 'STH MVRV'), lth: L('o LTH MVRV', 'LTH MVRV'), mayer: L('o Mayer Multiple', 'the Mayer Multiple'), w200: L('o preço ÷ 200W SMA', 'price ÷ 200W SMA'), tmm: L('o preço ÷ True Market Mean', 'price ÷ True Market Mean') }[b];
+  const base = { rp: L('preço realizado (custo médio de todos os bitcoins)', 'realized price (average cost of all bitcoins)'), sth: L('custo médio de quem comprou há menos de ~155 dias', 'cost basis of coins bought < ~155 days ago'), lth: L('custo médio de quem segura há mais de ~155 dias', 'cost basis of coins held > ~155 days'), mayer: L('média de 200 dias', '200-day average'), w200: L('média de 200 semanas', '200-week average'), tmm: 'True Market Mean' }[b];
+  return { id: (custom ? 'u-' : 'm-') + b + '-' + k, cat: 'mult', grp: custom ? 'custom' : b, kind: 'ov', n: `${B.n} ×${kt}`, s: `${base} × ${kt}`, c: custom ? mixHex(B.c, '#ffffff', 0.15) : labMultColor(b, k), src: B.src, bdk: B.bdk, f: 'usd', mult: { b, k }, custom: !!custom,
+    kw: `multiplo linha ${B.n} ${kt} ${base}`,
+    lines: (A) => [{ v: mulA(B.arr(A), k) }], now: (A) => lastPt(mulA(B.arr(A), k)),
+    desc: L(`Linha de preço = ${base} × ${kt}. É o preço em que ${what} seria ${kt}: quando o BTC toca essa linha, o indicador chega a esse valor.`, `Price line = ${base} × ${kt}. It is the price at which ${what} would be ${kt}: when BTC touches this line, the indicator reaches that value.`),
+    ref: L('Múltiplos abaixo de 1× marcaram suportes e fundos; acima de 1×, resistências e topos de ciclos anteriores. Combine várias linhas para ver as faixas do ciclo.', 'Multiples below 1× marked supports and bottoms; above 1×, resistances and previous cycle tops. Combine several lines to see the cycle bands.') };
+}
+
 // ---------- catálogo de indicadores ----------
 // kind 'ov' = linha sobre o preço (US$); 'pane' = painel próprio embaixo do gráfico.
 // cyc(A): série resumida por ciclo de halving (no "i" de cada indicador).
 function labIndicators() {
-  if (LAB._inds && LAB._indsLang === S.lang) return LAB._inds;
+  if (LAB._inds && LAB._indsLang === S.lang && LAB._indsCustom === JSON.stringify(LAB.custom)) return LAB._inds;
   const z = (v, t, tone) => ({ v, t, tone });
   const rdZones = (zs, dflt) => (v) => { for (const x of zs) if (x.test(v)) return { t: x.t, c: x.c }; return { t: dflt || L('neutro', 'neutral'), c: '' }; };
   const lo = (thr, t, c = 'up') => ({ test: (v) => v <= thr, t, c });
@@ -368,11 +399,15 @@ function labIndicators() {
       desc: L('Índice da alternative.me que combina volatilidade, volume, redes sociais, dominância e buscas. Medo extremo costuma aparecer perto de fundos; ganância extrema, perto de topos.', 'alternative.me index combining volatility, volume, social media, dominance and search trends. Extreme fear tends to show up near bottoms; extreme greed, near tops.'),
       ref: L('0–24 medo extremo · 25–46 medo · 47–54 neutro · 55–75 ganância · 76–100 ganância extrema.', '0–24 extreme fear · 25–46 fear · 47–54 neutral · 55–75 greed · 76–100 extreme greed.') },
   ];
-  LAB._inds = list; LAB._indsLang = S.lang;
+  for (const b of ['rp', 'sth', 'mayer', 'lth']) for (const k of LAB_BASES[b].ks) list.push(labMultInd(b, k, false));
+  for (const c of LAB.custom) list.push(labMultInd(c.b, c.k, true));
+  LAB._inds = list; LAB._indsLang = S.lang; LAB._indsCustom = JSON.stringify(LAB.custom);
   return list;
 }
 const labIndMap = () => { const m = {}; for (const x of labIndicators()) m[x.id] = x; return m; };
-const LAB_CATS = () => [['all', L('Todos', 'All')], ['ma', L('Médias', 'Averages')], ['val', L('Valor on-chain', 'On-chain value')], ['hold', L('Detentores', 'Holders')], ['min', L('Mineração', 'Mining')], ['net', L('Rede e corretoras', 'Network & exchanges')], ['sent', L('Sentimento', 'Sentiment')]];
+const LAB_CATS = () => [['all', L('Todos', 'All')], ['mult', L('Múltiplos', 'Multiples')], ['ma', L('Médias', 'Averages')], ['val', L('Valor on-chain', 'On-chain value')], ['hold', L('Detentores', 'Holders')], ['min', L('Mineração', 'Mining')], ['net', L('Rede e corretoras', 'Network & exchanges')], ['sent', L('Sentimento', 'Sentiment')]];
+const LAB_CAT_ICO = { mult: 'ruler', ma: 'chart-spline', val: 'gem', hold: 'users', min: 'pickaxe', net: 'network', sent: 'gauge' };
+const LAB_CAT_COL = { mult: '#f4b43f', ma: '#c084fc', val: '#62b4ff', hold: '#f472b6', min: '#fbbf24', net: '#22d3ee', sent: '#4ade80' };
 function labAvail(x, D) { if (!D) return false; D._av = D._av || {}; if (D._av[x.id] === undefined) D._av[x.id] = x.lines(D.A).some((l) => !!lastPt(l.v)); return D._av[x.id]; }
 // valor atual de um indicador: { v, i, est } (est = estimado com o preço ao vivo)
 function labCur(x, D) { const pt = x.now(D.A); if (!pt) return null; return { ...pt, est: D.hasLive && pt.i === D.N - 1 && ['mvrv', 'mvrvZ', 'nupl', 'mayer', 'realized'].includes(x.id) }; }
@@ -458,55 +493,59 @@ function labLoadPrefs() {
     if (['6m', '1y', '2y', '4y', '8y', 'all'].includes(p.range)) LAB.range = p.range;
     LAB.log = p.log !== false;
     if (isNum(p.h)) LAB.h = p.h;
+    if (p.kind === 'candle') LAB.kind = 'candle';
+    if (Array.isArray(p.custom)) LAB.custom = p.custom.filter((c) => c && LAB_BASES[c.b] && isNum(c.k) && c.k > 0 && c.k < 100).slice(0, 12);
+    if (p.rpl && typeof p.rpl === 'object') { const r = p.rpl; LAB.rpl = { h: ['all', 'lth', 'sth'].includes(r.h) ? r.h : 'all', m: ['net', 'pl', 'p', 'l'].includes(r.m) ? r.m : 'net', agg: ['1d', '1w', '2w', '1m'].includes(r.agg) ? r.agg : '1d', rg: ['3m', '1y', '2y', 'all'].includes(r.rg) ? r.rg : '1y' }; }
   }
 }
-function labSave() { LS.set('lab3', { sel: LAB.sel, mode: LAB.mode, tab: LAB.tab, range: LAB.range, log: LAB.log, h: LAB.h }); }
+function labSave() { LS.set('lab3', { sel: LAB.sel, mode: LAB.mode, tab: LAB.tab, range: LAB.range, log: LAB.log, h: LAB.h, kind: LAB.kind, custom: LAB.custom, rpl: LAB.rpl }); }
 const labH = () => (LAB.h || clamp(Math.round(window.innerHeight * 0.52), 320, 620));
 function labHtml() { return `${pageHead(PAGES.lab, `<span class="stamp-wrap">${stamp('lab')}</span>`)}<div id="lab-body"></div>`; }
 function labShell() {
-  const cats = LAB_CATS().map(([k, t]) => `<button class="lab-cat" data-act="labCat" data-k="${k}" aria-pressed="${LAB.cat === k}">${esc(t)}</button>`).join('');
+  const cats = LAB_CATS().map(([k, t]) => `<button class="lab-cat${k !== 'all' ? ' c-' + k : ''}" data-act="labCat" data-k="${k}" aria-pressed="${LAB.cat === k}" style="${k !== 'all' ? `--cc:${LAB_CAT_COL[k]}` : ''}">${k !== 'all' ? ico(LAB_CAT_ICO[k], 13) : ''}${esc(t)}</button>`).join('');
   return `<section class="panel" id="lab-sig"></section>
   <section class="panel mt lab-wrap" id="lab-wrap">
-    ${panelHead('chart-spline', L('Gráfico do ciclo', 'Cycle chart'), { sub: esc(L('Arraste para mover, use a roda do mouse ou a pinça para aproximar e a alça embaixo para mudar a altura. Marque à direita os indicadores que quer ver.', 'Drag to pan, scroll or pinch to zoom and use the handle below to resize. Tick the indicators you want on the right.')) })}
+    ${panelHead('chart-spline', L('Gráfico do ciclo', 'Cycle chart'), { sub: esc(L('Passe o mouse nas linhas para ver o nome e o valor. Arraste para mover, use a roda do mouse ou a pinça para aproximar e a alça embaixo para mudar a altura. Ligue à direita os indicadores e as linhas de múltiplo.', 'Hover the lines to see their name and value. Drag to pan, scroll or pinch to zoom and use the handle below to resize. Switch on indicators and multiple lines on the right.')), right: `<button class="btn sm pri lab-fs-btn" id="lab-fbtn" data-act="labFull">${ico('maximize-2', 16)}<span>${esc(L('Tela cheia', 'Full screen'))}</span></button>` })}
     <div class="lab-tools">
       ${seg('labm', [['ind', L('Indicadores', 'Indicators'), 'layers'], ['lv', L('Níveis de sinal', 'Signal levels'), 'ruler']], LAB.mode)}
       ${seg('labr', [['6m', '6M'], ['1y', L('1A', '1Y')], ['2y', L('2A', '2Y')], ['4y', L('4A', '4Y')], ['8y', L('8A', '8Y')], ['all', L('Tudo', 'All')]], LAB.range)}
-      <label class="check small lab-log"><input type="checkbox" data-chg="labLog" ${LAB.log ? 'checked' : ''}>${esc(L('Escala log', 'Log scale'))}</label>
+      ${seg('labk', [['line', L('Linha', 'Line'), 'chart-line'], ['candle', L('Velas', 'Candles'), 'chart-candlestick']], LAB.kind)}
+      <span class="lab-scale">${seg('labsc', [['log', 'Log'], ['lin', L('Linear', 'Linear')]], LAB.log ? 'log' : 'lin')}<button class="lab-q" data-act="labLogInfo" title="${esc(L('O que é a escala log?', 'What is log scale?'))}" aria-label="${esc(L('O que é a escala log?', 'What is log scale?'))}">${ico('circle-help', 17)}</button></span>
       <span class="grow"></span>
       <div class="lab-zoom">
         <button class="btn sm ghost" data-act="labZoom" data-z="out" title="${esc(L('Afastar', 'Zoom out'))}" aria-label="${esc(L('Afastar', 'Zoom out'))}">${ico('zoom-out', 17)}</button>
         <button class="btn sm ghost" data-act="labZoom" data-z="in" title="${esc(L('Aproximar', 'Zoom in'))}" aria-label="${esc(L('Aproximar', 'Zoom in'))}">${ico('zoom-in', 17)}</button>
         <button class="btn sm ghost" data-act="labZoom" data-z="fit" title="${esc(L('Voltar ao período escolhido', 'Back to the chosen period'))}" aria-label="${esc(L('Voltar ao período escolhido', 'Back to the chosen period'))}">${ico('rotate-ccw', 17)}</button>
-        <button class="btn sm" id="lab-fbtn" data-act="labFull">${ico('maximize-2', 16)}<span class="hide-m">${esc(L('Tela cheia', 'Full screen'))}</span></button>
       </div>
     </div>
     <div class="lab-main">
       <div class="lab-charts">
-        <div class="lab-cw"><div class="lab-leg" id="lab-leg" aria-live="off"></div><div id="lab-chart" style="height:${labH()}px"></div></div>
+        <div class="lab-cw"><div class="lab-leg" id="lab-leg" aria-live="off"></div><button class="lab-fs-fab" data-act="labFull" title="${esc(L('Tela cheia', 'Full screen'))}" aria-label="${esc(L('Tela cheia', 'Full screen'))}">${ico('maximize-2', 18)}</button><div id="lab-chart" style="height:${labH()}px"></div></div>
         <div id="lab-panes"></div>
         <div class="lab-grip" id="lab-grip" role="separator" aria-orientation="horizontal" tabindex="0" title="${esc(L('Arraste para mudar a altura do gráfico', 'Drag to resize the chart'))}" aria-label="${esc(L('Altura do gráfico (setas para cima e para baixo)', 'Chart height (up and down arrows)'))}"></div>
         <div id="lab-lv"></div>
       </div>
       <aside class="lab-side" aria-label="${esc(L('Indicadores do gráfico', 'Chart indicators'))}">
         <div class="lab-side-in">
-          <button class="lab-side-h" data-act="labSideTog" aria-expanded="${LAB.sideOpen}"><span class="row" style="gap:8px">${ico('sliders-horizontal', 17)}<b>${esc(L('Indicadores', 'Indicators'))}</b></span><span class="tiny faint" id="lab-cnt"></span>${ico('chevron-down', 16, 'lab-chev')}</button>
+          <button class="lab-side-h" data-act="labSideTog" aria-expanded="${LAB.sideOpen}"><span class="row" style="gap:8px">${ico('sliders-horizontal', 17)}<b>${esc(L('Indicadores e linhas', 'Indicators & lines'))}</b></span><span class="lab-cntb" id="lab-cnt"></span>${ico('chevron-down', 16, 'lab-chev')}</button>
           <div class="lab-side-b"${LAB.sideOpen ? '' : ' hidden'}>
-            <div class="inp-search">${ico('search', 16)}<input class="inp" id="lab-q" type="search" data-inp="labQ" placeholder="${esc(L('Buscar indicador (ex.: MVRV, SOPR, média)', 'Search indicator (e.g. MVRV, SOPR, average)'))}" value="${esc(LAB.q)}" autocomplete="off" aria-label="${esc(L('Buscar indicador', 'Search indicator'))}"></div>
+            <div class="inp-search">${ico('search', 16)}<input class="inp" id="lab-q" type="search" data-inp="labQ" placeholder="${esc(L('Buscar (ex.: MVRV, STH ×1, SOPR, média)', 'Search (e.g. MVRV, STH ×1, SOPR, average)'))}" value="${esc(LAB.q)}" autocomplete="off" aria-label="${esc(L('Buscar indicador', 'Search indicator'))}"></div>
             <div class="lab-cats" role="group" aria-label="${esc(L('Categorias', 'Categories'))}">${cats}</div>
             <div class="lab-list" id="lab-list"></div>
-            <div class="lab-side-f"><button class="link-btn" data-act="labDefault">${ico('rotate-ccw', 14)}${esc(L('Seleção padrão', 'Default selection'))}</button><button class="link-btn" data-act="labClear">${ico('x', 14)}${esc(L('Limpar', 'Clear'))}</button></div>
+            <div class="lab-side-f"><button class="link-btn" data-act="labDefault">${ico('rotate-ccw', 14)}${esc(L('Seleção padrão', 'Default selection'))}</button><button class="link-btn" data-act="labAddLine">${ico('plus', 14)}${esc(L('Linha personalizada', 'Custom line'))}</button><button class="link-btn" data-act="labClear">${ico('x', 14)}${esc(L('Limpar', 'Clear'))}</button></div>
           </div>
         </div>
       </aside>
     </div>
     <div id="lab-note"></div>
-  </section>`;
+  </section>
+  <section class="panel mt" id="lab-rpl"></section>`;
 }
 function labDraw() {
   const box = $('#lab-body'); if (!box) return;
   if (!hasPro()) { box.innerHTML = proGate(PAGES.lab); return; }
   if (!$('#lab-wrap')) { box.innerHTML = labShell(); labGrip(); }
-  labDrawSignals(); labDrawSide(); labDrawNote(); labChart();
+  labDrawSignals(); labDrawSide(); labDrawNote(); labChart(); labDrawRpl();
 }
 function labEmpty() {
   const h = HEALTH.lab;
@@ -516,31 +555,48 @@ function labEmpty() {
 ACT.labRetry = () => runSource('lab', { force: true });
 
 // ----- painel de sinais -----
+// Estado do sinal (não confundir com "no gráfico"): longe → perto → ativo → extremo.
+const labStTxt = (st) => ({ ext: L('Extremo', 'Extreme'), on: L('Ativo', 'Active'), near: L('Perto', 'Near'), off: L('Longe', 'Far'), na: L('Sem dado', 'No data') }[st] || '');
+// quão perto o valor está do limiar do sinal (0 = longe, 1 = no limiar ou além)
+function labSigNear(s) {
+  if (s.special === 'hash' || !isNum(s.v)) return null;
+  const a = s.thr[0];
+  if (s.nearAbs) { const span = s.nearAbs * 4; return clamp(1 - (s.dir < 0 ? s.v - a : a - s.v) / span, 0, 1); }
+  return clamp(s.dir < 0 ? a / s.v : s.v / a, 0, 1);
+}
 function labSigCard(s, side, D, tag = 'button') {
-  const stTxt = { ext: L('Extremo', 'Extreme'), on: L('Ativo', 'Active'), near: L('Perto', 'Near'), off: L('Inativo', 'Inactive'), na: L('Sem dado', 'No data') }[s.state];
-  let val, meta = '';
+  const stTxt = labStTxt(s.state);
+  const plotted = LAB.sel.includes(s.ind);
+  let val, thr = '';
   if (s.special === 'hash') {
     const hr = s.hr;
     if (s.state === 'on') val = L(`Compra em ${labDateOf(D, s.lastBuy.buy)}`, `Buy on ${labDateOf(D, s.lastBuy.buy)}`);
     else if (s.state === 'near') val = L(`Capitulação desde ${labDateOf(D, hr.capNow)}`, `Capitulation since ${labDateOf(D, hr.capNow)}`);
     else val = s.lastBuy ? L(`Último sinal: ${labDateOf(D, s.lastBuy.buy)}`, `Last signal: ${labDateOf(D, s.lastBuy.buy)}`) : L('Sem capitulação', 'No capitulation');
-    meta = L('30D vs 60D do hashrate', '30D vs 60D hashrate');
+    thr = `<span class="lc-thr">${esc(L('30D vs 60D do hashrate', '30D vs 60D hashrate'))}</span>`;
   } else {
-    val = `${labFmt(s.f, s.v)}<small>${esc(s.vLbl ? s.vLbl : '')}</small>`;
+    val = `<b class="lc-num">${esc(labFmt(s.f, s.v))}</b>${s.vLbl ? `<small>${esc(s.vLbl)}</small>` : ''}`;
     const op = s.dir < 0 ? '<' : '>';
-    meta = `${esc(L('sinal', 'signal'))} ${op} ${esc(labFmt(s.f, s.thr[0]))} · ${esc(L('extremo', 'extreme'))} ${op} ${esc(labFmt(s.f, s.thr[1]))}`;
+    thr = `<span class="lc-thr"><span class="lc-k sig">${esc(L('sinal', 'signal'))} ${op} ${esc(labFmt(s.f, s.thr[0]))}</span><span class="lc-k ext">${esc(L('extremo', 'extreme'))} ${op} ${esc(labFmt(s.f, s.thr[1]))}</span></span>`;
   }
-  const lvl = s.lv && isNum(s.lv[0]) ? `<div class="lab-lvl">${ico('ruler', 14)}<span><span class="w">${esc(L('Gatilho', 'Trigger'))} </span><b class="full">${esc(usd(s.lv[0], [0, 0]))}</b><b class="cmp">${esc(fmtCompact(s.lv[0], 'USD'))}</b></span><span>${esc(fmtPct(s.dist[0], 1))}</span></div>` : '';
+  const nr = labSigNear(s);
+  const bar = isNum(nr) ? `<div class="lc-bar" title="${esc(L(`${fmtNum(nr * 100, 0, 0)}% do caminho até o sinal`, `${fmtNum(nr * 100, 0, 0)}% of the way to the signal`))}"><i style="width:${(nr * 100).toFixed(1)}%"></i></div>` : '';
+  const trg = s.lv && isNum(s.lv[0]) ? `<div class="lc-g">${ico('crosshair', 14)}<span>${esc(L('Gatilho', 'Trigger'))}</span><b class="full">${esc(usd(s.lv[0], [0, 0]))}</b><b class="cmp">${esc(fmtCompact(s.lv[0], 'USD'))}</b><em class="${s.dist[0] < 0 ? 'down' : 'up'}">${esc(fmtPct(s.dist[0], 1))}</em></div>` : '';
   const srcBit = s.bd ? `BGeometrics · ${esc(D.bdLast[s.bd] ? fmtDate(parseDate(D.bdLast[s.bd]), { day: '2-digit', month: 'short', timeZone: 'UTC' }) : '—')}` : isNum(s.i) ? `${esc(s.ind === 'fng' ? 'alternative.me' : 'Coin Metrics')} · ${esc(labDateOf(D, s.i))}` : '';
-  const open = tag === 'button' ? `<button class="lab-card ${side} st-${s.state}" data-act="labInfo" data-k="${esc(s.ind)}" data-sig="${esc(s.id)}">` : `<div class="lab-card static ${side} st-${s.state}">`;
-  return `${open}
-    <span class="h"><span class="t">${esc(s.n)}</span><span class="st">${esc(stTxt)}</span></span>
-    <span class="v${s.special === 'hash' ? ' txt' : ''}">${s.special === 'hash' ? esc(val) : val}</span>
-    <span class="m">${meta}</span>
-    ${lvl}
-    <span class="m faint">${srcBit}${s.est ? ` · ${esc(L('com o preço ao vivo', 'with live price'))}` : ''}</span>
-  </${tag}>`;
+  const plot = tag === 'button' ? `<button class="lc-plot${plotted ? ' on' : ''}" data-act="labSigPlot" data-k="${esc(s.ind)}" aria-pressed="${plotted}" title="${esc(plotted ? L('Tirar do gráfico', 'Remove from chart') : L('Mostrar no gráfico', 'Show on chart'))}">${ico(plotted ? 'eye' : 'eye-off', 14)}<span>${esc(plotted ? L('No gráfico', 'On chart') : L('Ver no gráfico', 'Show'))}</span></button>` : '';
+  const head = `<span class="lc-h"><span class="lc-t">${esc(s.n)}</span><span class="lc-st">${esc(stTxt)}</span></span>
+    <span class="lc-v${s.special === 'hash' ? ' txt' : ''}">${s.special === 'hash' ? esc(val) : val}</span>${thr}${bar}${trg}
+    <span class="lc-f"><span class="lc-src">${srcBit}${s.est ? ` · ${esc(L('preço ao vivo', 'live price'))}` : ''}</span>${plot}</span>`;
+  if (tag !== 'button') return `<div class="lab-card static ${side} st-${s.state}">${head}</div>`;
+  return `<div class="lab-card ${side} st-${s.state}${plotted ? ' plotted' : ''}" role="button" tabindex="0" data-act="labInfo" data-k="${esc(s.ind)}" data-sig="${esc(s.id)}" aria-label="${esc(`${s.n}: ${stTxt}`)}">${head}</div>`;
 }
+document.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.lab-card[data-act=labInfo]')) { e.preventDefault(); ACT.labInfo(e.target); } });
+ACT.labSigPlot = (el) => {
+  const k = el.dataset.k; const on = LAB.sel.includes(k);
+  ACT.labSel({ dataset: { k }, checked: !on });
+  labDrawSignals();
+  if (!on) toast(L('Indicador no gráfico do ciclo, logo abaixo.', 'Indicator added to the cycle chart below.'), { type: 'ok', ms: 2200 });
+};
 function labTerritory(accOn, distOn) {
   if (distOn >= 3) return { t: L('Território de risco alto', 'High-risk territory'), c: 'down', d: L('Vários sinais de topo ativos ao mesmo tempo, como perto de topos anteriores.', 'Several top signals active at once, as near previous tops.') };
   if (distOn >= 1) return { t: L('Mercado aquecido', 'Heated market'), c: 'warn', d: L('Há sinal de topo ativo: o risco de queda forte aumentou.', 'A top signal is active: the risk of a sharp drop has increased.') };
@@ -550,7 +606,7 @@ function labTerritory(accOn, distOn) {
 }
 function labDrawSignals() {
   const box = $('#lab-sig'); if (!box) return;
-  const head = panelHead('radar', L('Sinais do ciclo', 'Cycle signals'), { sub: esc(L('Indicadores clássicos de fundo e de topo, lidos agora. Cada sinal mostra o limiar e, quando dá, o preço que o ativaria.', 'Classic bottom and top indicators, read now. Each signal shows its threshold and, when possible, the price that would trigger it.')), right: seg('labt', [['acc', L('Acumulação (fundo)', 'Accumulation (bottom)'), 'trending-down'], ['dist', L('Distribuição (topo)', 'Distribution (top)'), 'trending-up']], LAB.tab) });
+  const head = panelHead('radar', L('Sinais do ciclo', 'Cycle signals'), { sub: esc(L('Indicadores clássicos de fundo e de topo, lidos agora. A etiqueta mostra o estado do sinal (longe, perto, ativo ou extremo); o olho põe o indicador no gráfico.', 'Classic bottom and top indicators, read now. The label shows the signal state (far, near, active or extreme); the eye puts the indicator on the chart.')), right: seg('labt', [['acc', L('Acumulação (fundo)', 'Accumulation (bottom)'), 'trending-down'], ['dist', L('Distribuição (topo)', 'Distribution (top)'), 'trending-up']], LAB.tab, 'labt') });
   const D = labData();
   if (!D) { setHTML(box, head + (labEmpty() || `<div class="lab-sig-g"><div class="skel" style="height:230px"></div>${skel(4, 40)}</div>`)); return; }
   const sg = labSignals(D);
@@ -559,18 +615,24 @@ function labDrawSignals() {
   const ter = labTerritory(accOn, distOn);
   const list = LAB.tab === 'acc' ? sg.acc : sg.dist;
   const cnt = LAB.tab === 'acc' ? accOn : distOn;
+  const nearN = list.filter((x) => x.state === 'near').length;
   const sc = labScore(D);
   const scCol = !isNum(sc) ? 'var(--text-3)' : sc < 25 ? 'var(--up)' : sc < 60 ? 'var(--signal)' : sc < 85 ? 'var(--fg-2)' : 'var(--down)';
-  const sum = `<div class="lab-sum">
-    <div class="small muted b">${esc(LAB.tab === 'acc' ? L('Sinais de fundo ativos', 'Bottom signals active') : L('Sinais de topo ativos', 'Top signals active'))}</div>
-    <div class="lab-cnt ${LAB.tab === 'acc' ? (cnt ? 'up' : '') : (cnt ? 'down' : '')}">${cnt}<small>/${list.length}</small></div>
+  // os 4 sinais mais perto de disparar (barra colorida)
+  const close = list.filter((x) => isNum(labSigNear(x)) && x.state !== 'on' && x.state !== 'ext').sort((a, b) => labSigNear(b) - labSigNear(a)).slice(0, 4);
+  const closeHtml = close.length ? `<div class="lab-close"><div class="lab-sh">${ico('crosshair', 14)}${esc(L('Mais perto de disparar', 'Closest to triggering'))}</div>${close.map((x) => `<button class="lab-cl" data-act="labInfo" data-k="${esc(x.ind)}"><span class="n">${esc(x.short)}</span><span class="b"><i style="width:${(labSigNear(x) * 100).toFixed(0)}%"></i></span><b>${esc(fmtNum(labSigNear(x) * 100, 0, 0))}%</b></button>`).join('')}</div>` : '';
+  const sum = `<div class="lab-sum ${LAB.tab}">
+    <div class="lab-sh">${ico(LAB.tab === 'acc' ? 'trending-down' : 'trending-up', 14)}${esc(LAB.tab === 'acc' ? L('Sinais de fundo ativos', 'Bottom signals active') : L('Sinais de topo ativos', 'Top signals active'))}</div>
+    <div class="row" style="gap:12px;align-items:flex-end"><div class="lab-cnt ${cnt ? (LAB.tab === 'acc' ? 'up' : 'down') : ''}">${cnt}<small>/${list.length}</small></div><div class="lab-mini"><span class="near">${nearN} ${esc(L('perto', 'near'))}</span><span class="far">${list.length - cnt - nearN} ${esc(L('longe', 'far'))}</span></div></div>
     <div class="lab-terr ${ter.c}">${ico(ter.c === 'down' ? 'triangle-alert' : ter.c === 'warn' ? 'flame' : ter.c === 'up' ? 'shield-check' : 'scale', 15)}${esc(ter.t)}</div>
-    <p class="tiny muted" style="line-height:1.45">${esc(ter.d)} ${esc(LAB.tab === 'acc' ? L(`Sinais de topo ativos: ${distOn}/${sg.dist.length}.`, `Top signals active: ${distOn}/${sg.dist.length}.`) : L(`Sinais de fundo ativos: ${accOn}/${sg.acc.length}.`, `Bottom signals active: ${accOn}/${sg.acc.length}.`))}</p>
-    <div class="lab-score"><div class="row between tiny"><span class="muted b">${esc(L('Posição no ciclo', 'Cycle position'))}</span>${modelBadge(L('Média dos percentis históricos (desde 2012) de MVRV, Mayer Multiple e Pi Cycle: 0 = mais barato já visto, 100 = mais caro. Cálculo do NEXUS HUB; não é previsão.', 'Average of historical percentiles (since 2012) of MVRV, Mayer Multiple and Pi Cycle: 0 = cheapest ever, 100 = most expensive. NEXUS HUB calculation; not a forecast.'))}</div>
-      <div class="row" style="gap:10px;margin-top:6px"><b style="font-size:24px;color:${scCol}">${isNum(sc) ? fmtNum(sc, 0, 0) : '—'}</b><div class="grow"><div class="lab-gauge">${isNum(sc) ? `<i style="left:${clamp(sc, 0, 100)}%"></i>` : ''}</div><div class="row between tiny faint" style="margin-top:3px"><span>${esc(L('barato', 'cheap'))}</span><span>${esc(L('caro', 'expensive'))}</span></div></div></div></div>
+    <p class="lab-terr-d">${esc(ter.d)} ${esc(LAB.tab === 'acc' ? L(`Sinais de topo ativos: ${distOn}/${sg.dist.length}.`, `Top signals active: ${distOn}/${sg.dist.length}.`) : L(`Sinais de fundo ativos: ${accOn}/${sg.acc.length}.`, `Bottom signals active: ${accOn}/${sg.acc.length}.`))}</p>
+    <div class="lab-score"><div class="row between"><span class="lab-sh" style="margin:0">${ico('gauge', 14)}${esc(L('Posição no ciclo', 'Cycle position'))}</span>${modelBadge(L('Média dos percentis históricos (desde 2012) de MVRV, Mayer Multiple e Pi Cycle: 0 = mais barato já visto, 100 = mais caro. Cálculo do NEXUS HUB; não é previsão.', 'Average of historical percentiles (since 2012) of MVRV, Mayer Multiple and Pi Cycle: 0 = cheapest ever, 100 = most expensive. NEXUS HUB calculation; not a forecast.'))}</div>
+      <div class="row" style="gap:10px;margin-top:6px"><b style="font-size:26px;color:${scCol}">${isNum(sc) ? fmtNum(sc, 0, 0) : '—'}</b><div class="grow"><div class="lab-gauge">${isNum(sc) ? `<i style="left:${clamp(sc, 0, 100)}%"></i>` : ''}</div><div class="row between tiny" style="margin-top:3px"><span class="up b">${esc(L('barato', 'cheap'))}</span><span class="down b">${esc(L('caro', 'expensive'))}</span></div></div></div></div>
+    ${closeHtml}
   </div>`;
   const cards = `<div class="lab-cards">${list.map((s) => labSigCard(s, LAB.tab, D)).join('')}</div>`;
-  setHTML(box, head + `<div class="lab-sig-g">${sum}${cards}</div>` + note(esc(L('Limiares: referências clássicas do mercado e os picos e fundos de cada ciclo (veja a tabela em cada indicador). "Perto" = a menos de 10% do limiar. Sinal não é recomendação.', 'Thresholds: classic market references and each cycle’s peaks and troughs (see each indicator’s table). "Near" = within 10% of the threshold. A signal is not a recommendation.'))));
+  const legend = `<div class="lab-stleg"><span class="st-off">${esc(labStTxt('off'))}</span><span class="st-near">${esc(labStTxt('near'))} <small>${esc(L('a menos de 10% do limiar', 'within 10% of the threshold'))}</small></span><span class="st-on ${LAB.tab}">${esc(labStTxt('on'))}</span><span class="st-ext ${LAB.tab}">${esc(labStTxt('ext'))}</span></div>`;
+  setHTML(box, head + `<div class="lab-sig-g">${sum}${cards}</div>` + legend + note(esc(L('Limiares: referências clássicas do mercado e os picos e fundos de cada ciclo (veja a tabela em cada indicador). Clique no cartão para ler o que é e como ler. Sinal não é recomendação.', 'Thresholds: classic market references and each cycle’s peaks and troughs (see each indicator’s table). Click a card to learn what it is and how to read it. A signal is not a recommendation.'))));
 }
 
 // ----- lista de indicadores (lado do gráfico) -----
@@ -596,22 +658,162 @@ function labDrawSide() {
   const waiting = D ? all.filter((x) => !labAvail(x, D)).length : 0;
   const nSel = LAB.sel.filter((k) => !D || all.some((x) => x.id === k && labAvail(x, D))).length;
   setHTML('#lab-cnt', esc(L(`${nSel} no gráfico`, `${nSel} on chart`)));
-  if (!ok.length) { setHTML(box, `<div class="empty" style="padding:20px 8px">${ico('search', 22)}<b>${esc(L('Nenhum indicador encontrado', 'No indicator found'))}</b><p>${esc(L('Tente outro nome, como MVRV, SOPR, Puell ou média.', 'Try another name, like MVRV, SOPR, Puell or average.'))}</p></div>`); return; }
+  if (!ok.length) { setHTML(box, `<div class="empty" style="padding:20px 8px">${ico('search', 22)}<b>${esc(L('Nenhum indicador encontrado', 'No indicator found'))}</b><p>${esc(L('Tente outro nome, como MVRV, STH, SOPR, Puell ou média.', 'Try another name, like MVRV, STH, SOPR, Puell or average.'))}</p></div>`); return; }
   const cats = Object.fromEntries(LAB_CATS());
-  let html = '', lastCat = '';
+  let html = '', lastCat = '', lastGrp = '';
   for (const x of ok) {
-    if (LAB.cat === 'all' && !q && x.cat !== lastCat) { html += `<div class="lab-gh">${esc(cats[x.cat] || '')}</div>`; lastCat = x.cat; }
+    if (!q && x.cat !== lastCat) { html += `<div class="lab-gh" style="--cc:${LAB_CAT_COL[x.cat] || 'var(--accent)'}">${ico(LAB_CAT_ICO[x.cat] || 'layers', 14)}${esc(cats[x.cat] || '')}${x.cat === 'mult' ? `<span class="grow"></span><button class="lab-gadd" data-act="labAddLine">${ico('plus', 13)}${esc(L('Sua linha', 'Your line'))}</button>` : ''}</div>`; lastCat = x.cat; lastGrp = ''; }
+    if (!q && x.cat === 'mult' && x.grp !== lastGrp) { html += `<div class="lab-gs">${esc(x.grp === 'custom' ? L('Suas linhas', 'Your lines') : labBaseName(x.grp))}</div>`; lastGrp = x.grp; }
     const on = LAB.sel.includes(x.id);
     const rv = D ? labRowVal(x, D) : { v: '', s: '', c: '' };
-    html += `<div class="lab-row${on ? ' on' : ''}" style="--c:${x.c}">
-      <label><input type="checkbox" data-chg="labSel" data-k="${x.id}" ${on ? 'checked' : ''}><span class="lab-bar"></span><span class="grow"><span class="nm">${esc(x.n)}${x.kind === 'pane' ? `<span class="lab-kind" title="${esc(L('Abre um painel embaixo do gráfico', 'Opens a panel below the chart'))}">${esc(L('painel', 'panel'))}</span>` : ''}</span><span class="ds">${esc(x.s)}</span></span></label>
+    html += `<div class="lab-row${on ? ' on' : ''}${x.mult ? ' mult' : ''}" style="--c:${x.c}">
+      <label><input class="sw" type="checkbox" role="switch" data-chg="labSel" data-k="${x.id}" ${on ? 'checked' : ''}><span class="lab-dotc"></span><span class="grow"><span class="nm">${esc(x.n)}${x.kind === 'pane' ? `<span class="lab-kind" title="${esc(L('Abre um painel embaixo do gráfico', 'Opens a panel below the chart'))}">${esc(L('painel', 'panel'))}</span>` : ''}${x.mult ? `<span class="lab-arr ${x.mult.k < 1 ? 'up' : x.mult.k > 1 ? 'down' : ''}">${ico(x.mult.k < 1 ? 'arrow-down-right' : x.mult.k > 1 ? 'arrow-up-right' : 'minus', 12)}</span>` : ''}</span>${x.mult ? '' : `<span class="ds">${esc(x.s)}</span>`}</span></label>
       <span class="vv">${esc(rv.v)}${rv.s ? `<small class="${rv.c}">${esc(rv.s)}</small>` : ''}</span>
-      <button class="lab-ib" data-act="labInfo" data-k="${x.id}" title="${esc(L('O que é e como ler', 'What it is and how to read it'))}" aria-label="${esc(L(`Sobre ${x.n}`, `About ${x.n}`))}">${ico('info', 16)}</button>
+      ${x.custom ? `<button class="lab-ib" data-act="labRmLine" data-k="${x.id}" title="${esc(L('Apagar esta linha', 'Delete this line'))}" aria-label="${esc(L(`Apagar ${x.n}`, `Delete ${x.n}`))}">${ico('trash-2', 15)}</button>` : `<button class="lab-ib" data-act="labInfo" data-k="${x.id}" title="${esc(L('O que é e como ler', 'What it is and how to read it'))}" aria-label="${esc(L(`Sobre ${x.n}`, `About ${x.n}`))}">${ico('info', 16)}</button>`}
     </div>`;
   }
   if (waiting && !q && LAB.cat === 'all') html += `<p class="tiny faint" style="padding:10px 4px 2px;line-height:1.45">${esc(L(`${waiting} indicador(es) aguardando dados da fonte.`, `${waiting} indicator(s) waiting for source data.`))}</p>`;
   setHTML(box, html);
 }
+ACT.labAddLine = () => {
+  const opts = Object.keys(LAB_BASES).map((b) => `<option value="${b}">${esc(labBaseName(b))}</option>`).join('');
+  openModal({
+    title: L('Nova linha de múltiplo', 'New multiple line'),
+    body: `<p class="muted" style="margin-top:-4px">${esc(L('Escolha o preço-base e o múltiplo. Ex.: Curto prazo (STH) × 1 = custo médio de quem comprou nos últimos ~155 dias.', 'Pick the base price and the multiple. E.g. Short-term holders (STH) × 1 = cost basis of the last ~155 days’ buyers.'))}</p>
+      <div class="grid g-2" style="margin-top:12px"><label class="fld"><span class="lbl-t">${esc(L('Preço-base', 'Base price'))}</span><select class="inp sel" id="lab-nb">${opts}</select></label>
+      <label class="fld"><span class="lbl-t">${esc(L('Múltiplo (×)', 'Multiple (×)'))}</span><input class="inp" id="lab-nk" inputmode="decimal" placeholder="1,25" autocomplete="off"></label></div>`,
+    foot: `<button class="btn ghost" data-act="closeModal">${esc(L('Cancelar', 'Cancel'))}</button><button class="btn pri" data-act="labAddLineOk">${ico('plus', 16)}${esc(L('Adicionar ao gráfico', 'Add to chart'))}</button>`,
+    onOpen: () => { const i = $('#lab-nk'); if (i) i.focus(); },
+  });
+};
+ACT.labAddLineOk = () => {
+  const b = ($('#lab-nb') || {}).value; const k = parseDec(($('#lab-nk') || {}).value);
+  if (!LAB_BASES[b] || !isNum(k) || k <= 0 || k >= 100) { toast(L('Digite um múltiplo entre 0,01 e 99 (ex.: 1,25).', 'Type a multiple between 0.01 and 99 (e.g. 1.25).'), { type: 'warn' }); return; }
+  const kk = Math.round(k * 1000) / 1000;
+  if (!LAB.custom.some((c) => c.b === b && c.k === kk)) LAB.custom.push({ b, k: kk });
+  LAB.custom = LAB.custom.slice(-12);
+  const id = 'u-' + b + '-' + kk; if (!LAB.sel.includes(id)) LAB.sel.push(id);
+  LAB._inds = null; labSave(); closeModal(); labDrawSide(); LAB._keepRange = true; labChart();
+  toast(L(`Linha ${LAB_BASES[b].n} ×${fmtNum(kk, 0, 3)} no gráfico.`, `Line ${LAB_BASES[b].n} ×${fmtNum(kk, 0, 3)} on the chart.`), { type: 'ok' });
+};
+ACT.labRmLine = (el) => {
+  const id = el.dataset.k; const m = /^u-([a-z0-9]+)-([\d.]+)$/.exec(id || ''); if (!m) return;
+  LAB.custom = LAB.custom.filter((c) => !(c.b === m[1] && String(c.k) === m[2]));
+  LAB.sel = LAB.sel.filter((s) => s !== id); LAB._inds = null; labSave(); labDrawSide(); LAB._keepRange = true; labChart();
+};
+// ----- lucro e prejuízo realizados (BGeometrics): cartões de 24 h / 7 d / 30 d e gráfico com o preço -----
+const RPL_K = { all: ['realizedProfit', 'realizedLoss'], lth: ['realizedProfitLth', 'realizedLossLth'], sth: ['realizedProfitSth', 'realizedLossSth'] };
+const rplUsd = (m) => (isNum(m) ? fmtCompact(m * 1e6, 'USD') : '—'); // m em US$ milhões
+function rplSum(a, i0, i1) { let s = 0, n = 0; for (let i = Math.max(0, i0); i <= i1; i++) if (isNum(a[i])) { s += a[i]; n++; } return n ? s : null; }
+// barras: dia, semana (segunda a domingo), 2 semanas ou mês (UTC)
+function rplStart(D, i, agg) {
+  if (agg === '1w') return Math.floor((i - 1) / 7) * 7 + 1; // t0 (18/07/2010) é domingo: o índice 1 é segunda
+  if (agg === '2w') return Math.floor((i - 1) / 14) * 14 + 1;
+  if (agg === '1m') { const d = new Date(D.T(i)); return Math.round((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - D.t0) / DAYMS); }
+  return i;
+}
+function rplShell() {
+  const R = LAB.rpl;
+  return `${panelHead('scale', L('Lucro e prejuízo realizados', 'Realized profit and loss'), { sub: esc(L('Quanto os investidores embolsaram (lucro) ou perderam (prejuízo) ao mover bitcoins: a diferença entre o preço do dia e o preço pelo qual cada moeda tinha sido movida antes. Saldo positivo = mercado realizando lucro; saldo muito negativo = capitulação (venda no prejuízo), comum perto de fundos.', 'How much investors pocketed (profit) or lost (loss) when moving bitcoins: the difference between the day’s price and the price at which each coin last moved. Positive net = profit-taking; deeply negative net = capitulation (selling at a loss), common near bottoms.')) })}
+    <div class="rpl-tools">
+      <div class="rpl-f"><span class="rpl-fl">${esc(L('Quem moveu', 'Who moved'))}</span>${seg('rplh', [['all', L('Todos', 'All')], ['lth', L('Longo prazo · ≥155 dias', 'Long-term · ≥155 days')], ['sth', L('Curto prazo · <155 dias', 'Short-term · <155 days')]], R.h, 'rpl')}</div>
+      <div class="rpl-f"><span class="rpl-fl">${esc(L('Mostrar', 'Show'))}</span>${seg('rplm', [['net', L('Saldo', 'Net')], ['pl', L('Lucro e prejuízo', 'Profit & loss')], ['p', L('Lucro', 'Profit')], ['l', L('Prejuízo', 'Loss')]], R.m, 'rpl')}</div>
+      <div class="rpl-f"><span class="rpl-fl">${esc(L('Cada barra', 'Each bar'))}</span>${seg('rpla', [['1d', L('1 dia', '1 day')], ['1w', L('1 semana', '1 week')], ['2w', L('2 semanas', '2 weeks')], ['1m', L('1 mês', '1 month')]], R.agg, 'rpl')}</div>
+      <div class="rpl-f"><span class="rpl-fl">${esc(L('Período', 'Period'))}</span>${seg('rplr', [['3m', '3M'], ['1y', L('1A', '1Y')], ['2y', L('2A', '2Y')], ['all', L('Tudo', 'All')]], R.rg, 'rpl')}</div>
+    </div>
+    <div class="rpl-kpis" id="rpl-kpis"></div>
+    <div class="rpl-cw" id="rpl-cw"><div class="rpl-ct" id="rpl-ct"></div><div class="rpl-leg" id="rpl-leg" aria-live="off"></div><div id="rpl-chart" class="rpl-chart"></div></div>
+    <div id="rpl-note"></div>`;
+}
+function labDrawRpl(force) {
+  const box = $('#lab-rpl'); if (!box) return;
+  if (!$('#rpl-kpis')) box.innerHTML = rplShell();
+  const D = labData();
+  const cw = $('#rpl-cw');
+  if (!D) { setHTML('#rpl-kpis', `<div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div>`); return; }
+  const R = LAB.rpl; const [kp, kl] = RPL_K[R.h];
+  const P = D.A[kp] || [], Lo = D.A[kl] || [];
+  let li = -1; for (let i = Math.min(P.length, Lo.length) - 1; i >= 0; i--) if (isNum(P[i]) && isNum(Lo[i])) { li = i; break; }
+  if (li < 0) {
+    if (cw) cw.hidden = true;
+    setHTML('#rpl-kpis', `<div class="rpl-wait">${emptyBox('hourglass', L('Aguardando o robô de dados', 'Waiting for the data robot'), esc(L('O lucro e o prejuízo realizados chegam pelo robô (BGeometrics, plano grátis com cota por hora): o painel se completa sozinho nas próximas horas.', 'Realized profit and loss arrive through the data robot (BGeometrics free plan, hourly quota): this panel fills itself in the next hours.')))}</div>`);
+    setHTML('#rpl-note', ''); return;
+  }
+  if (cw) cw.hidden = false;
+  const who = { all: L('todos', 'everyone'), lth: L('longo prazo', 'long-term'), sth: L('curto prazo', 'short-term') }[R.h];
+  const sum = (a, n) => rplSum(a, li - n + 1, li);
+  const p1 = P[li], l1 = Lo[li], n1 = p1 + l1;
+  const p7 = sum(P, 7), l7 = sum(Lo, 7), p30 = sum(P, 30), l30 = sum(Lo, 30);
+  const n7 = isNum(p7) && isNum(l7) ? p7 + l7 : null, n30 = isNum(p30) && isNum(l30) ? p30 + l30 : null;
+  const ratio = l1 < 0 ? p1 / -l1 : null, ratio30 = isNum(l30) && l30 < 0 ? p30 / -l30 : null;
+  const dDate = fmtDate(D.T(li) + 12 * 3600e3, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const sub = (a, b) => `<span class="rpl-ks"><span>7d <b>${esc(rplUsd(a))}</b></span><span>30d <b>${esc(rplUsd(b))}</b></span></span>`;
+  setHTML('#rpl-kpis', `
+    <div class="rpl-k p"><span class="k">${ico('trending-up', 15)}${esc(L('Lucro realizado', 'Realized profit'))} <small>24h</small></span><b class="v">${esc(rplUsd(p1))}</b>${sub(p7, p30)}</div>
+    <div class="rpl-k l"><span class="k">${ico('trending-down', 15)}${esc(L('Prejuízo realizado', 'Realized loss'))} <small>24h</small></span><b class="v">${esc(rplUsd(l1))}</b>${sub(l7, l30)}</div>
+    <div class="rpl-k n ${n1 >= 0 ? 'pos' : 'neg'}"><span class="k">${ico('scale', 15)}${esc(L('Saldo (lucro − prejuízo)', 'Net (profit − loss)'))} <small>24h</small></span><b class="v">${esc((n1 > 0 ? '+' : '') + rplUsd(n1))}</b>${sub(n7, n30)}</div>
+    <div class="rpl-k r"><span class="k">${ico('divide', 15)}${esc(L('Lucro ÷ prejuízo', 'Profit ÷ loss'))} <small>24h</small></span><b class="v">${isNum(ratio) ? esc(fmtNum(ratio, 2, 2) + '×') : '—'}</b><span class="rpl-ks"><span>${esc(isNum(ratio) ? (ratio >= 1 ? L(`US$ ${fmtNum(ratio, 2, 2)} de lucro para cada US$ 1 de prejuízo`, `US$ ${fmtNum(ratio, 2, 2)} profit per US$ 1 of loss`) : L('mais prejuízo do que lucro', 'more loss than profit')) : '')}</span><span>30d <b>${isNum(ratio30) ? esc(fmtNum(ratio30, 2, 2) + '×') : '—'}</b></span></span></div>`);
+  setHTML('#rpl-note', note(esc(L(`Último dia publicado: ${dDate} (UTC) · ${who}. Fonte: BGeometrics (bitcoin-data.com), que publica com cerca de 1 dia de atraso; o robô do NEXUS HUB guarda o histórico. "Longo prazo" = moedas paradas há 155 dias ou mais; "curto prazo" = menos de 155 dias. Com barras de semana ou mês, a última barra pode estar incompleta.`, `Last published day: ${dDate} (UTC) · ${who}. Source: BGeometrics (bitcoin-data.com), published with about 1 day of delay; the NEXUS HUB robot keeps the history. "Long-term" = coins unmoved for 155 days or more; "short-term" = under 155 days. With week or month bars the last bar may be incomplete.`))));
+  rplChart(D, P, Lo, li, force);
+}
+async function rplChart(D, P, Lo, li, force) {
+  const host = $('#rpl-chart'); if (!host) return;
+  const R = LAB.rpl;
+  const key = [D.key, R.h, R.m, R.agg, R.rg, S.theme, S.lang, li].join('|');
+  if (!force && key === LAB._rk && host.querySelector('canvas')) return;
+  LAB._rk = key;
+  const seq = ++LAB.rseq;
+  const days = { '3m': 92, '1y': 366, '2y': 731 }[R.rg];
+  let first = days ? Math.max(0, li - days + 1) : 0;
+  while (first < li && !isNum(P[first]) && !isNum(Lo[first])) first++;
+  const bk = new Map();
+  for (let i = first; i <= li; i++) {
+    const st = rplStart(D, i, R.agg);
+    let b = bk.get(st); if (!b) { b = { st, i1: i, p: null, l: null }; bk.set(st, b); }
+    b.i1 = i;
+    if (isNum(P[i])) b.p = (b.p || 0) + P[i];
+    if (isNum(Lo[i])) b.l = (b.l || 0) + Lo[i];
+  }
+  const rows = [...bk.values()].filter((b) => isNum(b.p) || isNum(b.l));
+  const pf = ffill(D.A.p);
+  const ttl = { net: L('Preço do BTC + saldo realizado', 'BTC price + net realized P/L'), pl: L('Preço do BTC + lucro e prejuízo realizados', 'BTC price + realized profit and loss'), p: L('Preço do BTC + lucro realizado', 'BTC price + realized profit'), l: L('Preço do BTC + prejuízo realizado', 'BTC price + realized loss') }[R.m];
+  setHTML('#rpl-ct', `${ico('chart-column', 15)}<b>${esc(ttl)}</b><span class="faint">· ${esc({ '1d': L('barras diárias', 'daily bars'), '1w': L('barras semanais', 'weekly bars'), '2w': L('barras de 2 semanas', '2-week bars'), '1m': L('barras mensais', 'monthly bars') }[R.agg])}</span>`);
+  host.style.height = (window.innerWidth <= 640 ? 280 : 360) + 'px';
+  let r;
+  try { r = await makeChart(host, { priceFmt: (v) => fmtCompact(v, ''), onTheme: () => labDrawRpl(true) }); } catch (e) { host.innerHTML = emptyBox('wifi-off', L('Gráfico indisponível', 'Chart unavailable'), esc(e.message)); return; }
+  if (seq !== LAB.rseq) return;
+  const { ch, LWC } = r; const c = chartColors();
+  ch.applyOptions({ leftPriceScale: { visible: true, borderColor: cssVar('--line'), scaleMargins: { top: 0.1, bottom: 0.06 } }, rightPriceScale: { mode: LWC.PriceScaleMode.Logarithmic, scaleMargins: { top: 0.06, bottom: 0.06 } }, timeScale: { rightOffset: 4 }, crosshair: { mode: LWC.CrosshairMode.Normal } });
+  const tm = (b) => ctime(D.t0 + b.st * DAYMS, false);
+  const fU = (v) => fmtCompact(v, 'USD');
+  const up = labRGBA(c.up, 0.85), dn = labRGBA(c.down, 0.85);
+  const H = (name, col) => ch.addHistogramSeries({ priceScaleId: 'left', priceLineVisible: false, lastValueVisible: false, base: 0, color: col, nxName: name, nxFmt: fU });
+  if (R.m === 'net') {
+    const s = H(L('Saldo realizado', 'Net realized P/L'), up);
+    s.setData(rows.filter((b) => isNum(b.p) && isNum(b.l)).map((b) => { const v = (b.p + b.l) * 1e6; return { time: tm(b), value: v, color: v >= 0 ? up : dn }; }));
+  } else {
+    if (R.m !== 'l') H(L('Lucro realizado', 'Realized profit'), up).setData(rows.filter((b) => isNum(b.p)).map((b) => ({ time: tm(b), value: b.p * 1e6 })));
+    if (R.m !== 'p') H(L('Prejuízo realizado', 'Realized loss'), dn).setData(rows.filter((b) => isNum(b.l)).map((b) => ({ time: tm(b), value: b.l * 1e6 })));
+  }
+  const px = ch.addLineSeries({ color: c.text, lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: 'BTC', crosshairMarkerVisible: true, nxFmt: (v) => usd(v, [0, 0]) });
+  px.setData(rows.map((b) => (isNum(pf[b.i1]) ? { time: tm(b), value: pf[b.i1] } : null)).filter(Boolean));
+  ch.timeScale().fitContent();
+  // legenda: data, lucro, prejuízo, saldo e preço da barra apontada (ou da última)
+  const byT = new Map(rows.map((b) => [tm(b), b]));
+  const leg = (b) => {
+    if (!b) return;
+    const net = isNum(b.p) && isNum(b.l) ? b.p + b.l : null;
+    const d1 = fmtDate(D.T(b.st) + 12 * 3600e3, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    const d2 = fmtDate(D.T(b.i1) + 12 * 3600e3, { day: '2-digit', month: 'short', timeZone: 'UTC' });
+    setHTML('#rpl-leg', `<b>${esc(R.agg === '1d' ? d1 : `${d1} → ${d2}`)}</b>${R.m !== 'l' ? `<span><i style="background:var(--up)"></i>${esc(L('Lucro', 'Profit'))} <b class="up">${esc(rplUsd(b.p))}</b></span>` : ''}${R.m !== 'p' ? `<span><i style="background:var(--down)"></i>${esc(L('Prejuízo', 'Loss'))} <b class="down">${esc(rplUsd(b.l))}</b></span>` : ''}<span><i style="background:${isNum(net) && net < 0 ? 'var(--down)' : 'var(--up)'}"></i>${esc(L('Saldo', 'Net'))} <b class="${tone(net)}">${esc(isNum(net) ? (net > 0 ? '+' : '') + rplUsd(net) : '—')}</b></span><span><i style="background:var(--text)"></i>BTC <b>${esc(usd(pf[b.i1], [0, 0]))}</b></span>`);
+  };
+  leg(rows[rows.length - 1]);
+  ch.subscribeCrosshairMove((pr) => { const b = pr && pr.time !== undefined && pr.point ? byT.get(pr.time) : null; leg(b || rows[rows.length - 1]); });
+}
+ACT.seg_rplh = (v) => { LAB.rpl.h = v; labSave(); labDrawRpl(); };
+ACT.seg_rplm = (v) => { LAB.rpl.m = v; labSave(); labDrawRpl(); };
+ACT.seg_rpla = (v) => { LAB.rpl.agg = v; labSave(); labDrawRpl(); };
+ACT.seg_rplr = (v) => { LAB.rpl.rg = v; labSave(); labDrawRpl(); };
 function labDrawNote() {
   const D = labData();
   const via = D && D.via === 'direct' ? `<b>${esc(L('Robô de dados atrasado:', 'Data robot delayed:'))}</b> ${esc(L('histórico lido direto da Coin Metrics; os indicadores da BGeometrics voltam quando o robô atualizar.', 'history read directly from Coin Metrics; BGeometrics indicators return when the robot updates.'))} ` : '';
@@ -635,7 +837,8 @@ async function labChart(force) {
   const avail = (k) => im[k] && labAvail(im[k], D);
   const ov = LAB.mode === 'lv' ? [] : LAB.sel.filter((k) => avail(k) && im[k].kind === 'ov');
   const pn = LAB.sel.filter((k) => avail(k) && im[k].kind === 'pane');
-  const key = [D.key, ov.join(','), pn.join(','), LAB.mode, LAB.tab, S.theme, S.lang].join('|');
+  const kl = LAB.kind === 'candle' ? await labKlines() : null;
+  const key = [D.key, ov.join(','), pn.join(','), LAB.mode, LAB.tab, S.theme, S.lang, LAB.kind, kl ? kl.length : 0].join('|');
   if (!force && key === LAB._ck && LAB.charts.length && document.contains(LAB.charts[0].el) && LAB.charts[0].el.querySelector('canvas')) return;
   LAB._ck = key;
   const seq = ++LAB.seq;
@@ -657,16 +860,28 @@ async function labChart(force) {
   ch.applyOptions({ rightPriceScale: { mode: LAB.log ? LWC.PriceScaleMode.Logarithmic : LWC.PriceScaleMode.Normal, minimumWidth: 78, scaleMargins: { top: 0.08, bottom: 0.05 } }, timeScale: { visible: !pn.length, rightOffset: 8, minBarSpacing: 0.02, lockVisibleTimeRangeOnResize: true }, crosshair: { mode: LWC.CrosshairMode.Normal } });
   const base = ch.addLineSeries({ color: 'rgba(0,0,0,0)', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
   base.setData(ws);
-  const price = ch.addAreaSeries({ lineColor: c.text, topColor: labRGBA('#8e98ff', 0.16), bottomColor: labRGBA('#8e98ff', 0), lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: 'BTC' });
-  price.setData(labSeriesData(D, D.A.p));
+  // preço: linha (desde 2010, Coin Metrics) ou velas diárias da Binance (desde ago/2017; antes disso, a linha)
+  let price, candle = null;
+  if (kl && kl.length > 100) {
+    const t1 = ctime(kl[0].t, false);
+    price = ch.addAreaSeries({ lineColor: c.text3, topColor: labRGBA('#8e98ff', 0.08), bottomColor: labRGBA('#8e98ff', 0), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, nxName: L('BTC (fechamento)', 'BTC (close)'), nxFmt: (v) => labFmt('usd', v) });
+    price.setData(labSeriesData(D, D.A.p).filter((d) => d.time < t1));
+    candle = ch.addCandlestickSeries({ ...candleOpts(c), lastValueVisible: true, title: 'BTC', nxFmt: (v) => labFmt('usd', v) });
+    candle.setData(candleData(kl, false));
+  } else {
+    price = ch.addAreaSeries({ lineColor: c.text, topColor: labRGBA('#8e98ff', 0.16), bottomColor: labRGBA('#8e98ff', 0), lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: 'BTC', nxFmt: (v) => labFmt('usd', v) });
+    price.setData(labSeriesData(D, D.A.p));
+  }
+  LAB.candle = candle;
   const legend = [];
   for (const k of ov) {
     const x = im[k];
     for (const l of x.lines(D.A)) {
       const col = l.c || x.c;
-      const s = ch.addLineSeries({ color: col, lineWidth: l.w || 2, lineStyle: l.st || 0, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+      const nm = l.t || x.n;
+      const s = ch.addLineSeries({ color: col, lineWidth: l.w || (x.mult ? 1 : 2), lineStyle: l.st || (x.mult && !x.custom ? 0 : 0), priceLineVisible: false, lastValueVisible: true, title: nm, crosshairMarkerVisible: false, nxFmt: (v) => labFmt('usd', v) });
       s.setData(labSeriesData(D, l.v));
-      legend.push({ n: l.t || x.n, c: col, v: l.v });
+      legend.push({ n: nm, c: col, v: l.v });
     }
   }
   // modo "níveis de sinal": linhas tracejadas nos preços-gatilho de hoje
@@ -677,14 +892,14 @@ async function labChart(force) {
     // no gráfico só os níveis de "sinal" (os de "extremo" ficam na tabela embaixo), sem achatar o preço
     const pNow = (lastPt(D.A.p) || {}).v;
     const drawn = lvList.filter((x) => !x.ext);
-    for (const x of drawn) price.createPriceLine({ price: x.p, color: LAB.tab === 'acc' ? c.up : c.signal, lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title: x.t });
+    for (const x of drawn) (candle || price).createPriceLine({ price: x.p, color: LAB.tab === 'acc' ? c.up : c.signal, lineWidth: 2, lineStyle: 2, axisLabelVisible: true, title: x.t });
     const fit = drawn.filter((x) => isNum(pNow) && x.p <= pNow * 2.5 && x.p >= pNow / 3);
     if (fit.length) {
       const lo = Math.min(...fit.map((x) => x.p)), hi = Math.max(...fit.map((x) => x.p));
-      price.applyOptions({ autoscaleInfoProvider: (orig) => { const r0 = orig(); if (!r0 || !r0.priceRange) return r0; return { priceRange: { minValue: Math.min(r0.priceRange.minValue, lo * 0.97), maxValue: Math.max(r0.priceRange.maxValue, hi * 1.03) }, margins: r0.margins }; } });
+      (candle || price).applyOptions({ autoscaleInfoProvider: (orig) => { const r0 = orig(); if (!r0 || !r0.priceRange) return r0; return { priceRange: { minValue: Math.min(r0.priceRange.minValue, lo * 0.97), maxValue: Math.max(r0.priceRange.maxValue, hi * 1.03) }, margins: r0.margins }; } });
     }
   }
-  charts.push({ ch, el: host, s: price, vals: D.A.p });
+  charts.push({ ch, el: host, s: candle || price, vals: D.A.p });
   // painéis
   for (let pi = 0; pi < pn.length; pi++) {
     const x = im[pn[pi]]; const el = $('#lab-pc-' + x.id); if (!el) continue;
@@ -701,13 +916,13 @@ async function labChart(force) {
       const col = l.c || x.c;
       let s;
       if (l.hist) {
-        s = pc.addHistogramSeries({ priceLineVisible: false, lastValueVisible: true, base: 0 });
+        s = pc.addHistogramSeries({ priceLineVisible: false, lastValueVisible: true, base: 0, nxName: x.n, nxFmt: (v) => labFmt(x.f, v) });
         const t = labTimes(D); const data = [];
         const cDn = labRGBA(c.down, 0.75), cUp = labRGBA(c.up, 0.75);
         for (let i = 0; i < l.v.length; i++) if (isNum(l.v[i])) data.push({ time: t[i], value: l.v[i], color: l.v[i] > 0 ? cDn : cUp });
         s.setData(data);
       } else {
-        s = pc.addLineSeries({ color: l.a ? labRGBA(col, l.a) : col, lineWidth: l.w || 2, priceLineVisible: false, lastValueVisible: li === lines.length - 1 || lines.length === 1, crosshairMarkerVisible: !l.a });
+        s = pc.addLineSeries({ color: l.a ? labRGBA(col, l.a) : col, lineWidth: l.w || 2, priceLineVisible: false, lastValueVisible: li === lines.length - 1 || lines.length === 1, crosshairMarkerVisible: !l.a, nxName: l.t ? `${x.n} · ${l.t}` : l.a ? `${x.n} (${L('diário', 'daily')})` : x.n, nxFmt: (v) => labFmt(x.f, v) });
         const dd = labSeriesData(D, l.v);
         s.setData(x.log ? dd.filter((d) => d.value > 0) : dd);
       }
@@ -729,6 +944,14 @@ async function labChart(force) {
   applyR(); requestAnimationFrame(() => requestAnimationFrame(applyR)); // de novo depois que o tamanho assenta
   labLegend(null);
   labDrawLevels(D);
+}
+async function labKlines() {
+  if (LAB.kl && Date.now() - LAB.klAt < 10 * 60e3) return LAB.kl;
+  try {
+    const ks = await klinesSince('BTCUSDT', '1d', Date.UTC(2017, 7, 17));
+    if (ks.length > 100) { LAB.kl = ks; LAB.klAt = Date.now(); LAB.klIdx = new Map(ks.map((k) => [Math.round(k.t / DAYMS), k])); }
+  } catch { if (!LAB.kl) toast(L('Velas da Binance indisponíveis agora: mostrando a linha.', 'Binance candles unavailable now: showing the line.'), { type: 'warn' }); }
+  return LAB.kl;
 }
 function labGetRange() { try { return LAB.charts[0].ch.timeScale().getVisibleLogicalRange(); } catch { return null; } }
 function labSetRange(r) { try { LAB.charts[0].ch.timeScale().setVisibleLogicalRange(r); } catch { /* */ } }
@@ -766,7 +989,10 @@ function labLegend(i) {
   const idx = i === null || i === undefined || i < 0 || i >= D.N ? last : i;
   if (!isNum(idx)) return;
   const p = A.p[idx];
-  const bits = [`<b>${esc(fmtDate(D.T(idx) + 12 * 3600e3, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b>`, `<span><i style="background:var(--text)"></i>BTC <b>${esc(labFmt('usd', p))}</b></span>`];
+  const bits = [`<b>${esc(fmtDate(D.T(idx) + 12 * 3600e3, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b>`];
+  const k = LAB.kind === 'candle' && LAB.klIdx ? LAB.klIdx.get(Math.round(D.T(idx) / DAYMS)) : null;
+  if (k) bits.push(`<span class="ohlc"><i style="background:${k.c >= k.o ? 'var(--up)' : 'var(--down)'}"></i>BTC ${esc(L('A', 'O'))} <b>${esc(labFmt('usd', k.o))}</b> ${esc(L('M', 'H'))} <b>${esc(labFmt('usd', k.h))}</b> ${esc(L('m', 'L'))} <b>${esc(labFmt('usd', k.l))}</b> ${esc(L('F', 'C'))} <b class="${k.c >= k.o ? 'up' : 'down'}">${esc(labFmt('usd', k.c))}</b></span>`);
+  else bits.push(`<span><i style="background:var(--text)"></i>BTC <b>${esc(labFmt('usd', p))}</b></span>`);
   const hov = !(i === null || i === undefined);
   for (const l of LAB.legend || []) { const v = isNum(l.v[idx]) ? l.v[idx] : !hov ? (lastPt(l.v) || {}).v : null; if (isNum(v)) bits.push(`<span><i style="background:${l.c}"></i>${esc(l.n)} <b>${esc(labFmt('usd', v))}</b></span>`); }
   setHTML('#lab-leg', bits.join(''));
@@ -791,7 +1017,13 @@ function labDrawLevels(D) {
 function labLiveTick() {
   const cc = LAB.charts[0], D = LAB.cD; if (!cc || !D || !D.hasLive) return;
   const live = PX.BTCUSDT && PX.BTCUSDT.p; if (!isNum(live)) return;
-  try { cc.s.update({ time: labTimes(D)[D.N - 1], value: live }); D.A.p[D.N - 1] = live; } catch { /* */ }
+  try {
+    if (LAB.candle && LAB.kl && LAB.kl.length) {
+      const k = LAB.kl[LAB.kl.length - 1]; k.c = live; k.h = Math.max(k.h, live); k.l = Math.min(k.l, live);
+      LAB.candle.update({ time: ctime(k.t, false), open: k.o, high: k.h, low: k.l, close: k.c });
+    } else cc.s.update({ time: labTimes(D)[D.N - 1], value: live });
+    D.A.p[D.N - 1] = live;
+  } catch { /* */ }
   if (!LAB._hover) labLegend(null);
 }
 // alça para mudar a altura (mouse, toque e teclado)
@@ -810,7 +1042,16 @@ function labSetH(h, save) { LAB.h = clamp(Math.round(h), 240, 1400); const el = 
 ACT.seg_labt = (v) => { LAB.tab = v; labSave(); labDrawSignals(); if (LAB.mode === 'lv') { LAB._keepRange = true; labChart(true); } };
 ACT.seg_labm = (v) => { LAB.mode = v; labSave(); LAB._keepRange = true; labChart(true); };
 ACT.seg_labr = (v) => { LAB.range = v; labSave(); labApplyRange(); };
-ACT.labLog = (el) => { LAB.log = el.checked; labSave(); const cc = LAB.charts[0]; if (cc) { try { cc.ch.applyOptions({ rightPriceScale: { mode: LAB.log ? 1 : 0 } }); } catch { /* */ } } };
+ACT.seg_labsc = (v) => { LAB.log = v === 'log'; labSave(); const cc = LAB.charts[0]; if (cc) { try { cc.ch.applyOptions({ rightPriceScale: { mode: LAB.log ? 1 : 0 } }); } catch { /* */ } } };
+ACT.seg_labk = (v) => { LAB.kind = v === 'candle' ? 'candle' : 'line'; labSave(); LAB._keepRange = true; labChart(true); };
+ACT.labLogInfo = () => openModal({
+  title: L('Escala log ou linear?', 'Log or linear scale?'),
+  body: `<div class="howto">
+    <div class="ht-b ht-blue"><div class="ht-h">${ico('ruler', 16)}${esc(L('Escala log (logarítmica)', 'Log (logarithmic) scale'))}</div><p>${esc(L('Cada degrau do eixo é uma multiplicação: de US$ 10 mil para US$ 20 mil ocupa o mesmo espaço que de US$ 50 mil para US$ 100 mil — as duas são altas de 100%.', 'Each step of the axis is a multiplication: US$ 10k to US$ 20k takes the same space as US$ 50k to US$ 100k — both are 100% rallies.'))}</p><p class="ht-ok">${ico('check', 14)}${esc(L('Use para ver o ciclo inteiro do Bitcoin (de centavos a dezenas de milhares de dólares). É o padrão do Bitcoin Lab.', 'Use it to see Bitcoin’s whole cycle (from cents to tens of thousands of dollars). It is the Bitcoin Lab default.'))}</p></div>
+    <div class="ht-b ht-amber"><div class="ht-h">${ico('chart-line', 16)}${esc(L('Escala linear', 'Linear scale'))}</div><p>${esc(L('Cada degrau é uma soma fixa em dólares. Mostra o tamanho das variações em US$ — mas no histórico longo os primeiros anos viram uma linha reta no chão.', 'Each step is a fixed dollar amount. It shows the size of moves in US$ — but over long history the early years become a flat line.'))}</p><p class="ht-ok">${ico('check', 14)}${esc(L('Use para períodos curtos (6 meses, 1 ano).', 'Use it for short periods (6 months, 1 year).'))}</p></div>
+  </div>`,
+  foot: `<button class="btn pri" data-act="closeModal">${esc(L('Entendi', 'Got it'))}</button>`,
+});
 ACT.labSel = (el) => {
   const k = el.dataset.k; const im = labIndMap(); const x = im[k]; if (!x) return;
   if (el.checked) {
@@ -845,7 +1086,8 @@ ACT.labFull = () => {
   LAB.full = !LAB.full;
   w.classList.toggle('full', LAB.full); document.body.classList.toggle('lab-fs', LAB.full);
   const el = $('#lab-chart'); if (el) el.style.height = LAB.full ? '' : labH() + 'px';
-  const b = $('#lab-fbtn'); if (b) b.innerHTML = `${ico(LAB.full ? 'minimize-2' : 'maximize-2', 16)}<span class="hide-m">${esc(LAB.full ? L('Sair da tela cheia', 'Exit full screen') : L('Tela cheia', 'Full screen'))}</span>`;
+  const b = $('#lab-fbtn'); if (b) { b.innerHTML = `${ico(LAB.full ? 'minimize-2' : 'maximize-2', 16)}<span>${esc(LAB.full ? L('Sair da tela cheia', 'Exit full screen') : L('Tela cheia', 'Full screen'))}</span>`; b.classList.toggle('on', LAB.full); }
+  const f = $('.lab-fs-fab'); if (f) { f.innerHTML = ico(LAB.full ? 'minimize-2' : 'maximize-2', 18); f.title = LAB.full ? L('Sair da tela cheia (Esc)', 'Exit full screen (Esc)') : L('Tela cheia', 'Full screen'); }
 };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && LAB.full && !$('#scrim.open')) ACT.labFull(); });
 // janela "o que é e como ler" (com a tabela por ciclo de halving)
@@ -876,8 +1118,10 @@ ACT.labInfo = (el) => {
     title: x.n, wide: true,
     body: `<p class="muted" style="margin-top:-4px">${esc(x.s)}</p>
       <div class="lab-ik"><div><span>${esc(L('Agora', 'Now'))}</span><b>${esc(rv.v)}</b>${rv.s ? `<small class="${rv.c || ''}">${esc(rv.s)}</small>` : ''}</div><div><span>${esc(L('Fonte', 'Source'))}</span><b class="small">${esc(src)}</b>${cur && cur.est ? `<small>${esc(L('estimado com o preço ao vivo', 'estimated with the live price'))}</small>` : ''}</div></div>
-      <h3 class="lab-h3">${esc(L('O que é', 'What it is'))}</h3><p class="lab-p">${esc(x.desc)}</p>
-      <h3 class="lab-h3">${esc(L('Como ler', 'How to read it'))}</h3><p class="lab-p">${esc(x.ref)}</p>
+      <div class="howto">
+        <div class="ht-b ht-blue"><div class="ht-h">${ico('book-open', 16)}${esc(L('O que é', 'What it is'))}</div><p>${richText(x.desc)}</p></div>
+        <div class="ht-b ht-green"><div class="ht-h">${ico('lightbulb', 16)}${esc(L('Como ler', 'How to read it'))}</div><p>${richText(x.ref)}</p></div>
+      </div>
       ${sigHtml}${tbl}`,
     foot: `<button class="btn ghost" data-act="closeModal">${esc(L('Fechar', 'Close'))}</button>${D && labAvail(x, D) ? `<button class="btn pri" data-act="labShow" data-k="${esc(k)}">${ico(on ? 'eye-off' : 'eye', 16)}${esc(on ? L('Tirar do gráfico', 'Remove from chart') : L('Mostrar no gráfico', 'Show on chart'))}</button>` : ''}`,
   });

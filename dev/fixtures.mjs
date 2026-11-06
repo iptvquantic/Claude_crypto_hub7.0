@@ -117,8 +117,11 @@ function labFixture(gen) {
     generatedAt: gen, t0: '2010-07-18', n,
     cm: { price: arr(pr), mvrv: arr(mv, 0, 2), mcap: arr((i) => pr(i) * sup(i), 0, 2), iss: arr((i) => pr(i) * 900 * (1 + 0.1 * Math.sin(i / 50)), 0, 2), hash: arr((i) => 1e9 * Math.pow((i + 1) / n, 2) * (1 + 0.05 * Math.sin(i / 37))), addr: arr((i) => 650000 * (1 + 0.2 * Math.sin(i / 90))), bal: arr((i) => 5.5e7 * (i + 1) / n), supply: arr(sup, 0, 2), exch: arr((i) => 2.7e6 + 3e5 * Math.sin(i / 400), 280, 2), inflow: arr((i) => 26000 + 3000 * Math.sin(i / 11), 280, 2), outflow: arr((i) => 26200 + 3000 * Math.cos(i / 13), 280, 2), fees: arr((i) => 3 + 2 * Math.sin(i / 70) + 2.2), tx: arr((i) => 700000 * (1 + 0.15 * Math.sin(i / 60))) },
     cmAt: gen,
-    bd: { cvdd: arr((i) => pr(i) / 5, bdFrom, 2), sthRealizedPrice: arr((i) => pr(i) * 0.92, bdFrom, 7), lthRealizedPrice: arr((i) => pr(i) * 0.6, bdFrom, 7), aviv: arr((i) => cyc(i, 1.1, 0.4), bdFrom, 7), lthSopr: arr((i) => cyc(i, 1.6, 0.9), bdFrom, 7), sthSopr: arr((i) => cyc(i, 1.0, 0.03), bdFrom, 7), sthMvrv: arr((i) => cyc(i, 1.05, 0.2), bdFrom, 7), lthMvrv: arr((i) => cyc(i, 1.8, 0.8), bdFrom, 7), sopr: arr((i) => cyc(i, 1.0, 0.02), bdFrom, 7), reserveRisk: arr((i) => cyc(i, 0.0012, 0.0006), bdFrom, 1), trueMarketMean: arr((i) => pr(i) * 0.95, bdFrom, 7), terminalPrice: arr((i) => pr(i) * 1.25, bdFrom, 1) },
-    bdLast: { cvdd: iso(n - 3), sthRealizedPrice: iso(n - 8), lthRealizedPrice: iso(n - 8), aviv: iso(n - 8), lthSopr: iso(n - 8), sthSopr: iso(n - 8), sthMvrv: iso(n - 8), lthMvrv: iso(n - 8), sopr: iso(n - 8), reserveRisk: iso(n - 2), trueMarketMean: iso(n - 8), terminalPrice: iso(n - 2) },
+    bd: { cvdd: arr((i) => pr(i) / 5, bdFrom, 2), sthRealizedPrice: arr((i) => pr(i) * 0.92, bdFrom, 7), lthRealizedPrice: arr((i) => pr(i) * 0.6, bdFrom, 7), aviv: arr((i) => cyc(i, 1.1, 0.4), bdFrom, 7), lthSopr: arr((i) => cyc(i, 1.6, 0.9), bdFrom, 7), sthSopr: arr((i) => cyc(i, 1.0, 0.03), bdFrom, 7), sthMvrv: arr((i) => cyc(i, 1.05, 0.2), bdFrom, 7), lthMvrv: arr((i) => cyc(i, 1.8, 0.8), bdFrom, 7), sopr: arr((i) => cyc(i, 1.0, 0.02), bdFrom, 7), reserveRisk: arr((i) => cyc(i, 0.0012, 0.0006), bdFrom, 1), trueMarketMean: arr((i) => pr(i) * 0.95, bdFrom, 7), terminalPrice: arr((i) => pr(i) * 1.25, bdFrom, 1),
+      realizedProfit: arr((i) => 420 + 260 * Math.abs(Math.sin(i / 23)) + 160 * Math.sin(i / 190), bdFrom, 1), realizedLoss: arr((i) => -(150 + 170 * Math.abs(Math.cos(i / 17)) + 60 * Math.sin(i / 300)), bdFrom, 1),
+      realizedProfitLth: arr((i) => 90 + 70 * Math.abs(Math.sin(i / 29)), bdFrom, 1), realizedLossLth: arr((i) => -(30 + 25 * Math.abs(Math.cos(i / 31))), bdFrom, 1),
+      realizedProfitSth: arr((i) => 330 + 200 * Math.abs(Math.sin(i / 19)), bdFrom, 1), realizedLossSth: arr((i) => -(120 + 150 * Math.abs(Math.cos(i / 15))), bdFrom, 1) },
+    bdLast: { cvdd: iso(n - 3), sthRealizedPrice: iso(n - 8), lthRealizedPrice: iso(n - 8), aviv: iso(n - 8), lthSopr: iso(n - 8), sthSopr: iso(n - 8), sthMvrv: iso(n - 8), lthMvrv: iso(n - 8), sopr: iso(n - 8), reserveRisk: iso(n - 2), trueMarketMean: iso(n - 8), terminalPrice: iso(n - 2), realizedProfit: iso(n - 2), realizedLoss: iso(n - 2), realizedProfitLth: iso(n - 2), realizedLossLth: iso(n - 2), realizedProfitSth: iso(n - 2), realizedLossSth: iso(n - 2) },
     fng: arr((i) => Math.round(50 + 30 * Math.sin(i / 40)), 2755, 0), fngAt: gen,
   };
 }
@@ -154,7 +157,11 @@ function pipeline(name) {
     const coins = [46, 534, 5310, 44947, 278000, 1065591, 2037950, 4221225, 5266926, 4204066, 2274750, 696799];
     const addr = [7833693, 12742777, 14200210, 12189853, 8267873, 3494715, 820204, 129690, 18394, 1942, 83, 4];
     const ta = addr.reduce((x, y) => x + y, 0), tc = coins.reduce((x, y) => x + y, 0);
-    return { generatedAt: gen, src: 'bitinfocharts.com', top, dist: R.map((range, i) => ({ range, addr: addr[i], addrPct: +(addr[i] / ta * 100).toFixed(2), coins: coins[i], usd: coins[i] * 81500, coinsPct: +(coins[i] / tc * 100).toFixed(2) })) };
+    // faixas ao vivo da BGeometrics (como o robô grava): endereços e moedas por tamanho, com o valor de 30 dias antes
+    const day = (n) => new Date(NOW() - n * DAY).toISOString().slice(0, 10);
+    const bgA = [58902841, 820204, 129690, 18394, 1942, 87], bgC = [1393420, 2037950, 4221225, 5266926, 4204066, 2958036], bgD = [-2100, 3500, -8200, 12400, 9100, -15000];
+    const bg = {}; ['1-BTC', '10-1-BTC', '100-10-BTC', '1K-100-BTC', '10K-1K-BTC', '10K-BTC'].forEach((k, i) => { bg['balance-addr-' + k] = { v: bgA[i], d: day(2), v30: Math.round(bgA[i] * 0.995), d30: day(32) }; bg['coins-addr-' + k] = { v: bgC[i], d: day(2), v30: bgC[i] - bgD[i], d30: day(32) }; });
+    return { generatedAt: gen, src: 'bitinfocharts.com', topAt: new Date(NOW() - 18 * DAY).toISOString(), top, bg, bgAt: { 'balance-addr-1-BTC': gen }, dist: R.map((range, i) => ({ range, addr: addr[i], addrPct: +(addr[i] / ta * 100).toFixed(2), coins: coins[i], usd: coins[i] * 81500, coinsPct: +(coins[i] / tc * 100).toFixed(2) })) };
   }
   if (name === 'news') {
     const cat = (c) => Array.from({ length: 12 }, (_, i) => ({ t: `Manchete ${c} ${i + 1}: mercado reage a dados`, u: `https://news.test/${c}/${i}`, d: NOW() - (i * 37 + 3) * 60e3, x: 'Resumo curto.', img: i === 0 ? 'https://assets.test/img/lead.png' : '', src: pick(['InfoMoney', 'Livecoins', 'g1', 'BBC News Brasil']), lang: i % 5 === 4 ? 'en' : 'pt' }));
@@ -178,6 +185,20 @@ function pipeline(name) {
   if (name === 'calendar') {
     const ev = (d, h, country, title, impact, f, p) => ({ title, country, date: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + d, h)).toISOString(), impact, forecast: f, previous: p });
     return { generatedAt: gen, events: [ev(0, 13, 'USD', 'Unemployment Claims', 'Medium', '228K', '224K'), ev(1, 14, 'USD', 'Prelim UoM Consumer Sentiment', 'Medium', '54.8', '55.1'), ev(2, 9, 'EUR', 'German ZEW Economic Sentiment', 'Medium', '38.2', '37.3'), ev(3, 12, 'USD', 'Retail Sales m/m', 'High', '0.4%', '0.6%'), ev(4, 1, 'CNY', 'GDP q/q', 'High', '1.0%', '1.1%'), ev(5, 23, 'JPY', 'BOJ Policy Rate', 'High', '0.75%', '0.75%')] };
+  }
+  if (name === 'calhist') { // histórico de indicadores (TradingView pelo robô): CPI, payroll, Fed, Copom e IPCA dos últimos meses
+    const ev = []; const base = Math.floor(NOW() / DAY) * DAY;
+    for (let m = 1; m <= 14; m++) {
+      const d0 = new Date(base); d0.setUTCMonth(d0.getUTCMonth() - m);
+      const at = (day, h, mi = 30) => new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), day, h, mi)).toISOString();
+      const cpi = 2.6 + 0.4 * Math.sin(m / 2), fc = cpi + (m % 3 === 0 ? 0.1 : m % 3 === 1 ? -0.1 : 0);
+      ev.push({ id: 'cpi' + m, t: 'Inflation Rate YoY', i: 'Inflation Rate', k: 'USIRYY', c: 'US', d: at(12, 12), a: cpi.toFixed(1) + '%', f: fc.toFixed(1) + '%', p: (cpi + 0.1).toFixed(1) + '%', ar: +cpi.toFixed(1), fr: +fc.toFixed(1), pr: +(cpi + 0.1).toFixed(1) });
+      const nfp = 120 + 60 * Math.sin(m);
+      ev.push({ id: 'nfp' + m, t: 'Non Farm Payrolls', i: 'Non Farm Payrolls', k: 'USNFP', c: 'US', d: at(5, 12), a: Math.round(nfp) + 'K', f: Math.round(nfp + 15) + 'K', p: Math.round(nfp - 10) + 'K', ar: Math.round(nfp) * 1000, fr: Math.round(nfp + 15) * 1000, pr: Math.round(nfp - 10) * 1000 });
+      if (m % 2 === 0) ev.push({ id: 'fomc' + m, t: 'Fed Interest Rate Decision', i: 'Interest Rate', k: 'USINTR', c: 'US', d: at(18, 18, 0), a: '3.75%', f: '3.75%', p: '4%', ar: 3.75, fr: 3.75, pr: 4 });
+      ev.push({ id: 'ipca' + m, t: 'Inflation Rate YoY', i: 'Inflation Rate', k: 'BRIRYY', c: 'BR', d: at(10, 12, 0), a: (4.5 + 0.3 * Math.cos(m)).toFixed(2) + '%', f: (4.5 + 0.3 * Math.cos(m) + 0.05).toFixed(2) + '%', p: '4.68%', ar: +(4.5 + 0.3 * Math.cos(m)).toFixed(2), fr: +(4.55 + 0.3 * Math.cos(m)).toFixed(2), pr: 4.68 });
+    }
+    return { generatedAt: gen, src: 'TradingView', ev: ev.sort((a, b) => a.d.localeCompare(b.d)) };
   }
   if (name === 'status') return { generatedAt: gen, sources: { news: { ok: true, n: 48 }, calendar: { ok: true, n: 6 }, quotes: { ok: true, n: 10 }, world: { ok: false, err: 'HTTP 403' }, db: { ok: false, err: 'projeto pausado no Supabase (reativar no painel)' }, dbMc: { ok: false, err: 'projeto pausado no Supabase (reativar no painel)' }, appLicitafacil: { ok: false, err: 'HTTP 503', at: gen }, appCredix: { ok: true, ms: 41000, at: gen, cached: true } } };
   return null;
@@ -221,6 +242,7 @@ export function makeSupabase({ plan = 'trial', admin = false } = {}) {
     if (p === '/rest/v1/rpc/vault_remove') { const { p_id } = JSON.parse(body); const r = db.entries.find((e) => e.id === p_id); if (r) r.removed_at = new Date().toISOString(); return json({ ok: !!r }); }
     if (p === '/rest/v1/rpc/vault_restore') { const { p_id } = JSON.parse(body); const r = db.entries.find((e) => e.id === p_id); if (r) r.removed_at = null; return json({ ok: !!r }); }
     if (p === '/rest/v1/payment_claims') { if (method === 'GET') return json(db.claims); const r = { id: 'c' + ++n, ...JSON.parse(body), status: 'pending', created_at: new Date().toISOString() }; db.claims.push(r); return json([r], 201); }
+    if (p === '/rest/v1/rpc/admin_set_plan') { db.lastPlan = JSON.parse(body || '{}'); return json({ ok: true, plan: db.lastPlan.p_plan }); }
     if (p === '/rest/v1/rpc/admin_overview') return json({ users: 12, pro_active: 3, trial_active: 5, expired: 4, new_7d: 2, claims_pending: 1, entries: 87, server_time: new Date().toISOString() });
     if (p === '/rest/v1/rpc/admin_list_claims') return json([{ id: 'c9', user_id: 'u9', email: 'pagou@teste.com', plan: 'anual', note: 'Maria, pago 15/10', status: 'pending', created_at: new Date().toISOString() }]);
     if (p === '/rest/v1/rpc/admin_list_users') return json([{ id: uid, email, name: 'Dono', plan: 'master', plan_expiry: new Date(NOW() + 999 * DAY).toISOString(), active: true, created_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), entries: 3, pending_claims: 0 }, { id: 'u9', email: 'pagou@teste.com', name: 'Maria', plan: 'trial', plan_expiry: new Date(NOW() - DAY).toISOString(), active: true, created_at: new Date().toISOString(), last_seen_at: null, entries: 0, pending_claims: 1 }]);
@@ -277,6 +299,18 @@ export function respond(url, method = 'GET', body = '', opts = {}) {
     if (p.startsWith('/summary/fees/ondo-finance')) return json({ total24h: 41000, total7d: 290000, total30d: 1.2e6, total1y: 14e6, change_1d: 2.1 });
     if (p.startsWith('/summary/fees/hyperliquid')) { const k = { dailyFees: 4e6, dailyRevenue: 3.6e6, dailyHoldersRevenue: 3.4e6 }[q.get('dataType')] || 1e6; const ch = Array.from({ length: 400 }, (_, i) => [Math.floor((Math.floor(NOW() / DAY) * DAY - (399 - i) * DAY) / 1000), Math.round(k * (0.6 + 0.5 * Math.abs(Math.sin(i / 40))))]); return json({ name: 'Hyperliquid', total24h: k, total7d: k * 7, total30d: k * 30, total1y: k * 365, totalDataChart: q.get('excludeTotalDataChart') === 'true' ? [] : ch }); }
     if (p.startsWith('/summary/fees/')) return json({ message: 'not found' }, 404);
+  }
+  if (h === 'www.deribit.com' && p === '/api/v2/public/get_book_summary_by_currency') { // opções simuladas: 3 vencimentos com contratos em torno do preço
+    const cur = q.get('currency') || 'BTC'; const px = cur === 'BTC' ? price('BTCUSDT') : price('ETHUSDT'); const M = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const fri = (k) => { const d = new Date(NOW()); d.setUTCDate(d.getUTCDate() + ((5 - d.getUTCDay() + 7) % 7 || 7) + 7 * k); return d; };
+    const out = [];
+    for (const [k, size] of [[0, 4000], [2, 52000], [7, 31000]]) {
+      const d = fri(k); const nm = `${d.getUTCDate()}${M[d.getUTCMonth()]}${String(d.getUTCFullYear()).slice(2)}`;
+      for (let j = -6; j <= 6; j++) { const strike = Math.round(px * (1 + j * 0.05) / (cur === 'BTC' ? 1000 : 50)) * (cur === 'BTC' ? 1000 : 50); const w = Math.exp(-(j * j) / 12) * size / 10 * (cur === 'BTC' ? 1 : 20);
+        out.push({ instrument_name: `${cur}-${nm}-${strike}-C`, open_interest: +(w * (j >= 0 ? 1.2 : 0.6)).toFixed(1), estimated_delivery_price: px, underlying_price: px, mark_price: 0.01 });
+        out.push({ instrument_name: `${cur}-${nm}-${strike}-P`, open_interest: +(w * (j <= 0 ? 0.9 : 0.4)).toFixed(1), estimated_delivery_price: px, underlying_price: px, mark_price: 0.01 }); }
+    }
+    return json({ jsonrpc: '2.0', result: out });
   }
   if (h === 'mempool.space' || h === 'blockstream.info') {
     if (p.endsWith('/blocks/tip/height')) return text('971600');

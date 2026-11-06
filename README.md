@@ -1,6 +1,6 @@
 # NEXUS HUB
 
-Painel em português de cripto e mercado, ao vivo: preços, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e a carteira **Portfolio Vault** (PRO). Cada número mostra a fonte e a hora da leitura.
+Painel em português de cripto e mercado, ao vivo: preços, on-chain, juros (Fed e Copom), agenda econômica, eventos do mercado, Polymarket, notícias, Wallet Watch (grátis) e, no PRO, Bitcoin Lab, Tokenomics, Burn, Baby, Burn e a carteira **Portfolio Vault**. Cada número mostra a fonte e a hora da leitura.
 
 - Site: https://iptvquantic.github.io/Claude_crypto_hub7.0/
 - Apresentação (vendas): https://iptvquantic.github.io/Claude_crypto_hub7.0/landing.html
@@ -18,7 +18,8 @@ Painel em português de cripto e mercado, ao vivo: preços, on-chain, juros (Fed
 ## Tarefas do dia a dia (dono)
 
 - **Liberar um PRO pago:** entre com a sua conta → menu da conta → *Painel do administrador* → *Pedidos de ativação* → confira no PagBank → **Aprovar**.
-- **Senha esquecida de cliente:** Painel do administrador → usuário → *Gerar senha temporária*; envie por um canal seguro.
+- **Renovar ou ajustar um cliente:** Painel do administrador → *Usuários* → **Ações** no cliente → *Renovar PRO* (mensal, trimestral ou anual — soma a partir do vencimento atual e mostra a nova data), *Outro prazo* (dar ou tirar dias), *Teste +7 dias*, *Mudar para gratuito* ou *Desativar*. O filtro *Vencem em 7 dias* mostra quem renovar.
+- **Senha esquecida de cliente:** Painel do administrador → usuário → **Ações** → *Gerar senha temporária*; envie por um canal seguro.
 - **Robô de dados:** aba *Actions* do GitHub → *Atualizar dados* → *Run workflow* para rodar na hora. O status aparece no Painel do administrador.
 
 ## Para desenvolver (Node 20+)

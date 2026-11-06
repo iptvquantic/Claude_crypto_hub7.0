@@ -203,7 +203,68 @@ function chartTheme() {
 }
 const chartColors = () => ({ up: cssVar('--up'), down: cssVar('--down'), accent: cssVar('--accent'), signal: cssVar('--signal'), info: cssVar('--info'), text: cssVar('--text'), text3: cssVar('--text-3'), line: cssVar('--line-2') });
 function _sweepCharts() { CHARTS.forEach((c) => { if (!document.contains(c.el)) { try { c.ch.remove(); } catch { /* */ } CHARTS.delete(c); } }); }
-async function makeChart(el, { intraday = false, onTheme, priceFmt } = {}) {
+// Séries com nome: o gráfico mostra o nome da linha onde o mouse (ou o dedo) passa, como no TradingView.
+// Toda série criada com `title` (rótulo no eixo) ou `nxName` (só no mouse) entra na lista.
+const _SERIES_ADD = ['addLineSeries', 'addAreaSeries', 'addCandlestickSeries', 'addBarSeries', 'addHistogramSeries', 'addBaselineSeries'];
+function _chartNamed(rec) {
+  const { ch } = rec;
+  for (const m of _SERIES_ADD) {
+    const orig = ch[m] && ch[m].bind(ch); if (!orig) continue;
+    ch[m] = (opts = {}, ...rest) => {
+      const { nxName, nxFmt, nxColor, ...o } = opts || {};
+      const s = orig(o, ...rest);
+      const n = nxName !== undefined ? nxName : o.title;
+      if (n) rec.named.push({ s, n: String(n), kind: m, fmt: nxFmt, c: nxColor || o.color || o.lineColor || o.upColor || '' });
+      return s;
+    };
+  }
+  const rm = ch.removeSeries.bind(ch);
+  ch.removeSeries = (s) => { rec.named = rec.named.filter((x) => x.s !== s); return rm(s); };
+}
+function _chartHover(rec, fmtP) {
+  const { ch, el } = rec;
+  if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+  const tag = document.createElement('div'); tag.className = 'ch-tag'; tag.hidden = true; tag.setAttribute('aria-hidden', 'true'); el.appendChild(tag);
+  let hot = null;
+  const cool = () => { if (hot && hot.w0) { try { hot.s.applyOptions({ lineWidth: hot.w0 }); } catch { /* */ } } hot = null; };
+  const hide = () => { tag.hidden = true; cool(); };
+  el.addEventListener('mouseleave', hide);
+  ch.subscribeCrosshairMove((p) => {
+    if (!p || !p.point || p.time === undefined || !rec.named.length || !p.seriesData) { hide(); return; }
+    let best = null;
+    for (const r of rec.named) {
+      const d = p.seriesData.get(r.s); if (!d) continue;
+      const v = d.value !== undefined ? d.value : d.close; if (!isNum(v)) continue;
+      let y; try { y = r.s.priceToCoordinate(v); } catch { y = null; } if (y === null || y === undefined) continue;
+      let dist = Math.abs(y - p.point.y);
+      if (d.high !== undefined) { const yh = r.s.priceToCoordinate(d.high), yl = r.s.priceToCoordinate(d.low); if (yh !== null && yl !== null && p.point.y >= Math.min(yh, yl) - 4 && p.point.y <= Math.max(yh, yl) + 4) dist = 0; }
+      if (r.kind === 'addHistogramSeries') { const y0 = r.s.priceToCoordinate(0); if (y0 !== null && p.point.y >= Math.min(y, y0) - 3 && p.point.y <= Math.max(y, y0) + 3) dist = 0; }
+      if (!best || dist < best.dist) best = { r, v, d, y, dist };
+    }
+    if (!best || best.dist > 18) { hide(); return; }
+    const r = best.r, d = best.d;
+    let col = r.c || (r.s.options && (r.s.options().color || r.s.options().lineColor)) || 'var(--text)';
+    if (d.color) col = d.color;
+    if (r.kind === 'addCandlestickSeries' && d.close !== undefined) col = d.close >= d.open ? cssVar('--up') : cssVar('--down');
+    const f = r.fmt || fmtP;
+    const val = r.kind === 'addCandlestickSeries' || r.kind === 'addBarSeries'
+      ? `<span class="o">${esc(L('A', 'O'))} ${esc(f(d.open))}</span><span class="o">${esc(L('M', 'H'))} ${esc(f(d.high))}</span><span class="o">${esc(L('m', 'L'))} ${esc(f(d.low))}</span><span>${esc(L('F', 'C'))} ${esc(f(d.close))}</span>`
+      : `<span>${esc(f(best.v))}</span>`;
+    tag.style.setProperty('--tc', col);
+    tag.innerHTML = `<i></i><b>${esc(r.n)}</b>${val}`;
+    tag.hidden = false;
+    const w = tag.offsetWidth, h = tag.offsetHeight, W = el.clientWidth, H = el.clientHeight;
+    let x = p.point.x + 14; if (x + w > W - 64) x = p.point.x - w - 14; x = Math.max(2, x);
+    const yy = clamp((r.kind === 'addCandlestickSeries' ? p.point.y : best.y) - h - 8, 2, Math.max(2, H - h - 26));
+    tag.style.transform = `translate(${Math.round(x)}px, ${Math.round(yy)}px)`;
+    // destaca a linha apontada (engrossa um pouco)
+    if (!hot || hot.r !== r) {
+      cool();
+      if (r.kind === 'addLineSeries') { let w0 = 2; try { w0 = r.s.options().lineWidth || 2; } catch { /* */ } try { r.s.applyOptions({ lineWidth: Math.min(4, w0 + 1) }); } catch { /* */ } hot = { r, s: r.s, w0 }; } else hot = { r };
+    }
+  });
+}
+async function makeChart(el, { intraday = false, onTheme, priceFmt, hover = true } = {}) {
   _sweepCharts();
   const LWC = await loadScript(LIBS.lwc);
   // um gráfico por elemento: o anterior é desmontado
@@ -217,10 +278,18 @@ async function makeChart(el, { intraday = false, onTheme, priceFmt } = {}) {
     timeScale: { ...chartTheme().timeScale, timeVisible: intraday, secondsVisible: false, rightOffset: 3 },
     handleScroll: { vertTouchDrag: false },
   });
-  const rec = { ch, el, onTheme };
+  const rec = { ch, el, onTheme, named: [] };
   CHARTS.add(rec);
+  _chartNamed(rec);
+  if (hover) _chartHover(rec, fmtP);
   return { ch, LWC, c: chartColors() };
 }
+// velas para o LightweightCharts
+const candleData = (ks, intraday) => ks.map((k) => ({ time: ctime(k.t, intraday), open: k.o, high: k.h, low: k.l, close: k.c }));
+const candleOpts = (c) => ({ upColor: c.up, downColor: c.down, borderUpColor: c.up, borderDownColor: c.down, wickUpColor: c.up, wickDownColor: c.down, priceLineVisible: false });
+// botão "Linha | Velas" (o valor fica salvo por gráfico)
+const chartKind = (k, d = 'line') => { const v = LS.get('ck-' + k); return v === 'candle' || v === 'line' ? v : d; };
+const chartKindSeg = (k, cur) => seg('ck_' + k, [['line', L('Linha', 'Line'), 'chart-line'], ['candle', L('Velas', 'Candles'), 'chart-candlestick']], cur, 'ck');
 // tempo para o gráfico: velas diárias ficam na data UTC; intradiárias no horário local
 function ctime(ms, intraday) { return Math.floor(ms / 1000) - (intraday ? new Date(ms).getTimezoneOffset() * 60 : 0); }
 function onThemeChange() {

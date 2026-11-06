@@ -14,6 +14,11 @@ const dayKey = (t) => new Date(t).toISOString().slice(0, 10);
 const r6 = (v) => (Number.isFinite(v) ? +v.toPrecision(6) : null);
 const r5 = (v) => (Number.isFinite(v) ? +v.toPrecision(5) : null);
 const rint = (v) => (Number.isFinite(v) ? Math.round(v) : null);
+const rM = (v) => (Number.isFinite(v) ? +(v / 1e6).toPrecision(6) : null); // US$ → milhões (arquivo menor)
+// bitcoin-data.com (BGeometrics) grátis: 10 pedidos por hora por endereço. O robô divide uma cota por execução
+// entre o Bitcoin Lab e as Baleias (2 execuções seguidas dentro da mesma hora ainda ficam no limite).
+export const BD_BUDGET = 5;
+const bdTake = (ctx) => { if (ctx.bdLeft === undefined) ctx.bdLeft = BD_BUDGET; if (ctx.bdLeft <= 0) return false; ctx.bdLeft--; return true; };
 
 // ---------------------------------------------------------------------
 // GEOPOLÍTICA — inspirado no Radar Agora (Projeto X): geopolítica = guerras, conflitos, Oriente Médio,
@@ -132,6 +137,9 @@ export const BD_METRICS = [
   ['cvdd', 'cvdd', r6], ['sth-realized-price', 'sthRealizedPrice', r6], ['lth-realized-price', 'lthRealizedPrice', r6], ['aviv', 'aviv', r5],
   ['lth-sopr', 'lthSopr', r5], ['sth-sopr', 'sthSopr', r5], ['sth-mvrv', 'sthMvrv', r5], ['lth-mvrv', 'lthMvrv', r5], ['sopr', 'sopr', r5],
   ['reserve-risk', 'reserveRisk', r5], ['true-market-mean', 'trueMarketMean', r6], ['terminal-price', 'terminalPrice', r6], ['balanced-price', 'balancedPrice', r6], ['rhodl-ratio', 'rhodlRatio', r5],
+  // lucro e prejuízo realizados por dia (US$ milhões; prejuízo vem negativo), de todos, dos de longo e dos de curto prazo
+  ['realized-profit', 'realizedProfit', rM], ['realized-loss', 'realizedLoss', rM], ['realized_profit_lth', 'realizedProfitLth', rM],
+  ['realized_loss_lth', 'realizedLossLth', rM], ['realized_profit_sth', 'realizedProfitSth', rM], ['realized_loss_sth', 'realizedLossSth', rM],
 ];
 const T0 = Date.UTC(2010, 6, 18);
 const idxOf = (t) => Math.round((Date.UTC(new Date(t).getUTCFullYear(), new Date(t).getUTCMonth(), new Date(t).getUTCDate()) - T0) / DAY);
@@ -169,10 +177,11 @@ export async function lab(ctx) {
     .filter(([name]) => !out.bdAt[name] || now - Date.parse(out.bdAt[name]) > 20 * 3600e3)
     .sort((a, b) => (Date.parse(out.bdAt[a[0]] || 0) || 0) - (Date.parse(out.bdAt[b[0]] || 0) || 0)).slice(0, 3);
   for (const [name, key, rnd] of due) {
+    if (!bdTake(ctx)) break;
     try {
       const r = await ctx.raw(`https://bitcoin-data.com/v1/${name}`, { timeout: 40000 });
       if (r.status === 404) { out.bdMiss[name] = iso(now); notes.push(`bd ${name}: não existe`); continue; }
-      if (r.status === 429) { notes.push('bd: limite por hora'); break; }
+      if (r.status === 429) { notes.push('bd: limite por hora'); ctx.bdLeft = 0; break; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const arr = JSON.parse(r.text);
       if (!Array.isArray(arr) || arr.length < 100) throw new Error('formato inesperado');
@@ -310,12 +319,60 @@ export function parseBitinfo(html, strip) {
   }
   return { dist, top };
 }
+// Faixas de saldo pela BGeometrics (endereços e BTC em cada faixa). Nome do caminho → faixa do site.
+export const WH_BG = [
+  ['1-BTC', 0], ['10-1-BTC', 1], ['100-10-BTC', 2], ['1K-100-BTC', 3], ['10K-1K-BTC', 4], ['10K-BTC', 5],
+];
+const WH_BG_EVERY = 3 * DAY;
+const bgVal = (row) => { if (!row) return null; for (const [k, v] of Object.entries(row)) { if (['d', 'unixTs', 'delayed', 'message'].includes(k)) continue; const n = Number(v); if (Number.isFinite(n)) return n; } return null; };
 export async function whales(ctx) {
   const prev = await ctx.previous('whales');
-  if (prev && Array.isArray(prev.top) && prev.top.length && Date.now() - Date.parse(prev.generatedAt) < 6 * 3600e3) { ctx.save('whales', prev); return { n: prev.top.length, cached: true }; }
-  const html = await ctx.get('https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html', { timeout: 30000 });
-  const { dist, top } = parseBitinfo(html, ctx.strip);
-  if (top.length < 50 || dist.length < 6) throw new Error(`tabela mudou (top ${top.length}, faixas ${dist.length})`);
-  ctx.save('whales', { generatedAt: iso(Date.now()), src: 'bitinfocharts.com', top, dist });
-  return { n: top.length, ranges: dist.length };
+  const now = Date.now();
+  // o arquivo junta duas fontes: a lista dos 100 maiores (BitInfoCharts, com a data dela em topAt) e as
+  // 6 faixas de saldo (BGeometrics, cada série com a sua data). Uma falhar não apaga a outra.
+  const out = { generatedAt: iso(now), src: 'bitinfocharts.com', top: [], dist: [], topAt: null, bg: {}, bgAt: {} };
+  if (prev) {
+    if (Array.isArray(prev.top)) out.top = prev.top;
+    if (Array.isArray(prev.dist)) out.dist = prev.dist;
+    out.topAt = prev.topAt || prev.generatedAt || null;
+    if (prev.bg) out.bg = prev.bg;
+    if (prev.bgAt) out.bgAt = prev.bgAt;
+  }
+  const notes = [];
+  // 1) BitInfoCharts: no máximo a cada 6 h (desde 19/10/2026 o Cloudflare recusa o robô: fica a última lista, com a data)
+  if (!out.topAt || now - Date.parse(out.topAt) > 6 * 3600e3) {
+    try {
+      const html = await ctx.get('https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html', { timeout: 30000 });
+      const { dist, top } = parseBitinfo(html, ctx.strip);
+      if (top.length < 50 || dist.length < 6) throw new Error(`tabela mudou (top ${top.length}, faixas ${dist.length})`);
+      out.top = top; out.dist = dist; out.topAt = iso(now);
+    } catch (e) { notes.push('BitInfoCharts: ' + String(e.message || e).slice(0, 60)); }
+  }
+  // 2) BGeometrics: endereços (balance-addr) e BTC (coins-addr) por faixa; cada série a cada ~3 dias, dentro da cota
+  const series = WH_BG.flatMap(([p]) => [['balance-addr-' + p, 'a'], ['coins-addr-' + p, 'c']]);
+  const due = series.filter(([name]) => !out.bgAt[name] || now - Date.parse(out.bgAt[name]) > WH_BG_EVERY)
+    .sort((a, b) => (Date.parse(out.bgAt[a[0]] || 0) || 0) - (Date.parse(out.bgAt[b[0]] || 0) || 0));
+  let got = 0;
+  for (const [name] of due) {
+    if (ctx.bdLeft === undefined) ctx.bdLeft = BD_BUDGET;
+    if (ctx.bdLeft <= 0) break;
+    ctx.bdLeft--;
+    try {
+      const start = dayKey(now - 40 * DAY);
+      const r = await ctx.raw(`https://bitcoin-data.com/v1/${name}?startday=${start}`, { timeout: 30000 });
+      if (r.status === 429) { notes.push('BGeometrics: limite por hora'); ctx.bdLeft = 0; break; }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const rows = JSON.parse(r.text);
+      const arr = (Array.isArray(rows) ? rows : [rows]).filter((x) => x && x.d && Number.isFinite(bgVal(x))).sort((a, b) => String(a.d).localeCompare(String(b.d)));
+      if (!arr.length) throw new Error('sem dados');
+      const last = arr[arr.length - 1];
+      const ref = arr.find((x) => Date.parse(x.d) >= Date.parse(last.d) - 30 * DAY) || arr[0];
+      out.bg[name] = { v: bgVal(last), d: last.d, v30: bgVal(ref), d30: ref.d };
+      out.bgAt[name] = iso(now); got++;
+    } catch (e) { notes.push(`${name}: ` + String(e.message || e).slice(0, 40)); }
+  }
+  const hasTop = out.top.length >= 50, nBg = Object.keys(out.bg).length;
+  if (!hasTop && !nBg) throw new Error(notes.join(' · ') || 'sem dados');
+  ctx.save('whales', out);
+  return { n: out.top.length, bg: nBg, bgNew: got, ...(notes.length ? { note: notes.join(' · ').slice(0, 150) } : {}), ...(out.topAt && now - Date.parse(out.topAt) > 7 * DAY ? { topOld: out.topAt.slice(0, 10) } : {}) };
 }
