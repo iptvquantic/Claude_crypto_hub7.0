@@ -1,5 +1,5 @@
 // Captura de tela de uma página com as APIs simuladas (para revisar o visual).
-// Uso: node dev/shot.mjs <página> [--admin|--user] [--mobile] [--theme light] [--vault N] [--robot ok|notoken|missing] [--sel CSS] [--tall 8000] [--wait ms] [--click CSS]… [--hover 'CSS@fx,fy']… [--eval JS] [--root]
+// Uso: node dev/shot.mjs <página> [--admin|--user] [--mobile] [--theme light] [--vault N] [--robot ok|notoken|missing] [--sel CSS] [--tall 8000] [--wait ms] [--click CSS]… [--hover 'CSS@fx,fy']… [--ls chave=json]… [--eval JS] [--root]
 // Saída: dev/out/shot-<página>[-mobile][-tema].png
 import puppeteer from 'puppeteer-core';
 import { readFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
@@ -37,6 +37,8 @@ page.on('request', (r) => {
   return r.abort('blockedbyclient');
 });
 if (theme) await page.evaluateOnNewDocument((t) => { try { localStorage.setItem('nx3:theme', JSON.stringify(t)); } catch {} }, theme);
+// --ls chave=json (pode repetir): preferências gravadas antes de abrir (ex.: --ls 'lab3={"kind":"candle"}')
+for (const kv of A.flatMap((v, i) => (v === '--ls' ? [A[i + 1]] : []))) { const k = kv.slice(0, kv.indexOf('=')), v = kv.slice(kv.indexOf('=') + 1); await page.evaluateOnNewDocument((k, v) => { try { localStorage.setItem('nx3:' + k, v); } catch {} }, k, v); }
 await page.goto(SITE + BASE + 'index.html#/dash', { waitUntil: 'domcontentloaded' });
 await new Promise((r) => setTimeout(r, 2500));
 if (supa) {

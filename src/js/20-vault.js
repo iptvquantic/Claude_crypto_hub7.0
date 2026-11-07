@@ -262,7 +262,7 @@ async function vaultDrawAsset(H) {
     // dica ao passar o mouse
     const tip = document.createElement('div'); tip.className = 'ch-tip'; el.appendChild(tip);
     const avgAt = (d) => { let v = null; for (const p of avgPts) { if (new Date(p.t).toISOString().slice(0, 10) <= d) v = p.v; else break; } return v; };
-    ch.subscribeCrosshairMove((pm) => {
+    onCross(ch, (pm) => {
       if (!pm || pm.time === undefined || !pm.point) { tip.style.display = 'none'; return; }
       const d = new Date(pm.time * 1000).toISOString().slice(0, 10);
       const p = series.find((x) => x.d === d); if (!p) { tip.style.display = 'none'; return; }
@@ -527,7 +527,7 @@ async function vaultCmpDraw() {
   ch.timeScale().fitContent();
   // dica: todos os valores do dia
   const tip = document.createElement('div'); tip.className = 'ch-tip'; el.appendChild(tip);
-  ch.subscribeCrosshairMove((pm) => {
+  onCross(ch, (pm) => {
     if (!pm || pm.time === undefined || !pm.point) { tip.style.display = 'none'; return; }
     const i = t.indexOf(pm.time); if (i < 0) { tip.style.display = 'none'; return; }
     const line = (sw, n, v) => `<div class="v-cmp-tr">${sw}<span>${esc(n)}</span><b>${isNum(v) ? esc(brl(v, [0, 0])) : '—'}</b></div>`;

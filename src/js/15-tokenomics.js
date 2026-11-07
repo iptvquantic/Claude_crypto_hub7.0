@@ -227,7 +227,7 @@ async function tkDrawPx() {
   };
   const lastT = ctime(kk[kk.length - 1].t, false);
   leg(byT.get(lastT));
-  ch.subscribeCrosshairMove((pm) => { leg((pm && pm.time !== undefined && pm.point && byT.get(pm.time)) || byT.get(lastT)); });
+  onCross(ch, (pm) => { leg((pm && pm.time !== undefined && pm.point && byT.get(pm.time)) || byT.get(lastT)); });
 }
 function tkPxRange() {
   const ch = TK.pxch; const P = TK.px; if (!ch || !P || !P.pts.length) return;

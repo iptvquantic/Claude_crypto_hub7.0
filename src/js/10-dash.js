@@ -349,7 +349,7 @@ async function rsiModalDraw() {
   try { a = await makeChart(pe, { intraday }); b = await makeChart(re, { intraday, priceFmt: (x) => fmtNum(x, 0, 0) }); } catch (e) { pe.innerHTML = emptyBox('wifi-off', L('Gráfico indisponível', 'Chart unavailable'), esc(e.message)); return; }
   if (seq !== DASH.rseq) return;
   const c = chartColors();
-  a.ch.applyOptions({ timeScale: { visible: false }, rightPriceScale: { minimumWidth: 74 } });
+  a.ch.applyOptions({ timeScale: { visible: true }, rightPriceScale: { minimumWidth: 74 } });
   const cs = a.ch.addCandlestickSeries({ ...candleOpts(c), title: BY_SYM[s].b, lastValueVisible: true });
   cs.setData(candleData(ks, intraday));
   b.ch.applyOptions({ rightPriceScale: { minimumWidth: 74, scaleMargins: { top: 0.08, bottom: 0.08 } } });

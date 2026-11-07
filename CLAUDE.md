@@ -24,6 +24,8 @@ Responda ao dono em português do Brasil, direto. Ele não programa: entregue pr
 - Migrações novas: aplicar e registrar em `dev/supabase/` e rodar `bash dev/supabase/test-db.sh`. `migrations/02_permissoes.sql` tem REVOKE: o dono aplica pelo SQL Editor.
 - Agendador do robô: `migrations/03_agendador_robo.sql` (pg_cron nos minutos 2/22/42 → `private.robo_disparar()` → workflow_dispatch no GitHub com o segredo `github_dispatch_token` do Vault). O dono cola o token no Painel do administrador (RPCs `admin_robot_status/_set_token/_dispatch_now`); o token nunca volta para a tela. Em 22/10 a aplicação pelo conector foi cancelada duas vezes: o painel mostra como instalar pelo SQL Editor.
 
+- Alertas no celular (Web Push), migração `migrations/04_alertas.sql` (aplicada em 06/11): tabelas `push_devices`, `price_alerts`, `event_alerts`, `alert_log`, `alerts_status` e `private.alerts_keys` (chave do agendador gerada no banco e par VAPID gerado pela própria função na primeira chamada — nenhuma chave passa pelo código ou pelo chat). O pg_cron (`nexus-alertas`, a cada minuto) chama a Edge Function `alerts` (`dev/supabase/functions/alerts/`: `webpush.js` = VAPID + aes128gcm só com WebCrypto; `core.js` = regras e textos), que lê Binance/CoinGecko, dispara e envia; isso também mantém o banco ativo. Limite: grátis 3 alertas de preço ativos, PRO 30 (gatilho `price_alerts_guard`). Testes: `node dev/test-alerts.mjs` (criptografia conferida com `http_ece`) e `dev/supabase/test/alerts.sql` (dentro do `test-db.sh`). Desligar: `select cron.unschedule('nexus-alertas');`.
+
 ## Robô de dados
 - `scripts/atualizar-dados.mjs` publica `news.json`, `calendar.json`, `markets.json`, `status.json` no ramo órfão `data` (force-push). O site lê por `raw.githubusercontent.com`; se o arquivo estiver velho, busca direto. Também mantém ativos o banco do NEXUS (`rpc/ping`) e o do Meu Caixa (projeto `meu-caixa-br`, pela função `whatsapp?health=1`, sem chave; status `dbMc`) e acorda as APIs do LicitaFácil e do CREDIX no Render no máximo a cada ~5 h (`appLicitafacil`/`appCredix`, para os bancos delas não pausarem sem gastar as 750 h grátis do Render) — falha nunca derruba a execução.
 - Teste sem internet: `node dev/test-robot.mjs` (3 execuções: normal, banco pausado e "20 min depois", com os arquivos anteriores).
@@ -40,6 +42,9 @@ Responda ao dono em português do Brasil, direto. Ele não programa: entregue pr
 - `19c-wallets.js`: estado (`nx3:ww`, `ww-read`, `ww-ev`, `ww-hist` — só no navegador, nunca no servidor), tela e fontes `ww-tok`/`ww-bal`/`ww-px` (só com a página aberta).
 - Tokens EVM/Solana/Tron/TON só entram se estiverem no `tokens.json` do robô (ou verificados pela Jupiter/TonAPI): nada de token desconhecido (spam) na tela.
 - Fontes simuladas para teste em `dev/wallet-fixtures.mjs` (endereços de teste em `WT`).
+
+## Gráficos (`07-charts.js`)
+- `makeChart(el, { grip, free, hover })`: datas sempre visíveis; alça de altura embaixo de cada gráfico (salva em `nx3:chh` pelo id do elemento — todo gráfico precisa de `id`); arrastar na vertical move o preço e mostra o botão "Auto" (`free: false` no menu Gráfico, que tem o seu próprio). Etiqueta do nome da linha, legendas e cruz sincronizada rodam uma vez por quadro (`onCross`, `quickHTML`) e somem durante o arraste (`CHART_DRAG`/`chartBusy`). Medir fluidez: `node dev/perf-chart.mjs lab|chart [--prof]`.
 
 ## Antes de publicar
 `node dev/build.mjs --beta && node dev/test-app.mjs && node dev/test-robot.mjs && node dev/test-wallets.mjs`, conferir `/beta/` no navegador real, então `node dev/build.mjs` (raiz).

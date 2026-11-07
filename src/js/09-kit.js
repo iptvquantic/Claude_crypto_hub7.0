@@ -25,6 +25,8 @@ function richText(t) {
 }
 const pp = (v, dec = 2) => (isNum(v) ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtNum(Math.abs(v), dec, dec)} p.p.` : '—');
 function setHTML(sel, html, root = document) { const el = typeof sel === 'string' ? $(sel, root) : sel; if (el && el.innerHTML !== html) el.innerHTML = html; return el; }
+// troca o conteúdo só quando muda, sem ler o DOM (legendas que mudam a cada movimento do mouse)
+function quickHTML(sel, html) { const el = typeof sel === 'string' ? $(sel) : sel; if (!el) return null; if (el._qh !== html || el.firstChild !== el._qf) { el.innerHTML = html; el._qh = html; el._qf = el.firstChild; } return el; }
 // marca d'água de "modelo": para números que são cálculo nosso, não leitura de fonte
 const modelBadge = (title) => `<span class="badge model" title="${esc(title || L('Cálculo do NEXUS HUB a partir de dados reais; não é leitura direta de uma fonte.', 'NEXUS HUB calculation from real data; not a direct source reading.'))}">${esc(L('modelo', 'model'))}</span>`;
 const refBadge = (title) => `<span class="badge ref" title="${esc(title || '')}">${esc(L('referência', 'reference'))}</span>`;

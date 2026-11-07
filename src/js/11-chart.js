@@ -103,7 +103,7 @@ async function chartRender(seq, keepRange) {
   const box = $('#ch-box'); if (!box) return;
   const intraday = ['15m', '1h', '4h'].includes(CH.tf); CH.intraday = intraday;
   const prevRange = keepRange || (CH.ch && CH.cs ? (() => { try { return CH.ch.timeScale().getVisibleLogicalRange(); } catch { return null; } })() : null);
-  const { ch, c, LWC } = await makeChart(box, { intraday, onTheme: () => chartRender(CH.seq) });
+  const { ch, c, LWC } = await makeChart(box, { intraday, free: false, onTheme: () => chartRender(CH.seq) }); // arraste vertical próprio (chartDragWatch + botão Auto)
   if (seq !== CH.seq) { try { ch.remove(); } catch { /* */ } return; }
   CH.ch = ch;
   const MODE = (LWC.CrosshairMode && LWC.CrosshairMode.Normal) ?? 0;
@@ -142,19 +142,25 @@ async function chartRender(seq, keepRange) {
       `<span class="lg-i"><em class="lg-o">${esc(L('Abertura', 'Open'))}</em> ${fp(k.o)}</span>`, `<span class="lg-i"><em class="lg-h">${esc(L('Máxima', 'High'))}</em> ${fp(k.h)}</span>`, `<span class="lg-i"><em class="lg-l">${esc(L('Mínima', 'Low'))}</em> ${fp(k.l)}</span>`, `<span class="lg-i"><em class="lg-c ${dir}">${esc(L('Fechamento', 'Close'))}</em> <span class="${dir}">${fp(k.c)}</span></span>`,
       prev ? `<span class="lg-i chip ${tone(k.c - prev.c) || 'flat'}">${esc(fmtPct((k.c / prev.c - 1) * 100))}</span>` : '',
       `<span class="lg-i"><em class="lg-v">Vol</em> ${esc(fmtCompact(k.qv))}</span>`];
-    const ma = CH.mas.map((m, j) => { const v = D.mas[j][i]; return isNum(v) ? `<span class="lg-i" style="color:${maColor(j)}"><em>${esc(maLabel(m))}</em> ${fp(v)}</span>` : ''; }).filter(Boolean);
+    const ma = CH.mas.map((m, j) => { const v = (D.mas[j] || [])[i]; return isNum(v) ? `<span class="lg-i" style="color:${maColor(j)}"><em>${esc(maLabel(m))}</em> ${fp(v)}</span>` : ''; }).filter(Boolean);
     if (D.bb && isNum(D.bb.up[i])) ma.push(`<span class="lg-i"><em class="lg-v">BB</em> ${fp(D.bb.lo[i])} – ${fp(D.bb.up[i])}</span>`);
-    setHTML('#ch-legend', `<div class="lg-row">${parts.filter(Boolean).join('')}</div>${ma.length ? `<div class="lg-row">${ma.join('')}</div>` : ''}`);
-    const rv = D.rsi[i]; setHTML('#ch-rsi-v', isNum(rv) ? `<span class="${rv >= 70 ? 'down' : rv <= 30 ? 'up' : ''}">${esc(fmtNum(rv, 1, 1))}</span>` : '—');
+    quickHTML('#ch-legend', `<div class="lg-row">${parts.filter(Boolean).join('')}</div>${ma.length ? `<div class="lg-row">${ma.join('')}</div>` : ''}`);
+    const rv = D.rsi[i]; quickHTML('#ch-rsi-v', isNum(rv) ? `<span class="${rv >= 70 ? 'down' : rv <= 30 ? 'up' : ''}">${esc(fmtNum(rv, 1, 1))}</span>` : '—');
   };
   CH.legend = legend; CH.D = D;
   legend(kl.length - 1);
   const idxOf = (time) => { if (time === undefined || time === null) return -1; let lo = 0, hi = kl.length - 1; while (lo <= hi) { const m = (lo + hi) >> 1; const t = ctime(kl[m].t, intraday); if (t === time) return m; if (t < time) lo = m + 1; else hi = m - 1; } return -1; };
-  ch.subscribeCrosshairMove((param) => {
+  // legenda e cruz do RSI: uma vez por quadro (o mouse dispara bem mais eventos que a tela desenha)
+  let cpend = null, craf = 0;
+  const cross = () => {
+    craf = 0; const param = cpend; cpend = null;
+    if (CH.ch !== ch) return; // gráfico já foi refeito (troca de média, período…)
+    if (param && param.point && !param.sourceEvent) return; // cruz posta pelo RSI: a legenda já foi atualizada lá
     if (!param || param.time === undefined) { legend(kl.length - 1); if (CH.rch) try { CH.rch.clearCrosshairPosition(); } catch { /* */ } return; }
     const i = idxOf(param.time); if (i >= 0) legend(i);
     if (CH.rch && CH.rs && i >= 0 && isNum(D.rsi[i])) { try { CH.rch.setCrosshairPosition(D.rsi[i], param.time, CH.rs); } catch { /* */ } }
-  });
+  };
+  ch.subscribeCrosshairMove((param) => { cpend = param || {}; if (!craf) craf = requestAnimationFrame(cross); });
   ch.timeScale().subscribeVisibleLogicalRangeChange((r) => { if (r && r.from < 30) chartMore(); });
 }
 // Arrastar para cima/baixo move o preço (como nas corretoras). A biblioteca só move o preço com o ajuste
@@ -195,12 +201,12 @@ async function chartRsi(seq, D, c, LWC) {
   if (!el || !wrap) return;
   wrap.style.display = CH.rsi ? '' : 'none';
   if (!CH.rsi) return;
-  const { ch: rch } = await makeChart(el, { intraday: CH.intraday, priceFmt: (p) => fmtNum(p, 0, 0) });
+  const { ch: rch } = await makeChart(el, { intraday: CH.intraday, free: false, priceFmt: (p) => fmtNum(p, 0, 0) });
   if (seq !== CH.seq) { try { rch.remove(); } catch { /* */ } return; }
   rch.applyOptions({
     crosshair: { mode: (LWC.CrosshairMode && LWC.CrosshairMode.Normal) ?? 0 },
     rightPriceScale: { minimumWidth: 86, autoScale: false, scaleMargins: { top: 0.08, bottom: 0.08 } },
-    timeScale: { visible: false, rightOffset: 6, barSpacing: 8, minBarSpacing: 0.6 },
+    timeScale: { visible: true, rightOffset: 6, barSpacing: 8, minBarSpacing: 0.6 },
     handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
     handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: false } },
   });
@@ -214,7 +220,8 @@ async function chartRsi(seq, D, c, LWC) {
   let lock = false;
   const sync = (a, b) => a.timeScale().subscribeVisibleLogicalRangeChange((r) => { if (lock || !r) return; lock = true; try { b.timeScale().setVisibleLogicalRange(r); } catch { /* */ } lock = false; });
   sync(CH.ch, rch); sync(rch, CH.ch);
-  rch.subscribeCrosshairMove((pm) => {
+  onCross(rch, (pm) => {
+    if (pm && pm.point && !pm.sourceEvent) return; // cruz posta pelo gráfico de cima: não devolve
     if (!pm || pm.time === undefined) { try { CH.ch.clearCrosshairPosition(); } catch { /* */ } return; }
     const i = CH.kl.findIndex((k) => ctime(k.t, intraday) === pm.time);
     if (i >= 0 && CH.legend) CH.legend(i);

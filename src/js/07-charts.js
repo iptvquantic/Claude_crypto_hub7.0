@@ -202,7 +202,7 @@ function chartTheme() {
   };
 }
 const chartColors = () => ({ up: cssVar('--up'), down: cssVar('--down'), accent: cssVar('--accent'), signal: cssVar('--signal'), info: cssVar('--info'), text: cssVar('--text'), text3: cssVar('--text-3'), line: cssVar('--line-2') });
-function _sweepCharts() { CHARTS.forEach((c) => { if (!document.contains(c.el)) { try { c.ch.remove(); } catch { /* */ } CHARTS.delete(c); } }); }
+function _sweepCharts() { CHARTS.forEach((c) => { if (!document.contains(c.el)) { try { c.ch.remove(); } catch { /* */ } try { c.ro && c.ro.disconnect(); } catch { /* */ } CHARTS.delete(c); } }); }
 // Séries com nome: o gráfico mostra o nome da linha onde o mouse (ou o dedo) passa, como no TradingView.
 // Toda série criada com `title` (rótulo no eixo) ou `nxName` (só no mouse) entra na lista.
 const _SERIES_ADD = ['addLineSeries', 'addAreaSeries', 'addCandlestickSeries', 'addBarSeries', 'addHistogramSeries', 'addBaselineSeries'];
@@ -221,16 +221,28 @@ function _chartNamed(rec) {
   const rm = ch.removeSeries.bind(ch);
   ch.removeSeries = (s) => { rec.named = rec.named.filter((x) => x.s !== s); return rm(s); };
 }
+// ---------- interação comum a todos os gráficos ----------
+// Arraste em curso em qualquer gráfico: enquanto o botão está apertado, nada de etiqueta, legenda ou recálculo
+// pesado (é isso que deixava o arraste "travado"). CHART_ACT = último toque/movimento num gráfico.
+let CHART_DRAG = false, CHART_ACT = 0;
+document.addEventListener('pointerdown', (e) => { const t = e.target; if (t && t.closest && t.closest('.tv-lightweight-charts')) { CHART_DRAG = true; CHART_ACT = Date.now(); } }, true);
+['pointerup', 'pointercancel'].forEach((k) => window.addEventListener(k, () => { if (CHART_DRAG) { CHART_DRAG = false; CHART_ACT = Date.now(); } }, true));
+window.addEventListener('blur', () => { CHART_DRAG = false; });
+const chartBusy = (ms = 2500) => CHART_DRAG || Date.now() - CHART_ACT < ms;
 function _chartHover(rec, fmtP) {
   const { ch, el } = rec;
   if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
   const tag = document.createElement('div'); tag.className = 'ch-tag'; tag.hidden = true; tag.setAttribute('aria-hidden', 'true'); el.appendChild(tag);
-  let hot = null;
+  // tamanho do gráfico sem ler o layout a cada movimento do mouse
+  const box = { W: el.clientWidth, H: el.clientHeight };
+  try { rec.ro = new ResizeObserver((es) => { const r = es[0] && es[0].contentRect; if (r) { box.W = r.width; box.H = r.height; } }); rec.ro.observe(el); } catch { /* */ }
+  let hot = null, pend = null, raf = 0, sizeKey = '', tw = 0, th = 0, lastHtml = '';
   const cool = () => { if (hot && hot.w0) { try { hot.s.applyOptions({ lineWidth: hot.w0 }); } catch { /* */ } } hot = null; };
-  const hide = () => { tag.hidden = true; cool(); };
+  const hide = () => { pend = null; if (!tag.hidden) tag.hidden = true; lastHtml = ''; cool(); };
   el.addEventListener('mouseleave', hide);
-  ch.subscribeCrosshairMove((p) => {
-    if (!p || !p.point || p.time === undefined || !rec.named.length || !p.seriesData) { hide(); return; }
+  const run = () => {
+    raf = 0; const p = pend; pend = null;
+    if (!p || CHART_DRAG) return;
     let best = null;
     for (const r of rec.named) {
       const d = p.seriesData.get(r.s); if (!d) continue;
@@ -243,46 +255,143 @@ function _chartHover(rec, fmtP) {
     }
     if (!best || best.dist > 18) { hide(); return; }
     const r = best.r, d = best.d;
-    let col = r.c || (r.s.options && (r.s.options().color || r.s.options().lineColor)) || 'var(--text)';
+    let col = r.c || 'var(--text)';
     if (d.color) col = d.color;
-    if (r.kind === 'addCandlestickSeries' && d.close !== undefined) col = d.close >= d.open ? cssVar('--up') : cssVar('--down');
+    if (r.kind === 'addCandlestickSeries' && d.close !== undefined) col = d.close >= d.open ? 'var(--up)' : 'var(--down)';
     const f = r.fmt || fmtP;
     const val = r.kind === 'addCandlestickSeries' || r.kind === 'addBarSeries'
       ? `<span class="o">${esc(L('A', 'O'))} ${esc(f(d.open))}</span><span class="o">${esc(L('M', 'H'))} ${esc(f(d.high))}</span><span class="o">${esc(L('m', 'L'))} ${esc(f(d.low))}</span><span>${esc(L('F', 'C'))} ${esc(f(d.close))}</span>`
       : `<span>${esc(f(best.v))}</span>`;
-    tag.style.setProperty('--tc', col);
-    tag.innerHTML = `<i></i><b>${esc(r.n)}</b>${val}`;
-    tag.hidden = false;
-    const w = tag.offsetWidth, h = tag.offsetHeight, W = el.clientWidth, H = el.clientHeight;
-    let x = p.point.x + 14; if (x + w > W - 64) x = p.point.x - w - 14; x = Math.max(2, x);
-    const yy = clamp((r.kind === 'addCandlestickSeries' ? p.point.y : best.y) - h - 8, 2, Math.max(2, H - h - 26));
+    const html = `<i></i><b>${esc(r.n)}</b>${val}`;
+    if (html !== lastHtml) {
+      tag.style.setProperty('--tc', col); tag.innerHTML = html; lastHtml = html;
+      if (tag.hidden) tag.hidden = false;
+      // mede só quando muda a linha ou o tamanho do texto (medir a cada quadro força o navegador a refazer a página)
+      const k = r.n + '|' + Math.round(html.length / 6);
+      if (k !== sizeKey || !tw) { sizeKey = k; tw = tag.offsetWidth; th = tag.offsetHeight; }
+    }
+    let x = p.point.x + 14; if (x + tw > box.W - 64) x = p.point.x - tw - 14; x = Math.max(2, x);
+    const yy = clamp((r.kind === 'addCandlestickSeries' ? p.point.y : best.y) - th - 8, 2, Math.max(2, box.H - th - 26));
     tag.style.transform = `translate(${Math.round(x)}px, ${Math.round(yy)}px)`;
     // destaca a linha apontada (engrossa um pouco)
     if (!hot || hot.r !== r) {
       cool();
       if (r.kind === 'addLineSeries') { let w0 = 2; try { w0 = r.s.options().lineWidth || 2; } catch { /* */ } try { r.s.applyOptions({ lineWidth: Math.min(4, w0 + 1) }); } catch { /* */ } hot = { r, s: r.s, w0 }; } else hot = { r };
     }
+  };
+  ch.subscribeCrosshairMove((p) => {
+    // sem evento de origem = cruz movida por outro gráfico sincronizado: lá não precisa de etiqueta
+    if (CHART_DRAG || !p || !p.point || p.time === undefined || !p.sourceEvent || !rec.named.length || !p.seriesData) { if (!tag.hidden || hot) hide(); return; }
+    CHART_ACT = Date.now();
+    pend = p; if (!raf) raf = requestAnimationFrame(run);
   });
 }
-async function makeChart(el, { intraday = false, onTheme, priceFmt, hover = true } = {}) {
+// cruz do mouse tratada uma vez por quadro (legendas e dicas sem pesar no arraste)
+function onCross(ch, fn) {
+  let pend = null, raf = 0;
+  ch.subscribeCrosshairMove((p) => { pend = p || {}; if (!raf) raf = requestAnimationFrame(() => { raf = 0; const q = pend; pend = null; try { fn(q); } catch (e) { console.warn('[NX] cruz', e); } }); });
+}
+// Altura ajustável em todo gráfico: alça embaixo (arrastar com mouse ou dedo, setas do teclado; dois cliques
+// voltam à altura padrão). Fica salva por gráfico (pelo id do elemento) em nx3:chh.
+const CHH_MIN = 140, CHH_MAX = 1600;
+const chartHeights = () => { const o = LS.get('chh'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; };
+function chartSavedH(el) { const h = el && el.id ? chartHeights()[el.id] : null; return isNum(h) ? clamp(h, CHH_MIN, CHH_MAX) : null; }
+function chartApplyH(el) {
+  if (!el || el.closest('.full')) return;
+  if (el.dataset.h0 === undefined) el.dataset.h0 = el.style.height || '';
+  const h = chartSavedH(el); if (h) el.style.height = h + 'px';
+}
+function chartSaveH(el, h) {
+  if (!el || !el.id) return;
+  const o = chartHeights();
+  if (h === null) delete o[el.id]; else o[el.id] = Math.round(h);
+  const keys = Object.keys(o); if (keys.length > 60) delete o[keys[0]];
+  LS.set('chh', o);
+}
+function _chartGrip(rec) {
+  const { el } = rec;
+  chartApplyH(el);
+  let g = el.nextElementSibling;
+  if (!g || !g.classList.contains('ch-grip')) {
+    g = document.createElement('div'); g.className = 'ch-grip'; g.tabIndex = 0;
+    g.setAttribute('role', 'separator'); g.setAttribute('aria-orientation', 'horizontal');
+    g.title = L('Arraste para aumentar ou diminuir a altura · dois cliques: altura padrão', 'Drag to make it taller or shorter · double-click: default height');
+    g.setAttribute('aria-label', L('Altura do gráfico (setas para cima e para baixo)', 'Chart height (up and down arrows)'));
+    g.innerHTML = '<i></i>';
+    el.after(g);
+  }
+  g._el = el;
+  if (g._on) return; g._on = 1;
+  let y0 = 0, h0 = 0, pid = null;
+  const cur = () => (g._el ? g._el.getBoundingClientRect().height : 0);
+  const set = (h, save) => { const e = g._el; if (!e) return; const v = clamp(Math.round(h), CHH_MIN, Math.min(CHH_MAX, Math.round(window.innerHeight * 1.6))); e.style.height = v + 'px'; if (save) chartSaveH(e, v); };
+  g.addEventListener('pointerdown', (e) => { if (e.button > 0) return; pid = e.pointerId; try { g.setPointerCapture(pid); } catch { /* */ } y0 = e.clientY; h0 = cur(); g.classList.add('on'); document.body.classList.add('ch-resizing'); e.preventDefault(); });
+  g.addEventListener('pointermove', (e) => { if (pid === null || e.pointerId !== pid) return; set(h0 + e.clientY - y0, false); });
+  const end = () => { if (pid === null) return; pid = null; g.classList.remove('on'); document.body.classList.remove('ch-resizing'); set(cur(), true); };
+  g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
+  g.addEventListener('keydown', (e) => { if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return; e.preventDefault(); set(cur() + (e.key === 'ArrowDown' ? 40 : -40), true); });
+  g.addEventListener('dblclick', () => { const e = g._el; if (!e) return; chartSaveH(e, null); e.style.height = e.dataset.h0 || ''; });
+}
+// Arrastar para cima/baixo move o preço, como no menu Gráfico e nas corretoras: o ajuste automático do eixo
+// desliga ao apertar; se o arraste foi só para os lados (ou foi um clique), religa. Ficou manual: aparece o
+// botão "Auto" no canto (ou dois cliques no gráfico) para voltar.
+const _chartTouch = () => { try { return matchMedia('(pointer: coarse)').matches; } catch { return false; } };
+function _chartFree(rec) {
+  const { ch, el } = rec;
+  const scales = () => ['right', 'left'].filter((id) => { try { return ch.priceScale(id).options().visible !== false; } catch { return false; } });
+  const isAuto = () => scales().some((id) => { try { return ch.priceScale(id).options().autoScale; } catch { return false; } });
+  const setAuto = (on) => scales().forEach((id) => { try { ch.priceScale(id).applyOptions({ autoScale: on }); } catch { /* */ } });
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'ch-auto'; btn.hidden = true;
+  btn.innerHTML = `${ico('move-vertical', 13)}Auto`;
+  btn.title = L('Voltar o eixo de preço ao ajuste automático', 'Back to automatic price scale');
+  btn.addEventListener('click', (e) => { e.stopPropagation(); setAuto(true); btn.hidden = true; });
+  el.appendChild(btn);
+  rec.autoBtn = btn;
+  let st = null;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || (e.pointerType === 'touch' && _chartTouch()) || e.target === btn) return;
+    const r = el.getBoundingClientRect();
+    const onAxis = e.clientX > r.right - 90 || e.clientX < r.left + (scales().includes('left') ? 70 : 0) || e.clientY > r.bottom - 30;
+    st = { y: e.clientY, onAxis, wasAuto: isAuto(), moved: 0 };
+    if (!onAxis && st.wasAuto) setAuto(false);
+  }, true);
+  el.addEventListener('pointermove', (e) => { if (st && (e.buttons & 1)) st.moved = Math.max(st.moved, Math.abs(e.clientY - st.y)); }, true);
+  const end = () => {
+    if (!st) return; const s0 = st; st = null;
+    if (s0.onAxis) { setTimeout(() => { btn.hidden = isAuto(); }, 40); return; }
+    if (s0.wasAuto && s0.moved < 8) setAuto(true);
+    else if (s0.wasAuto) btn.hidden = false;
+  };
+  window.addEventListener('pointerup', end, true); el.addEventListener('pointercancel', end, true);
+  el.addEventListener('dblclick', (e) => { if (e.target === btn) return; setTimeout(() => { setAuto(true); btn.hidden = true; }, 30); });
+}
+async function makeChart(el, { intraday = false, onTheme, priceFmt, hover = true, grip = true, free = true } = {}) {
   _sweepCharts();
   const LWC = await loadScript(LIBS.lwc);
   // um gráfico por elemento: o anterior é desmontado
-  [...CHARTS].forEach((c) => { if (c.el === el) { try { c.ch.remove(); } catch { /* */ } CHARTS.delete(c); } });
+  [...CHARTS].forEach((c) => { if (c.el === el) { try { c.ch.remove(); } catch { /* */ } try { c.ro && c.ro.disconnect(); } catch { /* */ } CHARTS.delete(c); } });
   el.innerHTML = '';
-  const fmtP = priceFmt || ((p) => { const [mn, mx] = priceDigits(p); return fmtNum(p, mn, Math.min(mx, 8)); });
+  if (grip) chartApplyH(el);
+  const fmt0 = priceFmt || ((p) => { const [mn, mx] = priceDigits(p); return fmtNum(p, mn, Math.min(mx, 8)); });
+  const fmtP = priceFmt || ((p) => (p === 0 ? '0' : fmt0(p)));
   const ch = LWC.createChart(el, {
     autoSize: true,
     ...chartTheme(),
     localization: { locale: LOC(), priceFormatter: fmtP },
-    timeScale: { ...chartTheme().timeScale, timeVisible: intraday, secondsVisible: false, rightOffset: 3 },
-    handleScroll: { vertTouchDrag: false },
+    // datas sempre visíveis embaixo de cada gráfico
+    timeScale: { ...chartTheme().timeScale, visible: true, timeVisible: intraday, secondsVisible: false, rightOffset: 3 },
+    // no celular, arrastar na vertical continua rolando a página (senão o dedo fica preso no gráfico)
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    handleScale: { axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: { time: true, price: true }, mouseWheel: true, pinch: true },
   });
   const rec = { ch, el, onTheme, named: [] };
   CHARTS.add(rec);
   _chartNamed(rec);
   if (hover) _chartHover(rec, fmtP);
-  return { ch, LWC, c: chartColors() };
+  if (free) _chartFree(rec);
+  if (grip) _chartGrip(rec);
+  return { ch, LWC, c: chartColors(), rec };
 }
 // velas para o LightweightCharts
 const candleData = (ks, intraday) => ks.map((k) => ({ time: ctime(k.t, intraday), open: k.o, high: k.h, low: k.l, close: k.c }));

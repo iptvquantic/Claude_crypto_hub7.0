@@ -1,5 +1,13 @@
 # Mudanças
 
+## 3.5.1 — 07/11/2026 · Gráficos sem travar, altura ajustável e datas em todos
+- **Arrastar e dar zoom sem travar:** a etiqueta com o nome da linha, as legendas e a cruz dos painéis sincronizados passaram a ser desenhadas uma vez por quadro (antes, cada movimento do mouse refazia a página várias vezes). No Bitcoin Lab com velas e dois painéis, o pior quadro durante o arraste caiu de ~500 ms para 17 ms (teste em `dev/perf-chart.mjs`); no menu Gráfico, de 83 ms para 17 ms.
+- **Altura ajustável em todos os gráficos do site:** alça embaixo de cada gráfico e de cada painel (arrastar com o mouse ou o dedo, setas do teclado; dois cliques voltam à altura padrão). A altura fica salva por gráfico neste aparelho.
+- **Datas embaixo de cada gráfico:** o eixo de datas aparece em todos, inclusive em cada painel do Bitcoin Lab (MVRV Z-Score, MVRV…), no RSI do menu Gráfico e na janela do RSI do Dashboard, com a data do ponto apontado.
+- **Arrastar para cima e para baixo** move o eixo de preço em todos os gráficos (como no menu Gráfico); aparece o botão **Auto** para voltar ao ajuste automático (ou dois cliques no gráfico).
+- Bitcoin Lab: a atualização de 15 em 15 s espera você parar de mexer no gráfico; painéis um pouco mais altos para caber o eixo de datas.
+- Eixo de preço mostra "0" em vez de "0,00000000". Datas formatadas com cache (legendas mais leves).
+
 ## 3.5.0 — 06/11/2026 · Visual mais vivo, Bitcoin Lab ampliado e página Eventos do mercado
 - **Todos os gráficos:** ao passar o mouse perto de uma linha aparece o nome dela, a cor e o valor (como no TradingView); a linha apontada fica em destaque.
 - **Bitcoin Lab:** linhas de múltiplos com nome no eixo (MVRV ×0,8…3,9, STH ×0,6…1,6, Mayer ×0,63…2,4, LTH ×0,77…11) e **linha personalizada** (preço-base × múltiplo); gráfico em **velas** (Binance, desde 2017) ou linha; botão **"?"** explica a escala log; **Tela cheia** em destaque (botão principal e atalho dentro do gráfico); cartões de **Sinais do ciclo** coloridos por estado (longe, perto, ativo, extremo), menores, com o botão "no gráfico"; lista de indicadores com grupos coloridos e interruptores. Novo painel **Lucro e prejuízo realizados** (BGeometrics pelo robô): 24 h, 7 d e 30 d de lucro, prejuízo, saldo e lucro ÷ prejuízo; filtros todos / longo prazo (≥155 dias) / curto prazo (<155 dias), barras de 1 dia, 1 semana, 2 semanas ou 1 mês e o preço do BTC no eixo da direita.

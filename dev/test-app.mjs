@@ -117,6 +117,20 @@ console.log('\n[1b] Gráfico: mira livre, arrastar na vertical, médias à escol
   const kn0 = await page.evaluate(() => CH.kl.length);
   await page.evaluate(() => { CH.kl[CH.kl.length - 1].ct = Date.now() - 5000; chartLive(); }); await sleep(2000);
   ok(await page.evaluate((n) => CH.kl.length >= n && !!CH.cs && !!document.querySelector('#ch-box canvas'), kn0), 'vela fechada: busca só as novas e mantém o histórico');
+  // 3.5.1: datas embaixo de todos os gráficos, alça de altura (salva por gráfico) e dois cliques voltam ao padrão
+  ok(await page.evaluate(() => [...CHARTS].length >= 2 && [...CHARTS].every((r) => r.ch.timeScale().options().visible)), 'datas visíveis embaixo do gráfico e do RSI');
+  await page.evaluate(() => { const g = document.querySelector('#ch-box + .ch-grip'); if (g) g.scrollIntoView({ block: 'center', behavior: 'instant' }); }); await sleep(700);
+  const gb = await page.evaluate(() => { const g = document.querySelector('#ch-box + .ch-grip'); if (!g) return null; const r = g.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: document.querySelector('#ch-box').getBoundingClientRect().height }; });
+  ok(!!gb, 'alça de altura embaixo do gráfico');
+  if (gb) {
+    await page.mouse.move(gb.x, gb.y); await page.mouse.down(); await page.mouse.move(gb.x, gb.y + 120, { steps: 6 }); await page.mouse.up(); await sleep(500);
+    const h1 = await page.evaluate(() => document.querySelector('#ch-box').getBoundingClientRect().height);
+    ok(Math.abs(h1 - gb.h - 120) < 8, `arrastar a alça aumenta a altura (${Math.round(gb.h)} → ${Math.round(h1)} px)`);
+    ok(await page.evaluate(() => (JSON.parse(localStorage.getItem('nx3:chh') || '{}')['ch-box'] || 0) > 0), 'a altura escolhida fica salva');
+    const g2 = await page.evaluate(() => { const r = document.querySelector('#ch-box + .ch-grip').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+    await page.mouse.click(g2.x, g2.y, { clickCount: 2 }); await sleep(500);
+    ok(await page.evaluate((h) => Math.abs(document.querySelector('#ch-box').getBoundingClientRect().height - h) < 4 && !JSON.parse(localStorage.getItem('nx3:chh') || '{}')['ch-box'], gb.h), 'dois cliques na alça voltam à altura padrão');
+  }
   await shot(page, 'd-chart-novo', false);
   const r = await inspect(page); ok(!r.bad.length && !r.overflow, `gráfico sem número quebrado nem rolagem lateral ${r.bad.join(',')}`);
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
@@ -362,6 +376,14 @@ console.log('\n[3] Conta (teste grátis) · Portfolio Vault');
   await page.click('.seg[data-seg="labm"] button[data-v="ind"]'); await sleep(1200);
   await page.click('.seg[data-seg="labk"] button[data-v="candle"]'); await sleep(2500);
   ok(await page.evaluate(() => !!LAB.candle && !!document.querySelector('#lab-chart canvas')), 'Lab: gráfico em velas');
+  // 3.5.1: cada painel com datas e alça própria; arrastar para cima/baixo libera o eixo e mostra o botão Auto
+  ok(await page.evaluate(() => LAB.charts.length >= 2 && LAB.charts.every((c) => c.ch.timeScale().options().visible) && LAB.charts.every((c) => c.el.nextElementSibling && c.el.nextElementSibling.classList.contains('ch-grip'))), 'Lab: datas e alça de altura em cada painel');
+  await page.evaluate(() => document.querySelector('#lab-chart').scrollIntoView({ block: 'center', behavior: 'instant' })); await sleep(700);
+  const lb = await page.evaluate(() => { const e = document.querySelector('#lab-chart'); const r = e.getBoundingClientRect(); return { x: r.x + r.width * 0.45, y: r.y + r.height * 0.45 }; });
+  await page.mouse.move(lb.x, lb.y); await page.mouse.down(); await page.mouse.move(lb.x - 10, lb.y + 90, { steps: 6 }); await page.mouse.up(); await sleep(400);
+  ok(await page.evaluate(() => { const b = document.querySelector('#lab-chart .ch-auto'); return !!b && !b.hidden && LAB.charts[0].ch.priceScale('right').options().autoScale === false; }), 'Lab: arrastar na vertical move o preço e mostra o botão Auto');
+  await page.click('#lab-chart .ch-auto'); await sleep(300);
+  ok(await page.evaluate(() => document.querySelector('#lab-chart .ch-auto').hidden && LAB.charts[0].ch.priceScale('right').options().autoScale === true), 'Lab: botão Auto volta ao ajuste automático');
   await page.click('[data-act=labLogInfo]'); await sleep(400);
   ok(await page.$eval('#scrim .modal', (e) => /Escala log/.test(e.innerText)).catch(() => false), 'Lab: botão "?" explica a escala log');
   await page.keyboard.press('Escape'); await sleep(300);

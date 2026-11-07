@@ -1114,9 +1114,6 @@ details.li[open] > summary::after { content: '−'; }
 .lab-ph .z { font-size: 12.5px; font-weight: 650; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lab-ph .z.up { color: var(--up); } .lab-ph .z.down { color: var(--down); } .lab-ph .z.warn { color: var(--stale); }
 .lab-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-.lab-grip { height: 18px; display: flex; align-items: center; justify-content: center; cursor: ns-resize; touch-action: none; border-radius: 8px; margin-top: 2px; }
-.lab-grip::before { content: ''; width: 56px; height: 5px; border-radius: 999px; background: var(--line-2); transition: background .15s, width .15s; }
-.lab-grip:hover::before, .lab-grip.on::before, .lab-grip:focus-visible::before { background: var(--accent); width: 80px; }
 .lab-lvh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0 8px; font-size: 14px; }
 .lab-lvh .ico { color: var(--text-3); }
 .lab-lvs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 6px 16px; }
@@ -1176,7 +1173,7 @@ details.li[open] > summary::after { content: '−'; }
 .lab-wrap.full .lab-charts { display: flex; flex-direction: column; min-height: 0; }
 .lab-wrap.full .lab-cw { flex: 1 1 auto; min-height: 320px; display: flex; flex-direction: column; }
 .lab-wrap.full #lab-chart { flex: 1 1 auto; height: auto; }
-.lab-wrap.full .lab-grip, .lab-wrap.full #lab-note, .lab-wrap.full #lab-lv { display: none; }
+.lab-wrap.full .ch-grip, .lab-wrap.full #lab-note, .lab-wrap.full #lab-lv { display: none; }
 
 @media (max-width: 1180px) {
   .lab-main { grid-template-columns: minmax(0, 1fr); }
@@ -2248,3 +2245,17 @@ button.rsi-r:hover { background: var(--panel-3); }
 [data-theme="light"] .lab-cat[style*="--cc"][aria-pressed="true"] { background: color-mix(in srgb, var(--cc) 22%, var(--panel)); color: color-mix(in srgb, var(--cc) 48%, #000); border-color: var(--cc); }
 [data-theme="light"] .lab-cat[style*="--cc"][aria-pressed="true"] .ico { color: color-mix(in srgb, var(--cc) 48%, #000); }
 [data-theme="light"] .lab-cat .ico { color: color-mix(in srgb, var(--cc, currentColor) 60%, #000); }
+
+/* ===== 3.5.1 — gráficos: alça de altura, botão Auto e etiqueta leve ===== */
+.ch-grip { height: 16px; margin: 2px 0 4px; display: flex; align-items: center; justify-content: center; cursor: ns-resize; touch-action: none; user-select: none; border-radius: 8px; position: relative; }
+.ch-grip i { display: block; width: 64px; height: 5px; border-radius: 999px; background: var(--line-2); transition: background .15s, width .15s; }
+.ch-grip::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed transparent; transition: border-color .15s; pointer-events: none; }
+.ch-grip:hover i, .ch-grip.on i, .ch-grip:focus-visible i { background: var(--accent); width: 96px; }
+.ch-grip:hover::after, .ch-grip.on::after { border-top-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.ch-grip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+body.ch-resizing, body.ch-resizing * { cursor: ns-resize !important; user-select: none !important; }
+.ch-auto { position: absolute; right: 92px; bottom: 38px; z-index: 7; display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--accent); background: var(--panel); color: var(--accent); font: 700 12px/1 var(--font, inherit); cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+.ch-auto:hover { background: var(--accent); color: var(--accent-ink); }
+.ch-auto[hidden] { display: none; }
+.ch-tag { will-change: transform; }
+@media (pointer: coarse) { .ch-grip { height: 24px; } .ch-grip i { width: 84px; height: 6px; } }

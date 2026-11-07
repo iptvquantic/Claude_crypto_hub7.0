@@ -522,7 +522,6 @@ function labShell() {
       <div class="lab-charts">
         <div class="lab-cw"><div class="lab-leg" id="lab-leg" aria-live="off"></div><button class="lab-fs-fab" data-act="labFull" title="${esc(L('Tela cheia', 'Full screen'))}" aria-label="${esc(L('Tela cheia', 'Full screen'))}">${ico('maximize-2', 18)}</button><div id="lab-chart" style="height:${labH()}px"></div></div>
         <div id="lab-panes"></div>
-        <div class="lab-grip" id="lab-grip" role="separator" aria-orientation="horizontal" tabindex="0" title="${esc(L('Arraste para mudar a altura do gráfico', 'Drag to resize the chart'))}" aria-label="${esc(L('Altura do gráfico (setas para cima e para baixo)', 'Chart height (up and down arrows)'))}"></div>
         <div id="lab-lv"></div>
       </div>
       <aside class="lab-side" aria-label="${esc(L('Indicadores do gráfico', 'Chart indicators'))}">
@@ -544,7 +543,7 @@ function labShell() {
 function labDraw() {
   const box = $('#lab-body'); if (!box) return;
   if (!hasPro()) { box.innerHTML = proGate(PAGES.lab); return; }
-  if (!$('#lab-wrap')) { box.innerHTML = labShell(); labGrip(); }
+  if (!$('#lab-wrap')) { box.innerHTML = labShell(); }
   labDrawSignals(); labDrawSide(); labDrawNote(); labChart(); labDrawRpl();
 }
 function labEmpty() {
@@ -808,7 +807,7 @@ async function rplChart(D, P, Lo, li, force) {
     setHTML('#rpl-leg', `<b>${esc(R.agg === '1d' ? d1 : `${d1} → ${d2}`)}</b>${R.m !== 'l' ? `<span><i style="background:var(--up)"></i>${esc(L('Lucro', 'Profit'))} <b class="up">${esc(rplUsd(b.p))}</b></span>` : ''}${R.m !== 'p' ? `<span><i style="background:var(--down)"></i>${esc(L('Prejuízo', 'Loss'))} <b class="down">${esc(rplUsd(b.l))}</b></span>` : ''}<span><i style="background:${isNum(net) && net < 0 ? 'var(--down)' : 'var(--up)'}"></i>${esc(L('Saldo', 'Net'))} <b class="${tone(net)}">${esc(isNum(net) ? (net > 0 ? '+' : '') + rplUsd(net) : '—')}</b></span><span><i style="background:var(--text)"></i>BTC <b>${esc(usd(pf[b.i1], [0, 0]))}</b></span>`);
   };
   leg(rows[rows.length - 1]);
-  ch.subscribeCrosshairMove((pr) => { const b = pr && pr.time !== undefined && pr.point ? byT.get(pr.time) : null; leg(b || rows[rows.length - 1]); });
+  onCross(ch, (pr) => { const b = pr && pr.time !== undefined && pr.point ? byT.get(pr.time) : null; leg(b || rows[rows.length - 1]); });
 }
 ACT.seg_rplh = (v) => { LAB.rpl.h = v; labSave(); labDrawRpl(); };
 ACT.seg_rplm = (v) => { LAB.rpl.m = v; labSave(); labDrawRpl(); };
@@ -846,7 +845,7 @@ async function labChart(force) {
   if (seq !== LAB.seq) return;
   const keep = LAB.charts.length && LAB._keepRange ? labGetRange() : null; LAB._keepRange = false;
   setHTML('#lab-panes', pn.map((k) => labPaneHtml(im[k])).join(''));
-  $$('.lab-pc').forEach((el) => { el.style.height = (window.innerWidth <= 640 ? 118 : 138) + 'px'; });
+  $$('.lab-pc').forEach((el) => { el.style.height = (window.innerWidth <= 640 ? 150 : 176) + 'px'; });
   const times = labTimes(D);
   const ws = times.map((t) => ({ time: t }));
   const c = chartColors();
@@ -857,7 +856,7 @@ async function labChart(force) {
   try { r = await makeChart(host, { onTheme: () => labChart(true), priceFmt: (v) => labFmt('usd', v, true) }); } catch (e) { host.innerHTML = emptyBox('wifi-off', L('Gráfico indisponível', 'Chart unavailable'), esc(e.message)); return; }
   if (seq !== LAB.seq) return;
   const ch = r.ch;
-  ch.applyOptions({ rightPriceScale: { mode: LAB.log ? LWC.PriceScaleMode.Logarithmic : LWC.PriceScaleMode.Normal, minimumWidth: 78, scaleMargins: { top: 0.08, bottom: 0.05 } }, timeScale: { visible: !pn.length, rightOffset: 8, minBarSpacing: 0.02, lockVisibleTimeRangeOnResize: true }, crosshair: { mode: LWC.CrosshairMode.Normal } });
+  ch.applyOptions({ rightPriceScale: { mode: LAB.log ? LWC.PriceScaleMode.Logarithmic : LWC.PriceScaleMode.Normal, minimumWidth: 78, scaleMargins: { top: 0.08, bottom: 0.05 } }, timeScale: { visible: true, rightOffset: 8, minBarSpacing: 0.02, lockVisibleTimeRangeOnResize: true }, crosshair: { mode: LWC.CrosshairMode.Normal } });
   const base = ch.addLineSeries({ color: 'rgba(0,0,0,0)', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
   base.setData(ws);
   // preço: linha (desde 2010, Coin Metrics) ou velas diárias da Binance (desde ago/2017; antes disso, a linha)
@@ -907,7 +906,7 @@ async function labChart(force) {
     try { rr = await makeChart(el, { priceFmt: (v) => labFmt(x.f, v, true) }); } catch { continue; }
     if (seq !== LAB.seq) return;
     const pc = rr.ch;
-    pc.applyOptions({ layout: { attributionLogo: false }, rightPriceScale: { mode: x.log ? LWC.PriceScaleMode.Logarithmic : LWC.PriceScaleMode.Normal, minimumWidth: 78, scaleMargins: { top: 0.14, bottom: 0.08 } }, timeScale: { visible: pi === pn.length - 1, rightOffset: 8, minBarSpacing: 0.02, lockVisibleTimeRangeOnResize: true }, crosshair: { mode: LWC.CrosshairMode.Normal } });
+    pc.applyOptions({ layout: { attributionLogo: false }, rightPriceScale: { mode: x.log ? LWC.PriceScaleMode.Logarithmic : LWC.PriceScaleMode.Normal, minimumWidth: 78, scaleMargins: { top: 0.14, bottom: 0.08 } }, timeScale: { visible: true, rightOffset: 8, minBarSpacing: 0.02, lockVisibleTimeRangeOnResize: true }, crosshair: { mode: LWC.CrosshairMode.Normal } });
     const b2 = pc.addLineSeries({ color: 'rgba(0,0,0,0)', lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
     b2.setData(ws);
     let main = null, mainVals = null;
@@ -962,7 +961,19 @@ function labApplyRange() {
   labSetRange(yrs ? { from: Math.max(0, last - Math.round(yrs * 365.25)), to: last + 8 } : { from: 0, to: last + 8 });
 }
 function labSync(D) {
-  const cs = LAB.charts; let lock = false;
+  const cs = LAB.charts; let lock = false, pend = null, raf = 0;
+  const run = () => {
+    raf = 0; const q = pend; pend = null; if (!q) return;
+    const { cc, t } = q; const i = t === null ? null : Math.round((t * 1000 - D.t0) / DAYMS);
+    LAB._hover = i !== null;
+    LAB._xlock = true;
+    cs.forEach((o) => {
+      if (o === cc) return;
+      try { const v = i === null || CHART_DRAG ? null : o.vals[i]; if (isNum(v)) o.ch.setCrosshairPosition(v, t, o.s); else o.ch.clearCrosshairPosition(); } catch { /* */ }
+    });
+    LAB._xlock = false;
+    labLegend(i);
+  };
   cs.forEach((cc) => {
     cc.ch.timeScale().subscribeVisibleLogicalRangeChange((rg) => {
       if (lock || !rg) return; lock = true;
@@ -970,21 +981,16 @@ function labSync(D) {
       lock = false;
     });
     cc.ch.subscribeCrosshairMove((pr) => {
-      if (LAB._xlock) return; LAB._xlock = true;
+      // cruz movida por outro painel (sem evento de origem): ignora
+      if (LAB._xlock || (pr && pr.point && !pr.sourceEvent)) return;
       const t = pr && pr.time !== undefined && pr.point ? pr.time : null;
-      const i = t === null ? null : Math.round((t * 1000 - D.t0) / DAYMS);
-      LAB._hover = i !== null;
-      cs.forEach((o) => {
-        if (o === cc) return;
-        try { const v = i === null ? null : o.vals[i]; if (isNum(v)) o.ch.setCrosshairPosition(v, t, o.s); else o.ch.clearCrosshairPosition(); } catch { /* */ }
-      });
-      labLegend(i);
-      LAB._xlock = false;
+      pend = { cc, t }; if (!raf) raf = requestAnimationFrame(run);
     });
   });
 }
 function labLegend(i) {
   const D = LAB.cD; if (!D) return;
+  const lk = `${i}|${LAB._ck}|${D.N}|${(D.A.p || [])[D.N - 1]}`; if (lk === LAB._lk) return; LAB._lk = lk;
   const A = D.A; const last = (lastPt(A.p) || {}).i;
   const idx = i === null || i === undefined || i < 0 || i >= D.N ? last : i;
   if (!isNum(idx)) return;
@@ -995,11 +1001,11 @@ function labLegend(i) {
   else bits.push(`<span><i style="background:var(--text)"></i>BTC <b>${esc(labFmt('usd', p))}</b></span>`);
   const hov = !(i === null || i === undefined);
   for (const l of LAB.legend || []) { const v = isNum(l.v[idx]) ? l.v[idx] : !hov ? (lastPt(l.v) || {}).v : null; if (isNum(v)) bits.push(`<span><i style="background:${l.c}"></i>${esc(l.n)} <b>${esc(labFmt('usd', v))}</b></span>`); }
-  setHTML('#lab-leg', bits.join(''));
+  quickHTML('#lab-leg', bits.join(''));
   for (const cc of LAB.charts.slice(1)) {
     const x = cc.x; let v = cc.vals[idx];
     if (!isNum(v) && (i === null || i === undefined)) { const lp = lastPt(cc.vals); v = lp ? lp.v : null; }
-    setHTML('#lab-pv-' + x.id, esc(labFmt(x.f, v)));
+    quickHTML('#lab-pv-' + x.id, esc(labFmt(x.f, v)));
     const rd = isNum(v) && x.rd ? x.rd(v) : { t: '', c: '' };
     const zEl = $('#lab-pz-' + x.id); if (zEl) { zEl.textContent = rd.t || ''; zEl.className = 'z ' + (rd.c || ''); }
   }
@@ -1026,17 +1032,6 @@ function labLiveTick() {
   } catch { /* */ }
   if (!LAB._hover) labLegend(null);
 }
-// alça para mudar a altura (mouse, toque e teclado)
-function labGrip() {
-  const g = $('#lab-grip'); if (!g || g.dataset.on) return; g.dataset.on = '1';
-  let y0 = 0, h0 = 0, pid = null;
-  g.addEventListener('pointerdown', (e) => { pid = e.pointerId; try { g.setPointerCapture(pid); } catch { /* */ } y0 = e.clientY; const el = $('#lab-chart'); h0 = el ? el.getBoundingClientRect().height : labH(); g.classList.add('on'); e.preventDefault(); });
-  g.addEventListener('pointermove', (e) => { if (pid === null || e.pointerId !== pid) return; labSetH(h0 + e.clientY - y0, false); });
-  const end = () => { if (pid === null) return; pid = null; g.classList.remove('on'); labSave(); };
-  g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
-  g.addEventListener('keydown', (e) => { if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return; e.preventDefault(); const el = $('#lab-chart'); labSetH((el ? el.getBoundingClientRect().height : labH()) + (e.key === 'ArrowDown' ? 40 : -40), true); });
-}
-function labSetH(h, save) { LAB.h = clamp(Math.round(h), 240, 1400); const el = $('#lab-chart'); if (el && !LAB.full) el.style.height = LAB.h + 'px'; if (save) labSave(); }
 
 // ---------- ações ----------
 ACT.seg_labt = (v) => { LAB.tab = v; labSave(); labDrawSignals(); if (LAB.mode === 'lv') { LAB._keepRange = true; labChart(true); } };
@@ -1085,7 +1080,7 @@ ACT.labFull = () => {
   const w = $('#lab-wrap'); if (!w) return;
   LAB.full = !LAB.full;
   w.classList.toggle('full', LAB.full); document.body.classList.toggle('lab-fs', LAB.full);
-  const el = $('#lab-chart'); if (el) el.style.height = LAB.full ? '' : labH() + 'px';
+  const el = $('#lab-chart'); if (el) { el.style.height = LAB.full ? '' : labH() + 'px'; if (!LAB.full) chartApplyH(el); }
   const b = $('#lab-fbtn'); if (b) { b.innerHTML = `${ico(LAB.full ? 'minimize-2' : 'maximize-2', 16)}<span>${esc(LAB.full ? L('Sair da tela cheia', 'Exit full screen') : L('Tela cheia', 'Full screen'))}</span>`; b.classList.toggle('on', LAB.full); }
   const f = $('.lab-fs-fab'); if (f) { f.innerHTML = ico(LAB.full ? 'minimize-2' : 'maximize-2', 18); f.title = LAB.full ? L('Sair da tela cheia (Esc)', 'Exit full screen (Esc)') : L('Tela cheia', 'Full screen'); }
 };
@@ -1130,7 +1125,10 @@ ACT.labInfo = (el) => {
 onPrice((set) => {
   if (S.page !== 'lab' || !hasPro()) return;
   if (set.has('LAB')) { LAB.D = null; labDraw(); return; }
-  if (set.has('BTCUSDT') && Date.now() - LAB._tk > 15000) { LAB._tk = Date.now(); LAB.D = null; labDrawSignals(); labDrawSide(); labLiveTick(); }
+  if (set.has('BTCUSDT') && Date.now() - LAB._tk > 15000) {
+    if (chartBusy(3000)) { if (!CHART_DRAG) labLiveTick(); return; } // mexendo no gráfico: só a última vela
+    LAB._tk = Date.now(); LAB.D = null; labDrawSignals(); labDrawSide(); labLiveTick();
+  }
 });
 page({
   id: 'lab', group: 'analise', icon: 'flask-conical', pt: 'Bitcoin Lab', en: 'Bitcoin Lab', pro: true, proWhat: 'o Bitcoin Lab', proWhatEn: 'Bitcoin Lab',

@@ -131,8 +131,15 @@ function parseDate(raw) {
   return new Date(s);
 }
 const validDate = (d) => d instanceof Date && !Number.isNaN(d.getTime());
-function fmtDate(x, o = { day: '2-digit', month: 'short', year: 'numeric' }) { const d = toDate(x); return validDate(d) ? d.toLocaleDateString(LOC(), o) : '—'; }
-function fmtTime(x, sec = false) { const d = toDate(x); return validDate(d) ? d.toLocaleTimeString(LOC(), { hour: '2-digit', minute: '2-digit', ...(sec ? { second: '2-digit' } : {}) }) : '—'; }
+// formatadores de data reaproveitados (criar um Intl.DateTimeFormat a cada chamada é lento: legendas e gráficos chamam muito)
+const _DTF = new Map();
+function _dtf(o) { const k = LOC() + JSON.stringify(o); let f = _DTF.get(k); if (!f) { if (_DTF.size > 300) _DTF.clear(); f = new Intl.DateTimeFormat(LOC(), o); _DTF.set(k, f); } return f; }
+function fmtDate(x, o = { day: '2-digit', month: 'short', year: 'numeric' }) {
+  const d = toDate(x); if (!validDate(d)) return '—';
+  // sem campo de data (só hora, por ex.), toLocaleDateString completa com a data: mantém o comportamento
+  return o && (o.day || o.month || o.year || o.weekday || o.era) ? _dtf(o).format(d) : d.toLocaleDateString(LOC(), o);
+}
+function fmtTime(x, sec = false) { const d = toDate(x); return validDate(d) ? _dtf(sec ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : { hour: '2-digit', minute: '2-digit' }).format(d) : '—'; }
 function fmtDateTime(x) { const d = toDate(x); return validDate(d) ? d.toLocaleString(LOC(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'; }
 function ago(ts) {
   if (!ts) return L('sem leitura', 'no reading');
