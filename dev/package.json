@@ -3,7 +3,9 @@
   "private": true,
   "description": "Ferramentas e testes do NEXUS HUB. Nada daqui é carregado pelo site.",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "node build.mjs",
     "build:beta": "node build.mjs --beta",
@@ -13,6 +15,7 @@
   "devDependencies": {
     "@fontsource-variable/archivo": "5.2.8",
     "@supabase/supabase-js": "2.117.2",
+    "http_ece": "1.2.1",
     "lightweight-charts": "4.2.3",
     "puppeteer-core": "24.43.1"
   }
