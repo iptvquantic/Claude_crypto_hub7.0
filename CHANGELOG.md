@@ -1,5 +1,16 @@
 # Mudanças
 
+## 3.6.0 — 07/11/2026 · Alertas no celular (preço e eventos)
+- **Página nova Alertas** (menu Sua conta, grátis com conta): notificação no celular e no computador, mesmo com o site fechado.
+  - **Alerta de preço:** qualquer moeda; passar de / cair abaixo de um valor em US$ ou R$, ou subir/cair X% em 24 h; uma vez ou toda vez que cruzar (rearma depois de voltar 0,3%); anotação; atalhos ±5%/±10%; preço agora e distância ao alvo ao vivo; pausar e apagar. Plano grátis: 3 ativos; PRO e teste: 30.
+  - **Avisos de eventos:** automáticos para os eventos importantes (EUA, Brasil, cripto; alto ou médio impacto; 15 min, 30 min, 1 h ou 1 dia antes), programados para os próximos 60 dias, ou um a um pelo **sino** na página Eventos do mercado (lista, destaque e janela de detalhes).
+  - Aparelhos que recebem (com teste), histórico das notificações (entregue em quantos aparelhos), instruções para iPhone (app instalado) e para notificações bloqueadas.
+- Atalhos: botão **Alerta** no menu Gráfico e "Criar alerta de preço" no menu de cada cartão do Dashboard.
+- Servidor: o banco chama a função `alerts` a cada minuto (Binance; moedas fora dela pelo CoinGecko); Web Push com criptografia padrão (VAPID + aes128gcm), chaves geradas no próprio servidor. Painel do administrador mostra a situação (última verificação, aparelhos, enviadas em 24 h).
+- Sair da conta tira este aparelho da lista de quem recebe.
+- Correção: a página Eventos do mercado aberta direto (sem passar pelo Dashboard) agora carrega também o IBGE e a agenda do robô.
+- Menu cabe sem rolar também em 1280×600 com o item novo e o administrador.
+
 ## 3.5.1 — 07/11/2026 · Gráficos sem travar, altura ajustável e datas em todos
 - **Arrastar e dar zoom sem travar:** a etiqueta com o nome da linha, as legendas e a cruz dos painéis sincronizados passaram a ser desenhadas uma vez por quadro (antes, cada movimento do mouse refazia a página várias vezes). No Bitcoin Lab com velas e dois painéis, o pior quadro durante o arraste caiu de ~500 ms para 17 ms (teste em `dev/perf-chart.mjs`); no menu Gráfico, de 83 ms para 17 ms.
 - **Altura ajustável em todos os gráficos do site:** alça embaixo de cada gráfico e de cada painel (arrastar com o mouse ou o dedo, setas do teclado; dois cliques voltam à altura padrão). A altura fica salva por gráfico neste aparelho.

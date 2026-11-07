@@ -104,7 +104,9 @@ ACT.pcMenu = (el) => {
   const i = +el.dataset.i, n = dashCards().length;
   const m = el.nextElementSibling; const open = !m.classList.contains('open');
   closeMenus(m);
-  m.innerHTML = `<button class="menu-i" data-act="pcSwap" data-i="${i}" role="menuitem">${ico('arrow-left-right', 17)}${esc(L('Trocar moeda', 'Change coin'))}</button>
+  const cd = dashCards()[i] || {};
+  m.innerHTML = `<button class="menu-i" data-act="alNew" data-s="${esc(cd.s || cd.cg || '')}" role="menuitem">${ico('bell-plus', 17)}${esc(L('Criar alerta de preço', 'Create price alert'))}</button>
+    <button class="menu-i" data-act="pcSwap" data-i="${i}" role="menuitem">${ico('arrow-left-right', 17)}${esc(L('Trocar moeda', 'Change coin'))}</button>
     ${i > 0 ? `<button class="menu-i" data-act="pcMove" data-i="${i}" data-d="-1" role="menuitem">${ico('chevron-left', 17)}${esc(L('Mover para a esquerda', 'Move left'))}</button>` : ''}
     ${i < n - 1 ? `<button class="menu-i" data-act="pcMove" data-i="${i}" data-d="1" role="menuitem">${ico('chevron-right', 17)}${esc(L('Mover para a direita', 'Move right'))}</button>` : ''}
     <div class="menu-sep"></div>

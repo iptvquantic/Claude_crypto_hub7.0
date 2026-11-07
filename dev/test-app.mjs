@@ -16,7 +16,7 @@ const BASE = process.argv.includes('--root') ? '' : 'beta/';
 const SHOTS = process.argv.includes('--shots');
 const TYPES = { '.html': 'text/html', '.js': 'application/javascript', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' };
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
-const PAGES = ['dash', 'chart', 'top100', 'markets', 'onchain', 'lab', 'tokenomics', 'buybacks', 'etf', 'whales', 'macro', 'agenda', 'events', 'poly', 'news', 'geo', 'wallets', 'vault', 'plans', 'settings'];
+const PAGES = ['dash', 'chart', 'top100', 'markets', 'onchain', 'lab', 'tokenomics', 'buybacks', 'etf', 'whales', 'macro', 'agenda', 'events', 'poly', 'news', 'geo', 'wallets', 'alerts', 'vault', 'plans', 'settings'];
 const fails = [];
 const ok = (cond, msg) => { if (!cond) { fails.push(msg); console.log('  ✗ ' + msg); } else console.log('  ✓ ' + msg); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -24,7 +24,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const NOISE = /WebSocket connection|Failed to load resource|net::ERR_|ERR_BLOCKED|favicon|fetching the script/i;
 
 const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36';
-async function open({ width = 1280, height = 860, hash = '#/dash', pipeline = true, supa = null, storage = {}, mobile = false } = {}) {
+async function open({ width = 1280, height = 860, hash = '#/dash', pipeline = true, supa = null, storage = {}, mobile = false, init = null } = {}) {
   const browser = await puppeteer.launch({ executablePath: '/opt/pw-browsers/chromium', headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--lang=pt-BR', '--disable-background-networking', '--disable-component-update', '--no-first-run'] });
   const page = await browser.newPage();
   await page.emulateTimezone('America/Sao_Paulo');
@@ -55,6 +55,7 @@ async function open({ width = 1280, height = 860, hash = '#/dash', pipeline = tr
     window.__csp = [];
     document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
   }, storage);
+  if (init) await page.evaluateOnNewDocument(init);
   await page.goto(SITE + BASE + 'index.html' + hash, { waitUntil: 'domcontentloaded' });
   return { browser, page, errors, unhandled };
 }
@@ -497,6 +498,95 @@ console.log('\n[4] Conta com teste vencido');
   ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
   await browser.close();
 }
+// ---------- 4b. alertas no celular (serviço de push simulado: o Chromium de teste não tem um) ----------
+console.log('\n[4b] Alertas no celular');
+{
+  const supa = makeSupabase({ plan: 'free' });
+  supa.db.profile.plan_expiry = new Date(Date.now() - 86400e3).toISOString(); // grátis: sem PRO
+  const pushStub = () => {
+    const keys = { p256dh: 'B' + 'A'.repeat(86), auth: 'A'.repeat(22) };
+    const mk = () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/teste-' + Math.random().toString(36).slice(2), toJSON() { return { endpoint: this.endpoint, keys }; }, unsubscribe: async () => { window.__sub = null; return true; } });
+    const pm = { getSubscription: async () => window.__sub || null, subscribe: async (o) => { window.__subOpts = o; window.__sub = mk(); return window.__sub; } };
+    const reg = { pushManager: pm, scope: location.origin + '/' };
+    try { Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistration: async () => reg, ready: Promise.resolve(reg), register: async () => reg, addEventListener() {} } }); } catch { /* */ }
+    window.PushManager = window.PushManager || function () {};
+    let perm = 'default';
+    try { Object.defineProperty(Notification, 'permission', { configurable: true, get: () => perm }); Notification.requestPermission = async () => { perm = 'granted'; return perm; }; } catch { /* */ }
+  };
+  const { browser, page, errors } = await open({ supa, hash: '#/alerts', init: pushStub });
+  await sleep(2200);
+  ok(await page.$eval('#pg-alerts', (e) => /Alertas no celular/.test(e.innerText) && /Criar conta grátis/.test(e.innerText)).catch(() => false), 'visitante: Alertas explica e convida a criar conta');
+  await page.click('#acct .acct-btn'); await sleep(300);
+  await page.type('#au-email', 'cliente@teste.com'); await page.type('#au-pass', 'senha1234'); await page.click('#au-go'); await sleep(3000);
+  ok(await page.$eval('#al-dev', (e) => /desligadas/.test(e.innerText) && !!e.querySelector('[data-act=alOn]')).catch(() => false), 'conta: aparelho começa com notificações desligadas');
+  await page.click('[data-act=alOn]'); await sleep(2500);
+  ok(supa.db.devices.length === 1 && /^https:\/\/fcm/.test(supa.db.devices[0].endpoint) && supa.db.lastDevice.p_p256dh.length === 87, 'ativar: assinatura do navegador salva na conta (endereço e chaves)');
+  ok(await page.evaluate(() => window.__subOpts && window.__subOpts.userVisibleOnly === true && window.__subOpts.applicationServerKey.length === 65), 'ativar: usa a chave pública do servidor (65 bytes)');
+  ok((supa.db.tests || 0) >= 1 && await page.$eval('#al-dev', (e) => /ativas/.test(e.innerText) && /este/.test(e.innerText)).catch(() => false), 'ativar: manda a notificação de teste e mostra "ativas · este aparelho"');
+  // a chave do servidor mudou: a inscrição antiga sai (do navegador e da conta) e entra uma nova
+  const ep0 = await page.evaluate(() => window.__sub && window.__sub.endpoint);
+  await page.evaluate(() => { window.__sub.options = { applicationServerKey: new Uint8Array(65).fill(7).buffer }; window.__subOpts = null; });
+  await page.evaluate(() => ACT.alOn()); await sleep(2500);
+  ok(await page.evaluate((ep) => !!window.__subOpts && !!window.__sub && window.__sub.endpoint !== ep, ep0) && supa.db.devices.length === 1 && supa.db.devices[0].endpoint !== ep0, 'chave do servidor mudou: refaz a inscrição e tira a antiga da conta');
+  // alerta de preço: BTC acima de +5%, em reais
+  await page.click('.seg[data-seg="alccy"] button[data-v="brl"]'); await sleep(300);
+  await page.click('[data-act=alQuick][data-k="5"]'); await sleep(300);
+  const v = await page.$eval('#al-val', (i) => i.value);
+  ok(/^\d{1,3}(\.\d{3})*(,\d+)?$/.test(v) && await page.$eval('#al-sum', (e) => /BTC/.test(e.innerText) && /passar de R\$/.test(e.innerText)).catch(() => false), `atalho +5% preenche o alvo em reais (${v})`);
+  await page.click('[data-act=alSave]'); await sleep(1500);
+  ok(supa.db.alerts.length === 1 && supa.db.alerts[0].bn === 'BTCUSDT' && supa.db.alerts[0].cg === 'bitcoin' && supa.db.alerts[0].ccy === 'brl' && supa.db.alerts[0].cond === 'above' && supa.db.alerts[0].value > 0, `alerta gravado (par Binance + id CoinGecko, reais) ${JSON.stringify(supa.db.alerts[0] || {}).slice(0, 160)}`);
+  ok(await page.$$eval('#al-list .al-tb tbody tr', (a) => a.length === 1 && /BTC/.test(a[0].innerText) && /ativo/.test(a[0].innerText)).catch(() => false), 'lista mostra o alerta ativo com a distância');
+  // queda de 5% em 24 h para ETH (troca a moeda pelo seletor)
+  await page.click('[data-act=alCoin]'); await sleep(500);
+  await page.type('#cp-q', 'ETH'); await sleep(600);
+  await page.click('#cp-list [data-k="b"]'); await sleep(500);
+  await page.click('.seg[data-seg="alc"] button[data-v="down24"]'); await sleep(200);
+  await page.type('#al-val', '5'); await page.click('[data-act=alSave]'); await sleep(1500);
+  ok(supa.db.alerts.some((a) => a.sym === 'ETH' && a.cond === 'down24' && +a.value === 5), 'alerta de queda de 5% em 24 h');
+  await page.type('#al-val', '20'); await page.click('[data-act=alSave]'); await sleep(1200);
+  ok(supa.db.alerts.length === 3, 'terceiro alerta (limite do plano grátis)');
+  await page.type('#al-val', '30'); await page.click('[data-act=alSave]'); await sleep(1200);
+  ok(supa.db.alerts.length === 3 && /3 alertas de preço ativos/.test(await page.$eval('#toasts', (e) => e.innerText).catch(() => '')), 'quarto alerta no grátis: avisa o limite (3; PRO: 30)');
+  await page.$eval('#al-list [data-act=alToggle]', (b) => b.click()); await sleep(1200); // (o aviso do limite pode estar por cima do botão)
+  ok(supa.db.alerts.filter((a) => a.active).length === 2 && await page.$eval('#al-list', (e) => /pausado/.test(e.innerText)).catch(() => false), 'pausar um alerta');
+  // avisos de eventos automáticos
+  await page.click('[data-act=alAuto]'); await sleep(2500);
+  ok(supa.db.profile.settings && supa.db.profile.settings.alerts && supa.db.profile.settings.alerts.auto === true, 'liga os avisos automáticos de eventos (salvo na conta)');
+  ok(supa.db.evAlerts.length >= 2 && supa.db.evAlerts.every((x) => x.auto && x.lead_min === 30 && Date.parse(x.at) > Date.now()), `programa os próximos eventos importantes (${supa.db.evAlerts.length})`);
+  await page.click('.seg[data-seg="allead"] button[data-v="1440"]'); await sleep(2500);
+  ok(supa.db.evAlerts.length >= 2 && supa.db.evAlerts.every((x) => x.lead_min === 1440), 'trocar para "1 dia antes" reprograma os avisos');
+  // um evento marcado à mão (sino) continua manual quando os automáticos são reprogramados
+  const keepManual = await page.evaluate(async () => {
+    const want = alEvWant(AL.prefs); if (!want.length) return 'sem eventos';
+    const e = want[0], key = alEvKey(e), sb = await sbClient();
+    await sb.from('event_alerts').delete().eq('ev_key', key);
+    await sb.from('event_alerts').upsert([{ ev_key: key, title: alEvTitle(e), detail: null, at: new Date(e.at).toISOString(), lead_min: AL.prefs.lead, auto: false }], { onConflict: 'user_id,ev_key,lead_min' });
+    await alLoad(true); await alSyncEvents(true); await alLoad(true);
+    const x = AL.ea.filter((y) => y.ev_key === key);
+    return x.length === 1 && x[0].auto === false ? 'ok' : JSON.stringify(x).slice(0, 200);
+  });
+  ok(keepManual === 'ok', `sino marcado à mão continua manual quando os avisos automáticos são reprogramados (${keepManual})`);
+  await shot(page, 'v-alerts');
+  const rAl = await inspect(page); ok(!rAl.bad.length && !rAl.overflow, `Alertas sem número quebrado nem rolagem lateral ${rAl.bad.join(',')}`);
+  // sino na página Eventos do mercado
+  await goPage(page, 'events', 3000);
+  const nb = await page.$$eval('#ev-list .al-bell', (a) => a.length).catch(() => 0);
+  ok(nb >= 3, `Eventos: sino em cada evento futuro (${nb})`);
+  const before = supa.db.evAlerts.length;
+  const off = await page.evaluate(() => { const b = [...document.querySelectorAll('#ev-list .al-bell:not(.on)')].find((x) => { const e = evById(x.dataset.id); return e && e.at > Date.now() + 3 * 86400e3; }); return b ? b.dataset.id : null; });
+  if (off) { await page.click(`#ev-list .al-bell[data-id="${off}"]`); await sleep(1800); }
+  ok(!!off && supa.db.evAlerts.some((x) => x.ev_key === off && !x.auto) && supa.db.evAlerts.length === before + 1, 'Eventos: tocar no sino marca o aviso daquele evento');
+  ok(await page.$eval(`#ev-list .al-bell[data-id="${off}"]`, (b) => b.classList.contains('on')).catch(() => false), 'Eventos: o sino fica aceso');
+  // atalho do menu Gráfico
+  await goPage(page, 'chart', 2500);
+  await page.click('[data-act=chAlert]'); await sleep(1500);
+  ok(await page.evaluate(() => S.page === 'alerts' && /BTC/.test(document.querySelector('.al-coin').innerText)), 'Gráfico: botão "Alerta" abre Alertas com a moeda do gráfico');
+  // desativar neste aparelho
+  await page.click('[data-act=alOff]'); await sleep(1500);
+  ok(supa.db.devices.length === 0 && await page.$eval('#al-dev', (e) => /desligadas/.test(e.innerText)).catch(() => false), 'desativar: o aparelho sai da lista');
+  ok(!errors.length, `sem erro de JavaScript ${errors.slice(0, 5).join(' || ')}`);
+  await browser.close();
+}
 // ---------- 5. administrador ----------
 console.log('\n[5] Administrador');
 {
@@ -523,6 +613,7 @@ console.log('\n[5] Administrador');
   ok(await page.$eval('#pg-admin .adm-robot', (e) => /GitHub aceitou/.test(e.innerText)).catch(() => false), 'agendador: "Testar agora" mostra a resposta do GitHub');
   supa.db.robotMissing = true; await page.click('[data-act=admReload]'); await sleep(1500);
   ok(await page.$eval('#pg-admin .adm-robot', (e) => /Ainda não instalado/.test(e.innerText) && /03_agendador_robo\.sql/.test(e.innerText) && /SQL Editor/.test(e.innerText)).catch(() => false), 'agendador: sem a função no banco, explica como instalar');
+  ok(await page.$eval('#pg-admin', (e) => /Alertas no celular/.test(e.innerText) && /funcionando/.test(e.innerText) && /612/.test(e.innerText)).catch(() => false), 'admin: situação do servidor de alertas (última verificação, aparelhos, enviadas)');
   await shot(page, 'a-admin');
   await page.click('[data-act=admUser][data-u="u9"]'); await sleep(500);
   ok(await page.$eval('#scrim .modal', (e) => /Renovar PRO/i.test(e.innerText) && e.querySelectorAll('.adm-rn').length === 3 && /Gerar senha temporária/.test(e.innerText)).catch(() => false), 'admin: janela de ações com renovação mensal, trimestral e anual');

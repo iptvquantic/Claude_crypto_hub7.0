@@ -42,6 +42,7 @@ function chartIndHtml() {
   return `<span class="small faint" style="margin-right:2px">${esc(L('Médias:', 'Averages:'))}</span>${chips}${CH.mas.length < 8 ? `<button class="btn xs" data-act="chMaAdd" title="${esc(L('Adicionar outra média', 'Add another average'))}">${ico('plus', 14)}${esc(L('Média', 'Average'))}</button>` : ''}<datalist id="ch-ma-l">${MA_SUGEST.map((n) => `<option value="${n}">`).join('')}</datalist>
     <span class="ch-sep"></span>${tg('vol', 'Volume', 'chart-column')}${tg('rsi', L('RSI 14', 'RSI 14'), 'activity')}${tg('bb', 'Bollinger', 'waves')}`;
 }
+ACT.chAlert = () => { location.hash = '#/alerts?s=' + encodeURIComponent(CH.s); };
 function chartHtml() {
   const p = PAGES.chart;
   return `${pageHead(p, stamp('px-rest', 'Binance'))}
@@ -49,7 +50,7 @@ function chartHtml() {
     <div class="row wrap between" style="gap:14px" id="ch-head">${chartHeadHtml()}</div>
     <div class="row wrap between mt" style="gap:10px">
       <div class="seg-scroll">${seg('chtf', CH_TF.map(([v, l]) => [v, l]), CH.tf)}</div>
-      <div class="row wrap ch-tools" style="gap:6px"><button class="btn xs ${CH.log ? '' : 'ghost'}" data-act="chLog" aria-pressed="${CH.log}" title="${esc(L('Escala logarítmica', 'Log scale'))}">Log</button><button class="btn xs ${CH.auto ? '' : 'ghost'}" id="ch-auto" data-act="chAuto" title="${esc(L('Ajustar o preço automaticamente (desliga quando você arrasta para cima/baixo)', 'Auto-fit price (turns off when you drag up/down)'))}">${ico('move-vertical', 14)}Auto</button><button class="btn xs ghost" data-act="chFit" title="${esc(L('Voltar para as velas recentes', 'Back to recent candles'))}">${ico('rotate-ccw', 14)}${esc(L('Recentes', 'Recent'))}</button></div>
+      <div class="row wrap ch-tools" style="gap:6px"><button class="btn xs" data-act="chAlert" title="${esc(L('Criar alerta de preço desta moeda (aviso no celular)', 'Create a price alert for this coin (phone notification)'))}">${ico('bell-plus', 14)}${esc(L('Alerta', 'Alert'))}</button><button class="btn xs ${CH.log ? '' : 'ghost'}" data-act="chLog" aria-pressed="${CH.log}" title="${esc(L('Escala logarítmica', 'Log scale'))}">Log</button><button class="btn xs ${CH.auto ? '' : 'ghost'}" id="ch-auto" data-act="chAuto" title="${esc(L('Ajustar o preço automaticamente (desliga quando você arrasta para cima/baixo)', 'Auto-fit price (turns off when you drag up/down)'))}">${ico('move-vertical', 14)}Auto</button><button class="btn xs ghost" data-act="chFit" title="${esc(L('Voltar para as velas recentes', 'Back to recent candles'))}">${ico('rotate-ccw', 14)}${esc(L('Recentes', 'Recent'))}</button></div>
     </div>
     <div class="row wrap mt ch-ind" id="ch-ind" style="gap:6px">${chartIndHtml()}</div>
     <div id="ch-legend" class="ch-legend mt"></div>

@@ -387,6 +387,11 @@ body.sb-mini .sb-i[aria-current="page"]::before { left: -8px; }
   .sb-i { font-size: 13.5px; height: clamp(19px, calc((100vh - var(--tick-h) - var(--hdr-h) - 30px - var(--sb-g) * 8px) / var(--sb-n) - 1px), 34px); }
   .sb-ic { min-height: 16px; }
 }
+/* telas bem baixas (ex.: 1280×600) com o menu do administrador: itens um pouco mais justos */
+@media (min-width: 901px) and (max-height: 640px) {
+  .sb-i { font-size: 13px; height: clamp(17px, calc((100vh - var(--tick-h) - var(--hdr-h) - 30px - var(--sb-g) * 8px) / var(--sb-n) - 1px), 30px); }
+  .sb-ic { min-height: 15px; }
+}
 
 /* ---------- MAIN ---------- */
 #main {
@@ -2259,3 +2264,70 @@ body.ch-resizing, body.ch-resizing * { cursor: ns-resize !important; user-select
 .ch-auto[hidden] { display: none; }
 .ch-tag { will-change: transform; }
 @media (pointer: coarse) { .ch-grip { height: 24px; } .ch-grip i { width: 84px; height: 6px; } }
+
+/* ===== 3.6.0 — Alertas no celular ===== */
+.al-hero .empty p { max-width: 640px; }
+.al-feat { list-style: none; margin: 0 auto 18px; padding: 0 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; max-width: 920px; }
+.al-feat li { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--panel-2); font-size: 14px; line-height: 1.45; }
+.al-feat li svg { color: var(--accent); flex: none; margin-top: 2px; }
+.al-dev-b { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px 14px; }
+.al-dev-t { margin: 0; flex: 1 1 320px; font-size: 15px; line-height: 1.5; }
+.al-devs-h { padding: 0 18px 6px; }
+.al-devs { list-style: none; margin: 0; padding: 0 18px 14px; display: grid; gap: 6px; }
+.al-devs li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.al-devs li.me { border-color: var(--accent); background: var(--accent-bg); }
+.al-devs li > svg { color: var(--accent); flex: none; }
+.al-devs .nm { flex: 1; min-width: 0; font-weight: 650; }
+.al-top { align-items: start; }
+.al-form { padding: 0 18px 16px; display: grid; gap: 12px; }
+.al-form .fld > label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--text-2); }
+.al-coin { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--panel-2); color: var(--text); cursor: pointer; text-align: left; font: inherit; }
+.al-coin:hover, .al-coin:focus-visible { border-color: var(--accent); }
+.al-coin .nm { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.al-swap { display: inline-flex; align-items: center; gap: 2px; color: var(--accent); font-weight: 700; font-size: 13px; }
+.al-cond { flex-wrap: wrap; }
+.al-valrow { display: flex; gap: 8px; align-items: center; }
+.al-valrow .inp { flex: 1; min-width: 0; font-size: 18px; font-weight: 700; }
+.al-suf { font-weight: 800; font-size: 18px; color: var(--text-2); }
+.al-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+button.chip { cursor: pointer; border: 1px solid transparent; font: inherit; font-weight: 700; }
+button.chip:hover:not(:disabled) { border-color: currentColor; }
+button.chip:disabled { opacity: .45; cursor: default; }
+.chip.on { color: var(--accent-ink); background: var(--accent); }
+.al-sum { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--panel-2); font-size: 14.5px; line-height: 1.5; }
+.al-sum svg { color: var(--accent); vertical-align: -2px; }
+.al-tb .al-cn { display: flex; align-items: center; gap: 8px; }
+.al-tb .al-cn > span { display: flex; flex-direction: column; }
+.al-tb tr.off td { opacity: .62; }
+.al-dist { position: relative; min-width: 120px; height: 22px; border-radius: 6px; background: var(--panel-2); overflow: hidden; }
+.al-dist i { position: absolute; left: 0; top: 0; bottom: 0; background: currentColor; opacity: .2; }
+.al-dist span { position: relative; padding: 0 8px; line-height: 22px; font-weight: 750; font-size: 13px; }
+.al-acts { white-space: nowrap; }
+.al-acts .icon-btn + .icon-btn { margin-left: 4px; }
+.al-sw { width: 46px; height: 26px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--panel-2); position: relative; cursor: pointer; flex: none; padding: 0; }
+.al-sw i { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--text-3); transition: transform .18s, background .18s; }
+.al-sw.on { background: var(--accent); border-color: var(--accent); }
+.al-sw.on i { transform: translateX(20px); background: var(--accent-ink); }
+.al-evb { padding: 0 18px 14px; }
+.al-evopts { display: grid; gap: 8px; margin-bottom: 12px; }
+.al-evh { margin: 6px 0; }
+.al-evl { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.al-evl li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.al-evd { display: flex; flex-direction: column; align-items: center; min-width: 46px; }
+.al-evt { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 650; font-size: 14px; }
+.al-log { list-style: none; margin: 0; padding: 0 18px 16px; display: grid; gap: 8px; }
+.al-log li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--panel-2); }
+.al-log li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.al-log li > svg { flex: none; margin-top: 2px; color: var(--accent); }
+.al-log li.k-price > svg { color: var(--up); }
+.al-log li.k-event > svg { color: var(--signal); }
+.al-bell { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin-left: 6px; border-radius: 8px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); cursor: pointer; vertical-align: middle; flex: none; }
+.al-bell:hover, .al-bell:focus-visible { color: var(--accent); border-color: var(--accent); }
+.al-bell.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.ev-when { display: inline-flex; align-items: center; justify-content: flex-end; }
+.al-hbell.on { border-color: var(--accent); color: var(--accent); }
+.btn.pri.al-hbell.on { color: var(--accent-ink); }
+.adm-al { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; padding: 0 18px 14px; }
+.adm-al > div { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 12px; background: var(--panel-2); }
+.adm-al b { font-size: 18px; }
+@media (max-width: 700px) { .al-tb th:nth-child(4), .al-tb td:nth-child(4) { display: none; } }

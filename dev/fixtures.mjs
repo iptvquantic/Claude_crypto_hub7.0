@@ -222,7 +222,72 @@ export function makeSupabase({ plan = 'trial', admin = false } = {}) {
     if (p === '/auth/v1/user') return json(user);
     if (p === '/auth/v1/logout') return { status: 204, contentType: 'application/json', body: '' };
     if (p === '/rest/v1/rpc/my_profile') { const pr = db.profile; const pro = pr.active && (['admin', 'master'].includes(pr.plan) || Date.parse(pr.plan_expiry) > NOW()); return json({ ...pr, pro, admin: ['admin', 'master'].includes(pr.plan), server_time: new Date().toISOString() }); }
-    if (p === '/rest/v1/profiles') return { status: 204, contentType: 'application/json', body: '' };
+    // configurações da conta (preferências dos avisos de eventos ficam em settings.alerts)
+    if (p === '/rest/v1/profiles') {
+      if (method === 'GET') { const row = { settings: db.profile.settings || {} }; return json(single ? row : [row]); }
+      if (method === 'PATCH') { const b = JSON.parse(body || '{}'); if (b.settings) db.profile.settings = b.settings; }
+      return { status: 204, contentType: 'application/json', body: '' };
+    }
+    // ---------- alertas no celular (migração 04) ----------
+    const filt = (rows) => { // filtros do PostgREST usados pelo app: eq., in.(…), gte.
+      let out = rows;
+      for (const [k, v] of u.searchParams) {
+        if (['select', 'order', 'limit', 'offset', 'on_conflict', 'columns'].includes(k)) continue;
+        if (v.startsWith('eq.')) out = out.filter((r) => String(r[k]) === v.slice(3));
+        else if (v.startsWith('in.(')) { const set = new Set(v.slice(4, -1).split(',').map((x) => x.replace(/^"|"$/g, ''))); out = out.filter((r) => set.has(String(r[k]))); }
+        else if (v.startsWith('gte.')) out = out.filter((r) => String(r[k]) >= v.slice(4));
+      }
+      return out;
+    };
+    db.devices = db.devices || []; db.alerts = db.alerts || []; db.evAlerts = db.evAlerts || []; db.log = db.log || [];
+    if (p === '/functions/v1/alerts') {
+      if (method === 'GET') return json({ ok: true, key: 'B' + 'A'.repeat(86) });
+      const b = JSON.parse(body || '{}');
+      if (b.action === 'test') { db.tests = (db.tests || 0) + 1; db.log.unshift({ id: ++n, kind: 'test', title: 'Alertas do NEXUS HUB ligados', body: 'É assim que seus alertas vão chegar', url: '#/alerts', at: new Date().toISOString(), sent: db.devices.length, failed: 0 }); return json({ ok: true, sent: db.devices.length, failed: 0, devices: db.devices.length, gone: 0 }); }
+      return json({ ok: false, error: 'action' }, 400);
+    }
+    if (p === '/rest/v1/rpc/push_device_save') {
+      const b = JSON.parse(body || '{}'); const ex = db.devices.find((d) => d.endpoint === b.p_endpoint);
+      if (ex) Object.assign(ex, { label: b.p_label, lang: b.p_lang }); else db.devices.push({ id: 'd-' + ++n, endpoint: b.p_endpoint, label: b.p_label, lang: b.p_lang, created_at: new Date().toISOString(), last_ok_at: null, fails: 0 });
+      db.lastDevice = b; return json({ ok: true });
+    }
+    if (p === '/rest/v1/push_devices') {
+      if (method === 'GET') return json(db.devices);
+      if (method === 'DELETE') { const del = new Set(filt(db.devices).map((d) => d.id)); db.devices = db.devices.filter((d) => !del.has(d.id)); return { status: 204, contentType: 'application/json', body: '' }; }
+    }
+    if (p === '/rest/v1/price_alerts') {
+      if (method === 'GET') return json(filt(db.alerts));
+      if (method === 'POST') {
+        const lim = db.profile.plan === 'free' || db.profile.plan === 'expired' ? 3 : 30;
+        const rows = [].concat(JSON.parse(body));
+        for (const r of rows) {
+          if (db.alerts.filter((a) => a.active).length >= lim) return json({ code: 'P0001', message: `limite de ${lim} alertas de preço ativos`, hint: 'alert_limit', details: null }, 400);
+          db.alerts.unshift({ id: 'a-' + ++n, user_id: uid, active: true, armed: true, fired_n: 0, fired_at: null, fired_price: null, repeat: false, note: null, name: null, created_at: new Date().toISOString(), ...r });
+        }
+        return { status: 201, contentType: 'application/json', body: '' };
+      }
+      if (method === 'PATCH') { const b = JSON.parse(body || '{}'); for (const a of filt(db.alerts)) { Object.assign(a, b); if (b.active) a.armed = true; } return { status: 204, contentType: 'application/json', body: '' }; }
+      if (method === 'DELETE') { const del = new Set(filt(db.alerts).map((a) => a.id)); db.alerts = db.alerts.filter((a) => !del.has(a.id)); return { status: 204, contentType: 'application/json', body: '' }; }
+    }
+    if (p === '/rest/v1/event_alerts') {
+      if (method === 'GET') return json(db.evAlerts);
+      if (method === 'POST') {
+        for (const r of [].concat(JSON.parse(body))) {
+          const ex = db.evAlerts.find((x) => x.ev_key === r.ev_key && x.lead_min === r.lead_min);
+          if (ex) Object.assign(ex, r); else db.evAlerts.push({ id: 'e-' + ++n, sent_at: null, missed: false, created_at: new Date().toISOString(), ...r });
+        }
+        db.evAlerts.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+        return { status: 201, contentType: 'application/json', body: '' };
+      }
+      if (method === 'DELETE') { const del = new Set(filt(db.evAlerts).map((x) => x.id)); db.evAlerts = db.evAlerts.filter((x) => !del.has(x.id)); return { status: 204, contentType: 'application/json', body: '' }; }
+    }
+    if (p === '/rest/v1/alert_log') {
+      if (method === 'GET') return json(db.log);
+      if (method === 'DELETE') { db.log = []; return { status: 204, contentType: 'application/json', body: '' }; }
+    }
+    if (p === '/rest/v1/rpc/admin_alerts_status') {
+      return json({ server_time: new Date().toISOString(), run: { at: new Date(NOW() - 40e3).toISOString(), ms: 230, alerts: db.alerts.length, fired: 0, events: 0, sent: 0, failed: 0, err: '', day: new Date().toISOString().slice(0, 10), day_sent: 4, day_runs: 612 }, devices: 2, users: 1, price_active: 3, events_pending: 7, sent24h: 4, failed24h: 0, job: { active: true, schedule: '* * * * *' } });
+    }
     if (p === '/rest/v1/vault_entries') {
       if (method === 'GET') {
         // como o PostgREST do Supabase: no máximo 1000 linhas por pedido (offset/limit) e total com "Prefer: count=exact"

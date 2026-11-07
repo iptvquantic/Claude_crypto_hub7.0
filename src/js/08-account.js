@@ -224,6 +224,7 @@ ACT.forgot = () => {
 };
 ACT.logout = async () => {
   closeMenus();
+  try { if (typeof alForgetDevice === 'function') await Promise.race([alForgetDevice(), new Promise((r) => setTimeout(r, 3000))]); } catch { /* */ }
   try { const sb = await sbClient(); await sb.auth.signOut(); } catch { /* sai localmente mesmo sem rede */ try { localStorage.removeItem(AUTH_KEY); } catch { /* */ } accountSync(null, 'SIGNED_OUT'); }
   toast(L('Você saiu da conta.', 'Signed out.'), { type: 'ok' });
 };

@@ -10,7 +10,7 @@ const CTRY = { US: ['EUA', 'US'], BR: ['BR', 'BR'], EU: ['UE', 'EU'], DE: ['ALE'
 const FF_CTRY = { USD: 'US', EUR: 'EU', GBP: 'GB', JPY: 'JP', CNY: 'CN', CAD: 'CA', AUD: 'AU', NZD: 'NZ', CHF: 'CH', BRL: 'BR', ALL: 'WD' };
 const ctryTag = (c) => `<span class="flag" title="${esc(c)}">${esc(L(...(CTRY[c] || [c, c])))}</span>`;
 function registerMacroSources() {
-  const need = () => ['macro', 'agenda', 'dash'].includes(S.page);
+  const need = () => ['macro', 'agenda', 'dash', 'events', 'alerts'].includes(S.page);
   source({
     id: 'fedhist', label: L('Histórico de juros (Fed)', 'Fed rate history'), provider: 'NY Fed', every: 6 * 3600e3, kind: 'daily',
     need: () => ['macro', 'agenda'].includes(S.page),
