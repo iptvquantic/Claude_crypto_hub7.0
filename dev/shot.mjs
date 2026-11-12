@@ -1,5 +1,5 @@
 // Captura de tela de uma página com as APIs simuladas (para revisar o visual).
-// Uso: node dev/shot.mjs <página> [--admin|--user] [--mobile] [--theme light] [--vault N] [--robot ok|notoken|missing] [--sel CSS] [--tall 8000] [--wait ms] [--click CSS]… [--hover 'CSS@fx,fy']… [--ls chave=json]… [--eval JS] [--root]
+// Uso: node dev/shot.mjs <página> [--admin|--user] [--mobile] [--theme light] [--vault N] [--robot ok|notoken|missing] [--sel CSS] [--tall 8000] [--width 1280] [--wait ms] [--click CSS]… [--hover 'CSS@fx,fy']… [--ls chave=json]… [--eval JS] [--root]
 // Saída: dev/out/shot-<página>[-mobile][-tema].png
 import puppeteer from 'puppeteer-core';
 import { readFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
@@ -23,7 +23,7 @@ const browser = await puppeteer.launch({ executablePath: '/opt/pw-browsers/chrom
 const page = await browser.newPage();
 await page.emulateTimezone('America/Sao_Paulo');
 const tall = +(arg('--tall') || 0); // altura da janela (para capturar a página inteira de uma vez)
-await page.setViewport(mobile ? { width: 390, height: tall || 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true } : { width: 1280, height: tall || 900 });
+await page.setViewport(mobile ? { width: 390, height: tall || 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true } : { width: +(arg('--width') || 1280), height: tall || 900 });
 await page.setRequestInterception(true);
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
@@ -53,7 +53,7 @@ const allArgs = (k) => A.flatMap((v, i) => (v === k ? [A[i + 1]] : []));
 for (const c of allArgs('--click')) { try { await page.click(c); } catch { console.log('clique falhou: ' + c); } await new Promise((r) => setTimeout(r, 1800)); }
 for (const h of allArgs('--hover')) { const [css, xy] = h.split('@'); const [fx, fy] = (xy || '0.5,0.5').split(',').map(Number); const el = await page.$(css); if (!el) { console.log('hover: não achei ' + css); continue; } await el.evaluate((e) => e.scrollIntoView({ block: 'center' })); await new Promise((r) => setTimeout(r, 300)); const b = await el.boundingBox(); await page.mouse.move(b.x + b.width * fx, b.y + b.height * fy, { steps: 5 }); await new Promise((r) => setTimeout(r, 700)); }
 if (arg('--eval')) console.log(JSON.stringify(await page.evaluate(arg('--eval'))));
-const name = `shot-${pg}${mobile ? '-mobile' : ''}${theme ? '-' + theme : ''}${sel ? '-' + sel.replace(/[^a-z0-9]+/gi, '') : ''}.png`;
+const name = `shot-${pg}${mobile ? '-mobile' : ''}${arg('--width') ? '-w' + arg('--width') : ''}${theme ? '-' + theme : ''}${sel ? '-' + sel.replace(/[^a-z0-9]+/gi, '') : ''}.png`;
 if (sel) { const el = await page.$(sel); if (el) await el.screenshot({ path: join(OUT, name) }); else console.log('seletor não encontrado: ' + sel); }
 else await page.screenshot({ path: join(OUT, name), fullPage: true });
 console.log(join(OUT, name), errors.length ? 'ERROS: ' + errors.join(' | ') : '');

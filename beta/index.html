@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-lP4XlFlKfpPetzHJhi1sTlWgo3J5xFI1vYrx0yYtOB0=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-8AoCJryea+qRvHkSW3GS2JUyUFa1eDSQim4fi0jFLBk=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -2206,7 +2206,7 @@ button.rsi-r:hover { background: var(--panel-3); }
 .ev-l tr.past td { opacity: .62; }
 .ev-l tr.nx td { box-shadow: inset 3px 0 0 var(--accent); }
 .ev-l tr.nx td:not(:first-child) { box-shadow: none; }
-.ev-lt { white-space: normal; min-width: 240px; }
+.tbl td.ev-lt { white-space: normal; min-width: 240px; }
 .ev-lt .t { font-weight: 680; }
 .ev-lt .m { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 3px; font-size: 12px; color: var(--text-3); }
 .ev-vals { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font-size: 12.5px; }
@@ -2236,6 +2236,19 @@ button.rsi-r:hover { background: var(--panel-3); }
   .ev-h-vals b { font-size: 15px; }
   .ev-st { grid-template-columns: minmax(0, 1fr); }
   .ev-flt { flex-direction: column; }
+  /* lista no celular: cada evento vira um cartão (hora e país | evento | quando e sino), sem rolar para o lado */
+  .ev-l thead { display: none; }
+  .ev-l, .ev-l tbody, .ev-l tr.ev-lh, .ev-l tr.ev-lh td { display: block; width: 100%; }
+  .ev-l tr:not(.ev-lh) { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 6px; align-items: start; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .ev-l tr:not(.ev-lh) > td { padding: 0; border: 0; white-space: normal; min-width: 0; }
+  .ev-l tr:not(.ev-lh) > td:nth-child(1) { grid-area: 1 / 1; }
+  .ev-l tr:not(.ev-lh) > td:nth-child(2) { grid-area: 2 / 1; }
+  .ev-l tr:not(.ev-lh) > td:nth-child(3) { grid-area: 1 / 2 / 3 / 3; }
+  .ev-l tr:not(.ev-lh) > td:nth-child(4) { grid-area: 3 / 2; text-align: left; align-self: center; }
+  .ev-l tr:not(.ev-lh) > td:nth-child(5) { grid-area: 3 / 3; }
+  .ev-l tr:not(.ev-lh) > td:nth-child(6) { grid-area: 1 / 3 / 3 / 4; }
+  .ev-l tr.nx { box-shadow: inset 3px 0 0 var(--accent); }
+  .ev-l tr.nx td { box-shadow: none; }
 }
 
 /* =====================================================================
@@ -2407,7 +2420,7 @@ button.chip:disabled { opacity: .45; cursor: default; }
 // =====================================================================
 const NX = {
   version: '3.6.0',
-  build: '20261107-1059-4d98973-beta',
+  build: '20261112-1435-de985f0-beta',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',

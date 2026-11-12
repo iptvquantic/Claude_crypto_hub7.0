@@ -1,6 +1,6 @@
 # Mudanças
 
-## 3.6.0 — 07/11/2026 · Alertas no celular (preço e eventos)
+## 3.6.0 — 12/11/2026 · Alertas no celular (preço e eventos)
 - **Página nova Alertas** (menu Sua conta, grátis com conta): notificação no celular e no computador, mesmo com o site fechado.
   - **Alerta de preço:** qualquer moeda; passar de / cair abaixo de um valor em US$ ou R$, ou subir/cair X% em 24 h; uma vez ou toda vez que cruzar (rearma depois de voltar 0,3%); anotação; atalhos ±5%/±10%; preço agora e distância ao alvo ao vivo; pausar e apagar. Plano grátis: 3 ativos; PRO e teste: 30.
   - **Avisos de eventos:** automáticos para os eventos importantes (EUA, Brasil, cripto; alto ou médio impacto; 15 min, 30 min, 1 h ou 1 dia antes), programados para os próximos 60 dias, ou um a um pelo **sino** na página Eventos do mercado (lista, destaque e janela de detalhes).
@@ -9,7 +9,9 @@
 - Servidor: o banco chama a função `alerts` a cada minuto (Binance; moedas fora dela pelo CoinGecko); Web Push com criptografia padrão (VAPID + aes128gcm), chaves geradas no próprio servidor. Painel do administrador mostra a situação (última verificação, aparelhos, enviadas em 24 h).
 - Sair da conta tira este aparelho da lista de quem recebe.
 - Correção: a página Eventos do mercado aberta direto (sem passar pelo Dashboard) agora carrega também o IBGE e a agenda do robô.
+- Eventos do mercado: no celular a lista dos próximos 30 dias virou cartões (hora e país, evento, quando e sino), sem rolar para o lado; no computador e no tablet o nome do evento quebra a linha e a tabela cabe inteira (o sino fica sempre à vista).
 - Menu cabe sem rolar também em 1280×600 com o item novo e o administrador.
+- Robustez: a chave pública do servidor é sempre a atual (se mudar, a inscrição antiga do aparelho é trocada e sai da conta); o que foi marcado no sino nunca é trocado pelos avisos automáticos; tocar na notificação abre só a janela do próprio app (a raiz não pega a do /beta/).
 
 ## 3.5.1 — 07/11/2026 · Gráficos sem travar, altura ajustável e datas em todos
 - **Arrastar e dar zoom sem travar:** a etiqueta com o nome da linha, as legendas e a cruz dos painéis sincronizados passaram a ser desenhadas uma vez por quadro (antes, cada movimento do mouse refazia a página várias vezes). No Bitcoin Lab com velas e dois painéis, o pior quadro durante o arraste caiu de ~500 ms para 17 ms (teste em `dev/perf-chart.mjs`); no menu Gráfico, de 83 ms para 17 ms.
