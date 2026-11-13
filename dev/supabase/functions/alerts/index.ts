@@ -5,14 +5,32 @@
 //   POST {action:"test"} + login                  → notificação de teste nos aparelhos do usuário
 //   GET  ?vapid=1                                  → chave pública para o navegador assinar as notificações
 //   GET  ?health=1                                 → situação da função
+//   POST {mode:"probe"} + cabeçalho x-cron-key   → auto-teste de ponta a ponta: registra um aparelho de mentira no
+//                                                  serviço de push da Mozilla, envia com as chaves de produção e confere
+//                                                  se a mensagem chega e abre (não toca em contas nem em aparelhos reais)
 // As chaves (VAPID e a do agendador) ficam no banco, no esquema private: geradas lá dentro e aqui na
 // primeira vez; nunca passam pelo código do site.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.3';
 import { corsHeaders, env, SECRET } from './_shared.ts';
-import { generateVapidKeys, sendWebPush } from './webpush.js';
+import { b64uDec, b64uEnc, decryptPayload, generateVapidKeys, sendWebPush } from './webpush.js';
 import { judge, quoteFor, priceMsg, eventMsg, testMsg, renewMsg } from './core.js';
 
 const SUBJECT = 'https://iptvquantic.github.io/Claude_crypto_hub7.0/';
+const STALE_MS = 2 * 3600e3; // cotação parada há mais de 2 h (par suspenso, fonte travada) não dispara alerta
+const chunk = <T>(a: T[], n: number) => { const o: T[][] = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
+// lê tudo de 1000 em 1000 (a API do banco corta cada resposta em 1000 linhas)
+// deno-lint-ignore no-explicit-any
+async function all(q: (from: number, to: number) => PromiseLike<{ data: any[] | null; error: { message: string } | null }>, max = 20000) {
+  // deno-lint-ignore no-explicit-any
+  const out: any[] = [];
+  for (let from = 0; from < max; from += 1000) {
+    const { data, error } = await q(from, from + 999);
+    if (error) throw new Error(error.message);
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
 type Sb = ReturnType<typeof createClient>;
 type Msg = { kind: string; build: (lang: string, tz: string) => { title: string; body: string }; url: string; ttl: number; topic?: string; urgency?: string };
 
@@ -50,42 +68,48 @@ async function binance(symbols: string[]) {
   if (!symbols.length) return out;
   // deno-lint-ignore no-explicit-any
   const put = (x: any) => { const px = +x.lastPrice, op = +x.openPrice; if (px > 0) out[x.symbol] = { px, chg: op > 0 ? (px / op - 1) * 100 : NaN, t: +x.closeTime || Date.now() }; };
-  for (const h of BN_HOSTS) {
-    try {
-      const a = await getJSON(`${h}/api/v3/ticker/24hr?type=MINI&symbols=${encodeURIComponent(JSON.stringify(symbols))}`);
-      if (Array.isArray(a)) { a.forEach(put); return out; }
-    } catch (e) {
-      // um par saiu da Binance e derrubou o lote: um por um (no máximo 40)
-      if ((e as { status?: number }).status === 400) {
-        await Promise.all(symbols.slice(0, 40).map(async (s) => { try { put(await getJSON(`${h}/api/v3/ticker/24hr?type=MINI&symbol=${s}`, 6000)); } catch { /* fora */ } }));
-        return out;
+  const one = async (h: string, s: string) => { try { put(await getJSON(`${h}/api/v3/ticker/24hr?type=MINI&symbol=${s}`, 6000)); } catch { /* fora */ } };
+  // em lotes de 50; se um par saiu da Binance o lote volta 400: aí vai um por um, só naquele lote
+  await Promise.all(chunk(symbols, 50).map(async (part) => {
+    for (const h of BN_HOSTS) {
+      try {
+        const a = await getJSON(`${h}/api/v3/ticker/24hr?type=MINI&symbols=${encodeURIComponent(JSON.stringify(part))}`);
+        if (Array.isArray(a)) { a.forEach(put); return; }
+      } catch (e) {
+        if ((e as { status?: number }).status === 400) { await Promise.all(part.map((s) => one(h, s))); return; }
       }
     }
-  }
+  }));
   return out;
 }
 async function coingecko(ids: string[]) {
   const out: Record<string, { usd: number; brl: number; chg: number; brlChg: number; t: number }> = {};
   if (!ids.length) return out;
-  try {
-    const j = await getJSON(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.slice(0, 100).map(encodeURIComponent).join(',')}&vs_currencies=usd,brl&include_24hr_change=true&include_last_updated_at=true`);
-    // deno-lint-ignore no-explicit-any
-    for (const [id, v] of Object.entries(j as Record<string, any>)) {
-      if (v && v.usd > 0) out[id] = { usd: v.usd, brl: v.brl, chg: v.usd_24h_change, brlChg: v.brl_24h_change, t: (v.last_updated_at || 0) * 1000 || Date.now() };
-    }
-  } catch { /* CoinGecko fora ou limite: tenta no próximo minuto */ }
+  // 100 por pedido, no máximo 3 pedidos por minuto (limite do plano grátis)
+  for (const part of chunk(ids, 100).slice(0, 3)) {
+    try {
+      const j = await getJSON(`https://api.coingecko.com/api/v3/simple/price?ids=${part.map(encodeURIComponent).join(',')}&vs_currencies=usd,brl&include_24hr_change=true&include_last_updated_at=true`);
+      // deno-lint-ignore no-explicit-any
+      for (const [id, v] of Object.entries(j as Record<string, any>)) {
+        if (v && v.usd > 0) out[id] = { usd: v.usd, brl: v.brl, chg: v.usd_24h_change, brlChg: v.brl_24h_change, t: (v.last_updated_at || 0) * 1000 || Date.now() };
+      }
+    } catch { break; /* CoinGecko fora ou limite: tenta no próximo minuto */ }
+  }
   return out;
 }
 
 // ---------- envio ----------
 async function deliver(sb: Sb, vapid: { publicKey: string; privateKey: string }, out: Map<string, Msg[]>) {
-  const res = { sent: 0, failed: 0, devices: 0, gone: 0 };
+  const res = { sent: 0, failed: 0, devices: 0, gone: 0, why: [] as string[] };
   const users = [...out.keys()];
   if (!users.length) return res;
-  const { data: devs, error } = await sb.from('push_devices').select('id,user_id,endpoint,p256dh,auth,lang,tz').in('user_id', users);
-  if (error) throw new Error('devices: ' + error.message);
-  const byUser = new Map<string, typeof devs>();
-  for (const d of devs || []) { const a = byUser.get(d.user_id) || []; a.push(d); byUser.set(d.user_id, a); }
+  type Dev = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string; lang: string; tz: string | null };
+  const devs: Dev[] = [];
+  for (const part of chunk(users, 100)) {
+    devs.push(...await all((f, t) => sb.from('push_devices').select('id,user_id,endpoint,p256dh,auth,lang,tz').in('user_id', part).order('id').range(f, t)));
+  }
+  const byUser = new Map<string, Dev[]>();
+  for (const d of devs) { const a = byUser.get(d.user_id) || []; a.push(d); byUser.set(d.user_id, a); }
   const okIds = new Set<string>(), goneIds = new Set<string>(), bad = new Map<string, string>();
   const logs: Record<string, unknown>[] = [];
   const jobs: Promise<void>[] = [];
@@ -99,7 +123,13 @@ async function deliver(sb: Sb, vapid: { publicKey: string; privateKey: string },
         jobs.push((async () => {
           const txt = m.build(d.lang || 'pt', d.tz || 'America/Sao_Paulo');
           const payload = JSON.stringify({ ...txt, url: m.url, kind: m.kind, tag: m.topic ? 'nx-' + m.topic : undefined, ts: Date.now() });
-          const r = await sendWebPush(d, payload, vapid, SUBJECT, { ttl: m.ttl, urgency: m.urgency || 'high', topic: m.topic });
+          const send = () => sendWebPush(d, payload, vapid, SUBJECT, { ttl: m.ttl, urgency: m.urgency || 'high', topic: m.topic });
+          let r = await send();
+          // falha passageira (rede, limite ou erro do serviço de push): mais uma tentativa
+          if (!r.ok && !r.gone && !/^crypto/.test(r.err) && (r.status === 0 || r.status === 429 || r.status >= 500)) {
+            await new Promise((z) => setTimeout(z, 1200));
+            r = await send();
+          }
           if (r.ok) { row.sent++; okIds.add(d.id); } else { row.failed++; if (r.gone) goneIds.add(d.id); else bad.set(d.id, `${r.status} ${r.err}`.slice(0, 160)); }
         })());
       }
@@ -108,11 +138,12 @@ async function deliver(sb: Sb, vapid: { publicKey: string; privateKey: string },
   await Promise.all(jobs);
   for (const l of logs) { res.sent += l.sent as number; res.failed += l.failed as number; }
   res.gone = goneIds.size;
+  res.why = [...new Set(bad.values())].slice(0, 3);
   if (logs.length) await sb.from('alert_log').insert(logs);
   if (goneIds.size) await sb.from('push_devices').delete().in('id', [...goneIds]);
   if (okIds.size) await sb.from('push_devices').update({ last_ok_at: new Date().toISOString(), fails: 0, last_err: null }).in('id', [...okIds]);
   for (const [id, err] of bad) {
-    const d = (devs || []).find((x) => x.id === id);
+    const d = devs.find((x) => x.id === id);
     const { data: cur } = await sb.from('push_devices').select('fails').eq('id', id).maybeSingle();
     if (d && cur) await sb.from('push_devices').update({ fails: (cur.fails || 0) + 1, last_err: err }).eq('id', id);
   }
@@ -140,10 +171,9 @@ async function runCron(sb: Sb) {
   }
 
   // 2) alertas de preço
-  const { data: alerts, error: aErr } = await sb.from('price_alerts').select('*').eq('active', true).limit(5000);
-  if (aErr) errs.push('alertas: ' + aErr.message);
   // deno-lint-ignore no-explicit-any
-  const list = (alerts || []) as any[];
+  let list: any[] = [];
+  try { list = await all((f, t) => sb.from('price_alerts').select('*').eq('active', true).order('id').range(f, t)); } catch (e) { errs.push('alertas: ' + String((e as Error).message || e)); }
   st.alerts = list.length;
   if (list.length) {
     const bn = [...new Set(list.filter((a) => a.bn).map((a) => a.bn as string))];
@@ -153,7 +183,8 @@ async function runCron(sb: Sb) {
     Q.cg = await coingecko(needCg);
     const rearm: string[] = [];
     for (const a of list) {
-      const q = quoteFor(a, Q);
+      const q0 = quoteFor(a, Q);
+      const q = q0 && now - (q0.t || now) <= STALE_MS ? q0 : null;
       const j = judge(a, q);
       if (j === 'rearm') { rearm.push(a.id); continue; }
       if (j !== 'fire' || !q) continue;
@@ -197,6 +228,60 @@ async function runCron(sb: Sb) {
   return { ...st, ms: Date.now() - t0 };
 }
 
+// ---------- auto-teste de ponta a ponta (serviço de push da Mozilla, o mesmo do Firefox) ----------
+// Cria um "aparelho" só para o teste (chaves novas, nada gravado), envia com as chaves de produção e confere
+// se o serviço aceita (assinatura VAPID) e se a mensagem chega e abre igual à enviada (criptografia).
+async function probe(sb: Sb) {
+  const k = await getKeys(sb);
+  const vapid = { publicKey: k.vapid_public, privateKey: k.vapid_private };
+  const kp = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const uaPub = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
+  const auth = crypto.getRandomValues(new Uint8Array(16));
+  const chan = crypto.randomUUID();
+  const want = JSON.stringify({ title: 'NEXUS HUB', body: 'auto-teste ' + new Date().toISOString(), url: '#/alerts', kind: 'test' });
+  // deno-lint-ignore no-explicit-any
+  const rep: Record<string, any> = { ok: false, steps: [] as string[], at: new Date().toISOString() };
+  return await new Promise<typeof rep>((resolve) => {
+    let ended = false;
+    let ws: WebSocket;
+    const end = (extra: Record<string, unknown>) => {
+      if (ended) return;
+      ended = true; clearTimeout(timer);
+      try { ws.send(JSON.stringify({ messageType: 'unregister', channelID: chan })); } catch { /* */ }
+      try { ws.close(); } catch { /* */ }
+      resolve({ ...rep, ...extra, ms: Date.now() - Date.parse(rep.at) });
+    };
+    const timer = setTimeout(() => end({ error: 'timeout' }), 25000);
+    try { ws = new WebSocket('wss://push.services.mozilla.com/', 'push-notification'); } catch (e) { end({ error: 'ws: ' + String((e as Error).message || e) }); return; }
+    ws.onopen = () => { rep.steps.push('open'); ws.send(JSON.stringify({ messageType: 'hello', use_webpush: true, broadcasts: {} })); };
+    ws.onerror = (e) => { rep.steps.push('wserror ' + String((e as ErrorEvent).message || '').slice(0, 80)); };
+    ws.onclose = (e) => { rep.steps.push(`close ${e.code} ${String(e.reason || '').slice(0, 60)}`); end({ error: rep.error || 'closed' }); };
+    ws.onmessage = async (ev) => {
+      // deno-lint-ignore no-explicit-any
+      let m: any;
+      try { m = JSON.parse(String(ev.data)); } catch { return; }
+      rep.steps.push(String(m.messageType || 'ping') + (m.status ? ' ' + m.status : ''));
+      try {
+        if (m.messageType === 'hello') {
+          if (m.status !== 200) return end({ error: 'hello' });
+          ws.send(JSON.stringify({ messageType: 'register', channelID: chan, key: vapid.publicKey }));
+        } else if (m.messageType === 'register') {
+          if (m.status !== 200 || !m.pushEndpoint) return end({ error: 'register' });
+          rep.host = new URL(m.pushEndpoint).host;
+          const r = await sendWebPush({ endpoint: m.pushEndpoint, p256dh: b64uEnc(uaPub), auth: b64uEnc(auth) }, want, vapid, SUBJECT, { ttl: 60 });
+          rep.push = { status: r.status, ok: r.ok, err: r.err };
+          if (!r.ok) end({ error: 'push' });
+        } else if (m.messageType === 'notification') {
+          ws.send(JSON.stringify({ messageType: 'ack', updates: [{ channelID: m.channelID, version: m.version }] }));
+          rep.encoding = (m.headers && m.headers.encoding) || null;
+          const got = await decryptPayload(kp.privateKey, uaPub, auth, b64uDec(String(m.data || '')));
+          end({ ok: got === want, match: got === want });
+        }
+      } catch (e) { end({ error: 'probe: ' + String((e as Error).message || e).slice(0, 160) }); }
+    };
+  });
+}
+
 Deno.serve(async (req) => {
   const H = corsHeaders(req.headers.get('origin') ?? '');
   const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: H });
@@ -206,7 +291,7 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   try {
     if (req.method === 'GET') {
-      if (url.searchParams.has('health')) return json({ ok: true, fn: 'alerts', v: 1 });
+      if (url.searchParams.has('health')) return json({ ok: true, fn: 'alerts', v: 2 });
       if (url.searchParams.has('vapid')) { const k = await getKeys(sb); return json({ ok: true, key: k.vapid_public }); }
       return json({ ok: false, error: 'method' }, 405);
     }
@@ -215,6 +300,9 @@ Deno.serve(async (req) => {
     if (cron) {
       const k = await getKeys(sb);
       if (!sameKey(cron, k.cron_key)) return json({ ok: false, error: 'auth' }, 401);
+      let b: Record<string, unknown> = {};
+      try { b = await req.json(); } catch { /* corpo vazio */ }
+      if (String(b.mode || '') === 'probe') return json({ ok: true, probe: await probe(sb) });
       return json({ ok: true, ...(await runCron(sb)) });
     }
     const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim();

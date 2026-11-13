@@ -528,6 +528,18 @@ console.log('\n[4b] Alertas no celular');
   await page.evaluate(() => { window.__sub.options = { applicationServerKey: new Uint8Array(65).fill(7).buffer }; window.__subOpts = null; });
   await page.evaluate(() => ACT.alOn()); await sleep(2500);
   ok(await page.evaluate((ep) => !!window.__subOpts && !!window.__sub && window.__sub.endpoint !== ep, ep0) && supa.db.devices.length === 1 && supa.db.devices[0].endpoint !== ep0, 'chave do servidor mudou: refaz a inscrição e tira a antiga da conta');
+  // o navegador perdeu a inscrição (acontece de tempos em tempos): ao abrir o app, ela é refeita sozinha
+  const ep1 = await page.evaluate(() => window.__sub.endpoint);
+  ok(await page.evaluate(() => { const m = LS.get('al-ep'); return !!m && m.e === window.__sub.endpoint.slice(-40); }), 'aparelho ativo fica marcado neste navegador');
+  await page.evaluate(() => { window.__sub = null; });
+  ok(await page.evaluate(() => alHeal()) === true && await page.evaluate((ep) => !!window.__sub && window.__sub.endpoint !== ep, ep1) && supa.db.devices.some((d) => d.endpoint !== ep1), 'inscrição perdida pelo navegador é refeita sozinha');
+  // a pessoa tirou este aparelho da lista em outro lugar: a inscrição é a mesma e nada volta sozinho
+  supa.db.devices.length = 0;
+  ok(await page.evaluate(() => alHeal()) === false && supa.db.devices.length === 0, 'aparelho removido da lista não volta sozinho');
+  await page.evaluate(async () => { await alSaveSub(window.__sub); await alLoad(true); }); await sleep(400);
+  ok(supa.db.devices.length === 1, 'lista de aparelhos de volta ao normal para os próximos testes');
+  // navegador com serviço de notificações desconhecido: o servidor recusa e o site explica o que usar
+  ok(await page.evaluate(async () => { try { await alSaveSub({ toJSON: () => ({ endpoint: 'https://push.desconhecido.example/x', keys: { p256dh: 'A', auth: 'B' } }) }); return 'aceitou'; } catch (e) { return String(e.message); } }).then((m) => /Chrome, o Edge, o Firefox ou o Safari/.test(m)) && supa.db.devices.length === 1, 'serviço de notificações desconhecido é recusado com orientação clara');
   // alerta de preço: BTC acima de +5%, em reais
   await page.click('.seg[data-seg="alccy"] button[data-v="brl"]'); await sleep(300);
   await page.click('[data-act=alQuick][data-k="5"]'); await sleep(300);

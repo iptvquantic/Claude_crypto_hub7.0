@@ -61,7 +61,20 @@ do $$ declare r jsonb; begin
   if not (r ->> 'ok')::boolean then raise exception 'salvar aparelho: %', r; end if;
   if (select count(*) from public.push_devices) <> 1 then raise exception 'alice deveria ver 1 aparelho'; end if;
 end $$;
-select pg_temp.expect_fail($q$select public.push_device_save('http://inseguro.com/x', repeat('A', 87), repeat('B', 22))$q$, 'endereço sem https');
+-- só serviços de notificação conhecidos (migração 05): o resto é recusado com resposta clara
+do $$ declare r jsonb; u text; begin
+  foreach u in array array['http://fcm.googleapis.com/fcm/send/x', 'https://evil.example/x', 'https://fcm.googleapis.com.evil.example/x',
+    'https://evil.example/?x=fcm.googleapis.com/', 'https://fcm.googleapis.com@evil.example/x', 'https://FCM.googleapis.com/x', 'https://googleapis.com.br/x'] loop
+    r := public.push_device_save(u, repeat('A', 87), repeat('B', 22));
+    if (r ->> 'ok')::boolean or r ->> 'error' <> 'endpoint' then raise exception 'endereço % deveria ser recusado: %', u, r; end if;
+  end loop;
+  foreach u in array array['https://updates.push.services.mozilla.com/wpush/v2/gAAA', 'https://web.push.apple.com/QK1', 'https://wns2-by3p.notify.windows.com/w/?token=BQYAAAD%2b',
+    'https://jmt17.google.com/fcm/send/zz9'] loop
+    r := public.push_device_save(u, repeat('A', 87), repeat('B', 22));
+    if not (r ->> 'ok')::boolean then raise exception 'endereço % deveria ser aceito: %', u, r; end if;
+  end loop;
+  delete from public.push_devices where endpoint !~ 'abc123';
+end $$;
 select pg_temp.expect_fail($q$insert into public.push_devices (user_id, endpoint, p256dh, auth) values (auth.uid(), 'https://x.com/y', repeat('A', 87), repeat('B', 22))$q$, 'gravar aparelho direto na tabela');
 select pg_temp.expect_fail($q$insert into public.alert_log (user_id, kind, title) values (auth.uid(), 'info', 'falso')$q$, 'cliente escrever no histórico');
 select pg_temp.expect_fail($q$select public.alerts_server_keys()$q$, 'cliente ler as chaves do servidor');

@@ -79,8 +79,36 @@ export async function encryptPayload(p256dh, auth, payload) {
   return concat(head, ct);
 }
 
+// (diagnóstico e testes) abre um corpo aes128gcm com a chave privada do aparelho
+export async function decryptPayload(uaPrivateKey, uaPublicRaw, auth, body) {
+  const b = body instanceof Uint8Array ? body : new Uint8Array(body);
+  const salt = b.slice(0, 16), idlen = b[20], asPub = b.slice(21, 21 + idlen), ct = b.slice(21 + idlen);
+  const asKey = await crypto.subtle.importKey('raw', asPub, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: asKey }, uaPrivateKey, 256));
+  const ikm = await hkdf(auth, shared, concat(te.encode('WebPush: info\0'), uaPublicRaw, asPub), 32);
+  const cek = await hkdf(salt, ikm, te.encode('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, te.encode('Content-Encoding: nonce\0'), 12);
+  const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['decrypt']);
+  const pt = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: nonce }, key, ct));
+  let end = pt.length;
+  while (end > 0 && pt[end - 1] === 0) end--;
+  if (!end || pt[end - 1] !== 2) throw new Error('padding');
+  return new TextDecoder().decode(pt.slice(0, end - 1));
+}
+
+// só serviços de notificação conhecidos (Google/FCM: Chrome, Edge no Android, Samsung, Opera · Mozilla: Firefox ·
+// Apple: Safari e app no iPhone · WNS: Edge no Windows). O servidor nunca manda pedidos para outro endereço.
+const PUSH_HOSTS = /(^|\.)(googleapis\.com|google\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com)$/;
+export function pushHostOk(endpoint) {
+  try {
+    const u = new URL(endpoint);
+    return u.protocol === 'https:' && (u.port === '' || u.port === '443') && !u.username && !u.password && PUSH_HOSTS.test(u.hostname);
+  } catch { return false; }
+}
+
 // envia; 404/410 = assinatura cancelada (o aparelho sai da lista)
 export async function sendWebPush(dev, payload, vapid, subject, { ttl = 3600, urgency = 'high', topic = '', timeoutMs = 10000, fetchFn = fetch } = {}) {
+  if (!pushHostOk(dev.endpoint)) return { ok: false, status: 0, gone: true, err: 'host' };
   let body, authz;
   try {
     body = await encryptPayload(dev.p256dh, dev.auth, payload);

@@ -1,5 +1,14 @@
 # Mudanças
 
+## 3.6.1 — 13/11/2026 · Alertas: envio conferido de ponta a ponta e reforços
+
+- **Envio conferido num serviço de notificações de verdade** (o da Mozilla, usado pelo Firefox): a função `alerts` ganhou um auto-teste (`mode: "probe"`, só com a chave do agendador) que registra um aparelho de teste, envia com as chaves de produção e confere se a mensagem chega e abre igual à enviada. Em 13/11: aceita e entregue em 0,8 s. Não toca em contas nem em aparelhos de clientes.
+- Segurança: um aparelho só entra com endereço dos serviços de notificação conhecidos (Google, Mozilla, Apple, Microsoft) — regra no banco (migração `05_alertas_reforco.sql`) e na função. Antes, qualquer endereço https era aceito e uma conta mal-intencionada poderia fazer o servidor mandar pedidos para outro site.
+- Confiabilidade: nova tentativa quando o serviço de notificações falha por um instante; cotação parada há mais de 2 h (par suspenso, fonte travada) não dispara alerta; alertas e aparelhos lidos de 1000 em 1000; Binance consultada em lotes (um par retirado não atrasa os outros); se o navegador troca ou perde a inscrição, o app refaz sozinho ao abrir; quando o teste não chega, o aviso mostra o motivo.
+- Banco: limpeza diária do histórico do agendador (crescia 1.440 linhas por dia, para sempre).
+- Testes novos: `dev/test-alerts-fn.mjs` (a função inteira no Node, com banco, Binance e serviço de notificações simulados: 2.300 alertas, paginação, cotação parada, nova tentativa, aparelho cancelado); alertas com 75 verificações; app com mais 5.
+- Pendente do dono (1 minuto): as 4 linhas de REVOKE do fim da migração 05, pelo SQL Editor (o conector não aplica REVOKE). Sem elas nada quebra: as funções já conferem quem chama.
+
 ## 3.6.0 — 12/11/2026 · Alertas no celular (preço e eventos)
 - **Página nova Alertas** (menu Sua conta, grátis com conta): notificação no celular e no computador, mesmo com o site fechado.
   - **Alerta de preço:** qualquer moeda; passar de / cair abaixo de um valor em US$ ou R$, ou subir/cair X% em 24 h; uma vez ou toda vez que cruzar (rearma depois de voltar 0,3%); anotação; atalhos ±5%/±10%; preço agora e distância ao alvo ao vivo; pausar e apagar. Plano grátis: 3 ativos; PRO e teste: 30.

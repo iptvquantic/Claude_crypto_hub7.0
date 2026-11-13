@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-8AoCJryea+qRvHkSW3GS2JUyUFa1eDSQim4fi0jFLBk=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vLwWbw5gvQLc5JrdqxmRGVb3+8cZRHabVRSfwtccqf4=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -2419,8 +2419,8 @@ button.chip:disabled { opacity: .45; cursor: default; }
 // com fonte e data de conferência) ou AUSENTE ("—"). Nada de constante disfarçada de dado.
 // =====================================================================
 const NX = {
-  version: '3.6.0',
-  build: '20261112-1435-de985f0-beta',
+  version: '3.6.1',
+  build: '20261113-1028-b26556b-beta',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',
@@ -10395,7 +10395,29 @@ async function alSaveSub(sub) {
   let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { /* */ }
   const { data, error } = await sb.rpc('push_device_save', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_label: alDevLabel(), p_lang: S.lang === 'en' ? 'en' : 'pt', p_tz: tz });
   if (error) throw new Error(error.message);
-  if (data && data.ok === false) throw new Error(L('Limite de 10 aparelhos: remova um da lista antes.', 'Limit of 10 devices: remove one first.'));
+  if (data && data.ok === false) {
+    throw new Error(data.error === 'endpoint'
+      ? L('Este navegador usa um serviço de notificações que o NEXUS ainda não aceita. Use o Chrome, o Edge, o Firefox ou o Safari (no iPhone, o app instalado).', 'This browser uses a notification service NEXUS does not accept yet. Use Chrome, Edge, Firefox or Safari (on iPhone, the installed app).')
+      : L('Limite de 10 aparelhos: remova um da lista antes.', 'Limit of 10 devices: remove one first.'));
+  }
+}
+// este aparelho estava recebendo: guarda o fim do endereço da inscrição, para notar quando o navegador a troca
+const alEpId = (sub) => String((sub && sub.endpoint) || '').slice(-40);
+const alMark = (sub) => { if (sub && ACCOUNT.user) LS.set('al-ep', { u: ACCOUNT.user.id, e: alEpId(sub) }); else LS.del('al-ep'); };
+// O navegador pode trocar ou perder a inscrição de tempos em tempos. Se este aparelho estava recebendo e a
+// inscrição mudou, refaz sozinho (a permissão já foi dada), para os alertas não pararem em silêncio.
+// Se foi a pessoa que tirou o aparelho da lista, a inscrição continua a mesma e nada é refeito.
+async function alHeal() {
+  try {
+    const was = LS.get('al-ep');
+    if (!ACCOUNT.user || !was || was.u !== ACCOUNT.user.id || alEnv() !== 'ok' || Notification.permission !== 'granted') return false;
+    const reg = await alReg(); if (!reg || !reg.pushManager) return false;
+    let sub = await reg.pushManager.getSubscription();
+    if (sub && alEpId(sub) === was.e) return false;
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: alB64(await alVapid()) });
+    await alSaveSub(sub); alMark(sub); AL.sub = sub;
+    return true;
+  } catch (e) { console.warn('[NX] alertas: refazer a inscrição', e); return false; }
 }
 // este aparelho está na lista da conta?
 const alThisDev = () => (AL.sub ? AL.dev.find((d) => d.endpoint === AL.sub.endpoint) || null : null);
@@ -10416,7 +10438,7 @@ ACT.alOn = async () => {
     }
     if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: alB64(key) });
     await alSaveSub(sub);
-    AL.sub = sub;
+    AL.sub = sub; alMark(sub);
     await alLoad(true);
     await alTest(true);
   } catch (e) {
@@ -10428,7 +10450,11 @@ async function alTest(quiet) {
   if (j.status === 429) { if (!quiet) toast(L('Espere alguns segundos para mandar outro teste.', 'Wait a few seconds before another test.'), { type: 'warn' }); return; }
   if (!j.ok) throw new Error(j.detail || j.error || 'HTTP ' + j.status);
   if (j.sent) toast(L(`Notificação de teste enviada para ${j.sent} aparelho${j.sent > 1 ? 's' : ''}. Confira a tela.`, `Test notification sent to ${j.sent} device${j.sent > 1 ? 's' : ''}. Check the screen.`), { type: 'ok', ms: 6000 });
-  else toast(L('Nenhum aparelho recebeu o teste. Desative e ative de novo neste aparelho.', 'No device got the test. Turn alerts off and on again on this device.'), { type: 'warn', ms: 7000 });
+  else {
+    // o motivo que o serviço de notificações deu (ajuda o suporte a resolver de primeira)
+    const why = Array.isArray(j.why) && j.why[0] ? ` (${String(j.why[0]).slice(0, 90)})` : '';
+    toast(L(`Nenhum aparelho recebeu o teste${why}. Desative e ative de novo neste aparelho.`, `No device got the test${why}. Turn alerts off and on again on this device.`), { type: 'warn', ms: 9000 });
+  }
   setTimeout(() => alLoad(true), 1500);
 }
 ACT.alTest = () => alTest(false).catch((e) => toast(String(e.message || e), { type: 'err' }));
@@ -10439,20 +10465,21 @@ ACT.alOff = async () => {
     try { await sub.unsubscribe(); } catch { /* */ }
     try { const sb = await sbClient(); await sb.from('push_devices').delete().eq('endpoint', ep); } catch { /* */ }
   }
-  AL.sub = null; await alLoad(true);
+  AL.sub = null; alMark(null); await alLoad(true);
   toast(L('Este aparelho não recebe mais os alertas.', 'This device no longer gets alerts.'), { type: 'ok' });
 };
 ACT.alDevDel = async (b) => {
   const d = AL.dev.find((x) => x.id === b.dataset.id); if (!d) return;
   if (!(await confirmBox(L(`Parar de enviar alertas para "${d.label || 'aparelho'}"?`, `Stop sending alerts to "${d.label || 'device'}"?`), { ok: L('Remover', 'Remove'), danger: true }))) return;
   try {
-    if (AL.sub && AL.sub.endpoint === d.endpoint) { try { await AL.sub.unsubscribe(); } catch { /* */ } AL.sub = null; }
+    if (AL.sub && AL.sub.endpoint === d.endpoint) { try { await AL.sub.unsubscribe(); } catch { /* */ } AL.sub = null; alMark(null); }
     const sb = await sbClient(); const { error } = await sb.from('push_devices').delete().eq('id', d.id); if (error) throw new Error(error.message);
   } catch (e) { toast(String(e.message || e), { type: 'err' }); }
   alLoad(true);
 };
 // sair da conta: este aparelho para de receber os alertas dela
 async function alForgetDevice() {
+  alMark(null);
   const sub = await alCurSub(); if (!sub) return;
   const ep = sub.endpoint;
   try { const sb = await sbClient(); await Promise.race([sb.from('push_devices').delete().eq('endpoint', ep), new Promise((r) => setTimeout(r, 2500))]); } catch { /* */ }
@@ -10833,6 +10860,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('mess
 onAccount(() => {
   if (!ACCOUNT.user) { AL = alNew(); return; }
   if (AL.uid && AL.uid !== ACCOUNT.user.id) AL = alNew();
+  if (LS.get('al-ep')) setTimeout(() => alHeal().then((ok) => { if (ok && S.page === 'alerts') alLoad(true); }), 6000);
   const k = 'al-sync:' + ACCOUNT.user.id;
   if (Date.now() - (num(LS.get(k)) || 0) < 2 * 86400e3) return;
   setTimeout(async () => {

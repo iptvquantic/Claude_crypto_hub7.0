@@ -3,7 +3,7 @@
 // regras de disparo/rearme e os textos das notificações.  Uso: node dev/test-alerts.mjs
 import crypto from 'node:crypto';
 import ece from 'http_ece';
-import { b64uEnc, b64uDec, generateVapidKeys, vapidHeader, encryptPayload, sendWebPush } from './supabase/functions/alerts/webpush.js';
+import { b64uEnc, b64uDec, generateVapidKeys, vapidHeader, encryptPayload, decryptPayload, pushHostOk, sendWebPush } from './supabase/functions/alerts/webpush.js';
 import { judge, quoteFor, priceMsg, eventMsg, testMsg, renewMsg, money, fmtNum } from './supabase/functions/alerts/core.js';
 
 let n = 0;
@@ -67,6 +67,21 @@ ok(crypto.verify('sha256', Buffer.from(`${m[1]}.${m[2]}`), { key: pubKey, dsaEnc
   ok(!r3.ok && !r3.gone && r3.status === 500, '500 = falha temporária');
   const r4 = await sendWebPush({ ...b.sub, p256dh: 'curto' }, 'x', vapid, 'https://x.y/', { fetchFn: fakeFetch });
   ok(!r4.ok && /crypto/.test(r4.err), 'assinatura inválida não quebra o envio');
+  // só serviços de notificação conhecidos: o servidor nunca manda pedido para outro endereço
+  const n0 = calls.length;
+  for (const u of ['https://evil.example/x', 'http://fcm.googleapis.com/fcm/send/x', 'https://fcm.googleapis.com.evil.example/x', 'https://evil.example/?h=fcm.googleapis.com', 'https://user@fcm.googleapis.com/x', 'https://fcm.googleapis.com:8443/x', 'https://127.0.0.1/x', 'nada']) {
+    const r = await sendWebPush({ ...b.sub, endpoint: u }, 'x', vapid, 'https://x.y/', { fetchFn: fakeFetch });
+    ok(!r.ok && r.gone && r.err === 'host' && !pushHostOk(u), 'endereço fora dos serviços de push é recusado: ' + u);
+  }
+  eq(calls.length, n0, 'nenhum pedido saiu para endereço recusado');
+  for (const u of ['https://fcm.googleapis.com/fcm/send/a', 'https://jmt17.google.com/fcm/send/a', 'https://updates.push.services.mozilla.com/wpush/v2/a', 'https://web.push.apple.com/a', 'https://wns2-by3p.notify.windows.com/w/?token=a%2b']) ok(pushHostOk(u), 'serviço de push aceito: ' + u);
+}
+// ida e volta com o decifrador do auto-teste (o mesmo que confere o envio real no servidor)
+{
+  const kp = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const pub = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey)), auth = crypto.randomBytes(16);
+  const msg = JSON.stringify({ title: 'ação', body: 'R$ 1.234,56 · é' });
+  eq(await decryptPayload(kp.privateKey, pub, new Uint8Array(auth), await encryptPayload(b64uEnc(pub), b64uEnc(auth), msg)), msg, 'decifrador do auto-teste abre a mensagem');
 }
 
 // ---------- 3. regras ----------

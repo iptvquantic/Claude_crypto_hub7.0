@@ -248,6 +248,8 @@ export function makeSupabase({ plan = 'trial', admin = false } = {}) {
     }
     if (p === '/rest/v1/rpc/push_device_save') {
       const b = JSON.parse(body || '{}'); const ex = db.devices.find((d) => d.endpoint === b.p_endpoint);
+      // como no banco (migração 05): só serviços de notificação conhecidos
+      if (!/^https:\/\/([a-z0-9-]+\.)*(googleapis\.com|google\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com)(:443)?\//.test(b.p_endpoint || '')) return json({ ok: false, error: 'endpoint' });
       if (ex) Object.assign(ex, { label: b.p_label, lang: b.p_lang }); else db.devices.push({ id: 'd-' + ++n, endpoint: b.p_endpoint, label: b.p_label, lang: b.p_lang, created_at: new Date().toISOString(), last_ok_at: null, fails: 0 });
       db.lastDevice = b; return json({ ok: true });
     }
