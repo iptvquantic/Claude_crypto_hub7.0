@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vLwWbw5gvQLc5JrdqxmRGVb3+8cZRHabVRSfwtccqf4=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-JVQ42lP+L2/IzGGN4TdEvk8+xsafDIeI0RSkiMFNn3c=' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://stream.binance.com:9443 wss://data-stream.binance.vision; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>NEXUS HUB · Painel de cripto e mercado ao vivo</title>
 <meta name="description" content="Painel em português com preços de cripto ao vivo, on-chain, juros (Fed e Copom), agenda econômica, Polymarket, notícias e carteira com preço médio. Cada número com fonte e horário.">
@@ -2419,8 +2419,8 @@ button.chip:disabled { opacity: .45; cursor: default; }
 // com fonte e data de conferência) ou AUSENTE ("—"). Nada de constante disfarçada de dado.
 // =====================================================================
 const NX = {
-  version: '3.6.1',
-  build: '20261113-1028-b26556b-beta',
+  version: '3.6.2',
+  build: '20261114-1644-dd769ae-beta',
   // Supabase (login e Portfolio Vault). Só a chave PUBLICÁVEL fica no código; a de serviço vive no servidor.
   supabaseUrl: 'https://ccgpmnqlqsuetqindwkb.supabase.co',
   supabaseKey: 'sb_publishable_O-IF8C1MFkpPJXRja5m2rA_Ny_XDDMW',
@@ -12300,7 +12300,7 @@ function admDraw() {
 const MC_SB_REF = 'jgqhtshcuyzytljkmmxd';
 // nomes das tarefas do robô (status.json) para o painel
 function pipeName(k) {
-  const n = { news: L('Notícias', 'News'), calendar: L('Agenda econômica', 'Economic calendar'), markets: L('Arquivo de mercados', 'Markets file'), quotes: L('Bolsas e índices', 'Stock indices'), etfs: L('Cotas de ETFs', 'ETF quotes'), etfAum: L('Patrimônio dos ETFs', 'ETF assets'), miners: L('Mineradoras listadas', 'Listed miners'), world: L('Maiores ativos do mundo', 'Largest assets'), lab: L('Histórico on-chain (Bitcoin Lab)', 'On-chain history (Bitcoin Lab)'), buybacks: L('Recompra e queima', 'Buybacks and burns'), whales: L('Baleias (maiores endereços)', 'Whales (largest addresses)'), tokens: L('Tokens reconhecidos (Wallet Watch)', 'Recognized tokens (Wallet Watch)'), db: L('Banco de dados ativo (contas e Vault)', 'Database awake (accounts and Vault)'), dbMc: L('Banco do Meu Caixa ativo (outro app)', 'Meu Caixa database awake (other app)'), appLicitafacil: L('LicitaFácil: API no Render (a cada ~5 h)', 'LicitaFácil: Render API (every ~5 h)'), appCredix: L('CREDIX: API no Render (a cada ~5 h)', 'CREDIX: Render API (every ~5 h)') }[k];
+  const n = { news: L('Notícias', 'News'), calendar: L('Agenda econômica', 'Economic calendar'), markets: L('Arquivo de mercados', 'Markets file'), quotes: L('Bolsas e índices', 'Stock indices'), etfs: L('Cotas de ETFs', 'ETF quotes'), etfAum: L('Patrimônio dos ETFs', 'ETF assets'), miners: L('Mineradoras listadas', 'Listed miners'), world: L('Maiores ativos do mundo', 'Largest assets'), lab: L('Histórico on-chain (Bitcoin Lab)', 'On-chain history (Bitcoin Lab)'), buybacks: L('Recompra e queima', 'Buybacks and burns'), whales: L('Baleias (maiores endereços)', 'Whales (largest addresses)'), tokens: L('Tokens reconhecidos (Wallet Watch)', 'Recognized tokens (Wallet Watch)'), db: L('Banco de dados ativo (contas e Vault)', 'Database awake (accounts and Vault)'), dbMc: L('Banco do Meu Caixa ativo (outro app)', 'Meu Caixa database awake (other app)'), appLicitafacil: L('LicitaFácil: API na Vercel (a cada ~5 h)', 'LicitaFácil: Vercel API (every ~5 h)'), appCredix: L('CREDIX: API no Render (1 vez por dia, às 13h)', 'CREDIX: Render API (once a day, 1 PM)') }[k];
   return n || k;
 }
 const pipeEvent = (e) => ({ schedule: L('agendamento do GitHub', 'GitHub schedule'), workflow_dispatch: L('pedido (agendador do banco ou botão Run workflow)', 'requested (scheduler or Run workflow)'), push: L('publicação', 'push') }[e] || e);

@@ -92,17 +92,22 @@ async function dbMc() {
     return { ms: Date.now() - t };
   } finally { clearTimeout(to); }
 }
-// APIs dos outros apps do dono no Render grátis (LicitaFácil e CREDIX). O UptimeRobot grátis confere de 5 em
-// 5 min, o que deixa cada serviço acordado 24 h: dois serviços esgotam as 750 h/mês do Render em ~16 dias (em
-// 26/10/2026 todos os serviços grátis foram suspensos até o mês seguinte). Aqui, uma chamada de saúde a cada
-// ~5 h acorda a API por ~15 min e consulta o banco dela (o Supabase grátis pausa com ~7 dias sem uso): ~40 h/mês
-// por serviço. Endereços públicos, sem chave; falha nunca derruba o robô.
-const APPS = [['appLicitafacil', 'https://licitafacil-api-kxks.onrender.com/api/health'], ['appCredix', 'https://loan-system-api-af5k.onrender.com/health']];
+// APIs dos outros apps do dono (CREDIX e LicitaFácil). O Render grátis dá 750 h por mês para a conta inteira e
+// cada acesso deixa o serviço acordado ~15 min. Desde 14/11/2026 quem mantém o CREDIX acordado é o banco do
+// NEXUS (migração 06: janela diária que cabe na cota do mês, centrada às 13h30 de Brasília); aqui a conferência
+// do CREDIX só acontece às 13h de Brasília (dentro da janela), para nunca acordá-lo fora de hora. O LicitaFácil
+// é conferido na API da Vercel, a que o site dele usa (o Render dele é só reserva): não gasta hora do Render.
+// No máximo a cada ~5 h. Endereços públicos, sem chave; falha nunca derruba o robô.
+const APPS = [
+  ['appLicitafacil', 'https://licitafacil-one.vercel.app/api/health', false],
+  ['appCredix', 'https://loan-system-api-af5k.onrender.com/health', true],
+];
 const APP_EVERY = 5 * 3600e3;
+const brtHour = () => (process.env.NX_BRT_HOUR !== undefined ? +process.env.NX_BRT_HOUR : new Date(Date.now() - 3 * 3600e3).getUTCHours());
 async function apps(prevStatus) {
-  await Promise.all(APPS.map(async ([k, url]) => {
+  await Promise.all(APPS.map(async ([k, url, render]) => {
     const p = prevStatus && prevStatus.sources && prevStatus.sources[k];
-    if (p && p.at && Date.now() - Date.parse(p.at) < APP_EVERY) { status[k] = { ...p, cached: true }; return; }
+    if ((render && brtHour() !== 13) || (p && p.at && Date.now() - Date.parse(p.at) < APP_EVERY)) { if (p) status[k] = { ...p, cached: true }; return; }
     const t = Date.now(), at = new Date().toISOString();
     try {
       const r = await raw(url, { timeout: 90000 }); // acordar o serviço grátis leva até ~1 min

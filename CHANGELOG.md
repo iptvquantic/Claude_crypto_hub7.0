@@ -1,5 +1,15 @@
 # Mudanças
 
+## 3.6.2 — 14/11/2026 · Render: horas grátis bem aproveitadas (CREDIX acordado ~22 h por dia)
+
+- O Render grátis dá 750 h por mês para a conta inteira e desliga o serviço depois de 15 min sem acesso. Os monitores do UptimeRobot (de 5 em 5 min) deixavam as APIs do CREDIX e do LicitaFácil acordadas 24 h: ~650 h gastas até 14/11, e as horas acabariam por volta de 16/11 (o Render suspende tudo até o dia 1º).
+- Agora o banco do NEXUS acorda o CREDIX numa janela por dia que cabe na cota do mês (migração `06_render_acordado.sql`, pg_cron `nexus-render-acordado` a cada 10 min): a janela = o que sobra da cota ÷ dias que faltam, centrada às 13h30 de Brasília e recalculada todo dia. A partir de dezembro, ~22 h por dia (dorme só de madrugada); no resto de novembro, ~4,8 h por dia (11h–16h), com o que sobrou do mês.
+- LicitaFácil: o site dele usa a API da Vercel (o Render é só reserva e acorda sozinho se precisar), então as horas do Render vão para o CREDIX. O monitor do UptimeRobot passou a conferir a API da Vercel (de 5 em 5 min, sem gastar hora do Render, e mantém o banco dele ativo); o workflow "Manter banco ativo" do LicitaFácil só chama a Vercel.
+- CREDIX: monitor do UptimeRobot pausado; o "Manter sistema ativo" continua falando com o banco 4 vezes por dia e confere a API 1 vez, às 13h17 (dentro da janela).
+- Robô: confere o CREDIX só às 13h de Brasília (nunca o acorda fora de hora) e o LicitaFácil pela Vercel; Painel do administrador com os nomes novos.
+- Testes: `dev/supabase/test/render.sql` (dia útil, fim de semana, virada do mês, cota esgotada, desligado, CREDIX em dezembro) e o robô com uma execução de madrugada.
+- Reverter: `select cron.unschedule('nexus-render-acordado');` e retomar o monitor do CREDIX no UptimeRobot.
+
 ## 3.6.1 — 13/11/2026 · Alertas: envio conferido de ponta a ponta e reforços
 
 - **Envio conferido num serviço de notificações de verdade** (o da Mozilla, usado pelo Firefox): a função `alerts` ganhou um auto-teste (`mode: "probe"`, só com a chave do agendador) que registra um aparelho de teste, envia com as chaves de produção e confere se a mensagem chega e abre igual à enviada. Em 13/11: aceita e entregue em 0,8 s. Não toca em contas nem em aparelhos de clientes.

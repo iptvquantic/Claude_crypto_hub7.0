@@ -1,6 +1,6 @@
 // Testa o robô de dados (scripts/atualizar-dados.mjs) sem internet: troca o fetch por respostas simuladas
 // e confere os arquivos gerados. Uso: node dev/test-robot.mjs
-import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -44,6 +44,7 @@ function tkMcResult(n, dec) { // resposta do Multicall3.aggregate3 com n resulta
   return '0x' + head + offs + body;
 }
 let calls = 0;
+process.env.NX_BRT_HOUR = '13'; // conferência das APIs do Render só às 13h de Brasília (dentro da janela)
 let pingFails = false; let pings = []; let mcPings = []; let appPings = [];
 let cg429 = 1; const bdCalls = []; let tvHist = 0; // páginas do CoinGecko respondidas com "429" (limite por minuto) antes de responder normalmente
 let prevDir = null, cmcCalls = 0; // 3ª execução: arquivos da 1ª servidos como "anteriores" (ramo data)
@@ -55,7 +56,7 @@ globalThis.fetch = async (url, opts = {}) => {
   const res = (body, ok = true, status = 200, ct = null) => { const txt = typeof body === 'string' ? body : JSON.stringify(body); return { ok, status, headers: { get: (h) => (h.toLowerCase() === 'content-type' ? ct : null) }, text: async () => txt, json: async () => (typeof body === 'string' ? JSON.parse(body) : body), arrayBuffer: async () => (body instanceof Uint8Array ? body : new TextEncoder().encode(txt)).buffer }; };
   if (u.includes('feeds.folha.uol.com.br/mundo')) { const xml = `<?xml version="1.0" encoding="ISO-8859-1"?><rss><channel><title>Folha</title><item><title>Papa faz oração pela paz em Gaza e pede cessar-fogo</title><link>https://folha.test/1</link><pubDate>${new Date(now - 2 * 3600e3).toUTCString()}</pubDate></item></channel></rss>`; return res(Uint8Array.from(xml, (c) => c.charCodeAt(0)), true, 200, 'text/xml; charset=ISO-8859-1'); }
   if (u.includes('.supabase.co/rest/v1/rpc/ping')) { pings.push({ u, method: opts.method, key: (opts.headers || {}).apikey }); return pingFails ? res('paused', false, 540) : res({ ok: true, server_time: new Date().toISOString() }); }
-  if (u.includes('.onrender.com/')) { appPings.push(u); return pingFails ? res('Service Suspended', false, 503) : res({ status: 'ok', db: 'ok' }); }
+  if (u.includes('.onrender.com/') || u.includes('licitafacil-one.vercel.app/')) { appPings.push(u); return pingFails ? res('Service Suspended', false, 503) : res({ status: 'ok', db: 'ok' }); }
   if (u.includes('.supabase.co/functions/v1/whatsapp?health=1')) { mcPings.push(u); return pingFails ? res('paused', false, 540) : res({ db: true, configured: true }); }
   if (failing.has(u)) return res('erro', false, 503);
   if (u.includes('community-api.coinmetrics.io/v4/timeseries')) return res({ data: cmRows() });
@@ -178,7 +179,7 @@ const bj = read('bench');
 ok(bj.h['^BVSP'] && bj.h['^GSPC'] && bj.h['^BVSP'].d.length === 299 && bj.h['^BVSP'].d.length === bj.h['^BVSP'].c.length && bj.h['^BVSP'].c.every(Number.isFinite) && st.sources.bench.ok, 'índices para a comparação do Vault: 10 anos de Ibovespa e S&P 500 (dia sem fechamento fica de fora)');
 ok(st.sources.db && st.sources.db.ok && pings.length === 1 && pings[0].method === 'POST' && /^sb_publishable_/.test(pings[0].key), 'banco mantido ativo (ping com a chave publicável da configuração)');
 ok(st.sources.dbMc && st.sources.dbMc.ok && mcPings.length === 1, 'banco do Meu Caixa mantido ativo (função de saúde, sem chave)');
-ok(st.sources.appLicitafacil && st.sources.appLicitafacil.ok && st.sources.appCredix && st.sources.appCredix.ok && appPings.length === 2 && appPings.some((u) => u.endsWith('licitafacil-api-kxks.onrender.com/api/health')) && Date.parse(st.sources.appCredix.at) > 0, 'APIs do LicitaFácil e do CREDIX acordadas (saúde, sem chave)');
+ok(st.sources.appLicitafacil && st.sources.appLicitafacil.ok && st.sources.appCredix && st.sources.appCredix.ok && appPings.length === 2 && appPings.some((u) => u.endsWith('licitafacil-one.vercel.app/api/health')) && appPings.some((u) => u.endsWith('loan-system-api-af5k.onrender.com/health')) && Date.parse(st.sources.appCredix.at) > 0, 'APIs do LicitaFácil e do CREDIX acordadas (saúde, sem chave)');
 // 2ª execução: bancos pausados e CoinGecko sempre no limite não derrubam o robô
 pingFails = true; cg429 = 99;
 const out2 = mkdtempSync(join(tmpdir(), 'nx-robot-'));
@@ -204,5 +205,20 @@ const wh3 = JSON.parse(readFileSync(join(out3, 'whales.json'), 'utf8'));
 ok(wh3.topAt === wh.topAt && wh3.top.length === 60 && Object.keys(wh3.bg).length === 4, 'baleias 20 min depois: lista dos 100 maiores reaproveitada e mais 2 faixas lidas');
 ok(st3.sources.calhist.cached && tvHist === 26, 'histórico do calendário reaproveitado (renova 1× por semana)');
 ok(st3.sources.appCredix && st3.sources.appCredix.cached && st3.sources.appCredix.ok && st3.sources.appCredix.at === st.sources.appCredix.at && appPings.length === 4, 'APIs dos outros apps: no máximo a cada ~5 h (20 min depois, reaproveita a última conferência)');
+// 4ª execução, de madrugada, com a última conferência das APIs de 6 h atrás: não acorda o Render fora da janela
+{
+  const prev4 = mkdtempSync(join(tmpdir(), 'nx-robot-'));
+  for (const f of readdirSync(out3)) writeFileSync(join(prev4, f), readFileSync(join(out3, f)));
+  const s = JSON.parse(readFileSync(join(prev4, 'status.json'), 'utf8'));
+  const old = new Date(Date.now() - 6 * 3600e3).toISOString();
+  s.sources.appCredix.at = old; s.sources.appLicitafacil.at = old;
+  writeFileSync(join(prev4, 'status.json'), JSON.stringify(s));
+  prevDir = prev4; process.env.NX_BRT_HOUR = '3';
+  const out4 = mkdtempSync(join(tmpdir(), 'nx-robot-'));
+  process.argv[2] = out4;
+  await import(pathToFileURL(new URL('../scripts/atualizar-dados.mjs', import.meta.url).pathname).href + '?run=4');
+  const st4 = JSON.parse(readFileSync(join(out4, 'status.json'), 'utf8'));
+  ok(appPings.length === 5 && appPings[4].endsWith('licitafacil-one.vercel.app/api/health') && st4.sources.appCredix.cached && st4.sources.appCredix.at === old && st4.sources.appLicitafacil.ok && !st4.sources.appLicitafacil.cached && st4.sources.news.ok, 'de madrugada: o CREDIX (Render) não é acordado fora da janela; o LicitaFácil (Vercel) é conferido normalmente');
+}
 console.log(`\n${fails.length ? '✗ ' + fails.length + ' falha(s)' : '✓ robô: tudo certo'} (${calls} pedidos simulados)`);
 process.exit(fails.length ? 1 : 0);
