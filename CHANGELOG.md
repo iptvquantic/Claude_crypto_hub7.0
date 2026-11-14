@@ -7,7 +7,7 @@
 - Confiabilidade: nova tentativa quando o serviço de notificações falha por um instante; cotação parada há mais de 2 h (par suspenso, fonte travada) não dispara alerta; alertas e aparelhos lidos de 1000 em 1000; Binance consultada em lotes (um par retirado não atrasa os outros); se o navegador troca ou perde a inscrição, o app refaz sozinho ao abrir; quando o teste não chega, o aviso mostra o motivo.
 - Banco: limpeza diária do histórico do agendador (crescia 1.440 linhas por dia, para sempre).
 - Testes novos: `dev/test-alerts-fn.mjs` (a função inteira no Node, com banco, Binance e serviço de notificações simulados: 2.300 alertas, paginação, cotação parada, nova tentativa, aparelho cancelado); alertas com 75 verificações; app com mais 5.
-- Pendente do dono (1 minuto): as 4 linhas de REVOKE do fim da migração 05, pelo SQL Editor (o conector não aplica REVOKE). Sem elas nada quebra: as funções já conferem quem chama.
+- Permissões do fim da migração 05 (REVOKE/GRANT): aplicadas pelo dono no SQL Editor em 14/11 (o conector foi bloqueado para mudança de permissão). Conferido: visitante sem login não chama mais nenhuma função dos alertas e o servidor seguiu sem erro.
 
 ## 3.6.0 — 12/11/2026 · Alertas no celular (preço e eventos)
 - **Página nova Alertas** (menu Sua conta, grátis com conta): notificação no celular e no computador, mesmo com o site fechado.
